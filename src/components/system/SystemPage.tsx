@@ -8,6 +8,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 interface SystemStats {
   totalMem: number; freeMem: number; usedMem: number
   uptimeSeconds: number; nodeVersion: string; platform: string
+  dbSize: number
 }
 
 interface Config { port: number }
@@ -39,8 +40,6 @@ export default function SystemPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [shutting, setShutting] = useState(false)
-
-  const memPct = stats ? Math.round((stats.usedMem / stats.totalMem) * 100) : 0
 
   async function saveConfig() {
     const port = Number(portInput || config?.port)
@@ -74,15 +73,10 @@ export default function SystemPage() {
         {!stats ? <p className="text-sm text-gray-400">Loading…</p> : (
           <>
             <div className="grid grid-cols-2 gap-4 mb-3">
-              <Stat label="Total RAM" value={formatBytes(stats.totalMem)} />
-              <Stat label="Used RAM" value={`${formatBytes(stats.usedMem)} (${memPct}%)`} />
-              <Stat label="Free RAM" value={formatBytes(stats.freeMem)} />
+              <Stat label="Database" value={formatBytes(stats.dbSize)} />
               <Stat label="Uptime" value={formatUptime(stats.uptimeSeconds)} />
               <Stat label="Node" value={stats.nodeVersion} />
               <Stat label="Platform" value={stats.platform} />
-            </div>
-            <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${memPct}%` }} />
             </div>
           </>
         )}
