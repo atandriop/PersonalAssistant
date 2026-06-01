@@ -29,10 +29,9 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/than/PersonalAssistant
-ExecStart=/usr/bin/npm run dev
+ExecStart=/bin/bash -c 'PORT=$(node -p "require(\"./config.json\").port || 3000") npx next dev -p $PORT'
 Restart=on-failure
 Environment=NODE_ENV=development
-Environment=PORT=3000
 
 [Install]
 WantedBy=default.target
@@ -72,7 +71,7 @@ cat > ~/.config/autostart/personal-assistant.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
 Name=Personal Assistant
-Exec=bash -c 'cd /home/than/PersonalAssistant && npm run dev'
+Exec=bash -c 'cd /home/than/PersonalAssistant && PORT=$(node -p "require(\"./config.json\").port || 3000") npx next dev -p $PORT'
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
