@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal Assistant
 
-## Getting Started
+A personal-use local web app for tracking wishlists, inventory, decision matrices, and a financial portfolio.
 
-First, run the development server:
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Autostart on Ubuntu
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To have the app start automatically when you log in, create a **systemd user service**.
 
-## Learn More
+### Option A — systemd user service (recommended)
 
-To learn more about Next.js, take a look at the following resources:
+1. Create the service file:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/personal-assistant.service << 'EOF'
+[Unit]
+Description=Personal Assistant web app
+After=network.target
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+[Service]
+Type=simple
+WorkingDirectory=/home/than/PersonalAssistant
+ExecStart=/usr/bin/npm run dev
+Restart=on-failure
+Environment=NODE_ENV=development
+Environment=PORT=3000
 
-## Deploy on Vercel
+[Install]
+WantedBy=default.target
+EOF
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Enable and start it:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+systemctl --user daemon-reload
+systemctl --user enable personal-assistant
+systemctl --user start personal-assistant
+```
+
+3. Verify it's running:
+
+```bash
+systemctl --user status personal-assistant
+```
+
+4. To view logs:
+
+```bash
+journalctl --user -u personal-assistant -f
+```
+
+> **Note:** For `systemctl --user` services to persist after logout, run once:
+> `sudo loginctl enable-linger $USER`
+
+### Option B — GNOME autostart (desktop entry)
+
+If you use GNOME and prefer a lighter approach, create an autostart `.desktop` file:
+
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/personal-assistant.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=Personal Assistant
+Exec=bash -c 'cd /home/than/PersonalAssistant && npm run dev'
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+```
+
+This runs on login and is stopped when you log out. No persistence between sessions.
+
+### Stopping the service (Option A)
+
+```bash
+systemctl --user stop personal-assistant
+systemctl --user disable personal-assistant  # remove from autostart
+```
