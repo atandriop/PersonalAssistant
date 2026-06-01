@@ -4,7 +4,10 @@ import { prisma } from '@/lib/prisma'
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const matrix = await prisma.matrix.findUnique({
     where: { id: Number(params.id) },
-    include: { criteria: true, options: true, scores: true },
+    include: {
+      criteria: { include: { scores: true } },
+      options: { include: { scores: true } },
+    },
   })
   if (!matrix) return new NextResponse(null, { status: 404 })
   return NextResponse.json(matrix)
