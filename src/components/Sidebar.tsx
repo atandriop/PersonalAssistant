@@ -10,6 +10,8 @@ const NAV = [
   { href: '/matrices', label: 'Matrices', active: true },
   { href: '/portfolio', label: 'Portfolio', active: true },
   { href: '/trends', label: 'Trends', active: true },
+  { href: '/weekly-review', label: 'Weekly Review', active: true },
+  { href: '/system', label: 'System', active: true },
 ]
 
 export default function Sidebar() {
