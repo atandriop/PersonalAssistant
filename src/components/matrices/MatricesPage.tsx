@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
+import PromptModal from '@/components/ui/PromptModal'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -42,6 +43,7 @@ export default function MatricesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const { data: matrix, mutate: mutateMatrix } = useSWR<Matrix>(
     selectedId ? `/api/matrices/${selectedId}` : null,
@@ -133,6 +135,31 @@ export default function MatricesPage() {
     return criteria.reduce((total, c) => total + getScore(c.id, optionId) * c.weight / 100, 0)
   }
 
+  function buildMatrixPrompt(): string {
+    if (!matrix || !criteria.length || !options.length) return ''
+    const criteriaLines = criteria.map(c => `- ${c.name} — ${c.weight}%`).join('\n')
+    const optionLines = options.map(opt => {
+      const scoreList = criteria.map(c => `${c.name} = ${getScore(c.id, opt.id)}`).join(', ')
+      return `- ${opt.name}: ${scoreList}`
+    }).join('\n')
+    const resultLines = [...options]
+      .sort((a, b) => getWeightedScore(b.id) - getWeightedScore(a.id))
+      .map((opt, i) => `${i + 1}. ${opt.name} — ${getWeightedScore(opt.id).toFixed(2)}`)
+      .join('\n')
+    return `I'm evaluating options using a weighted decision matrix.
+
+Criteria and weights:
+${criteriaLines}
+
+Options with scores (0–10 per criterion):
+${optionLines}
+
+Weighted results (higher is better, max 10):
+${resultLines}
+
+Please analyse my scoring. Identify potential biases, flag criteria that may be under/over-weighted relative to their importance, and suggest whether the top-ranked option is clearly the right choice or if the decision is too close to call.`
+  }
+
   const maxWS = Math.max(...options.map(o => getWeightedScore(o.id)), 0.001)
 
   return (
@@ -167,6 +194,14 @@ export default function MatricesPage() {
           </select>
           {selectedId && (
             <button onClick={deleteMatrix} className="text-sm text-red-500 hover:underline">Delete</button>
+          )}
+          {selectedId && matrix && criteria.length > 0 && options.length > 0 && (
+            <button
+              onClick={() => setShowPrompt(true)}
+              className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              AI Brief
+            </button>
           )}
         </div>
       )}
@@ -281,6 +316,14 @@ export default function MatricesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {showPrompt && (
+        <PromptModal
+          title="Decision Matrix AI Brief"
+          prompt={buildMatrixPrompt()}
+          onClose={() => setShowPrompt(false)}
+        />
       )}
     </div>
   )
