@@ -13,6 +13,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   // Flatten scores to top level and strip from criteria for a clean response shape
   const scores = matrix.criteria.flatMap(c => c.scores)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const criteria = matrix.criteria.map(({ scores: _s, ...c }) => c)
 
   return NextResponse.json({ ...matrix, criteria, scores })
