@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Category {
+  id             Int             @id @default(autoincrement())
+  name           String
+  color          String
+  wishlistItems  WishlistItem[]
+  inventoryItems InventoryItem[]
+}
+
+model WishlistItem {
+  id                Int             @id @default(autoincrement())
+  name              String
+  url               String?
+  cost              Float
+  priority          String          @default("Medium")
+  notes             String?
+  purchased         Boolean         @default(false)
+  categoryId        Int
+  category          Category        @relation(fields: [categoryId], references: [id])
+  inventoryUpgrades InventoryItem[] @relation("UpgradeTarget")
+  createdAt         DateTime        @default(now())
+}
+
+model InventoryItem {
+  id              Int           @id @default(autoincrement())
+  name            String
+  cost            Float
+  quantity        Int           @default(1)
+  purchaseDate    DateTime?
+  notes           String?
+  categoryId      Int
+  category        Category      @relation(fields: [categoryId], references: [id])
+  upgradeTargetId Int?
+  upgradeTarget   WishlistItem? @relation("UpgradeTarget", fields: [upgradeTargetId], references: [id])
+  createdAt       DateTime      @default(now())
+}
+
+model Matrix {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String?
+  criteria    MatrixCriteria[]
+  options     MatrixOption[]
+  createdAt   DateTime         @default(now())
+}
+
+model MatrixCriteria {
+  id       Int           @id @default(autoincrement())
+  name     String
+  weight   Float
+  matrixId Int
+  matrix   Matrix        @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+  scores   MatrixScore[]
+}
+
+model MatrixOption {
+  id       Int           @id @default(autoincrement())
+  name     String
+  matrixId Int
+  matrix   Matrix        @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+  scores   MatrixScore[]
+}
+
+model MatrixScore {
+  id         Int            @id @default(autoincrement())
+  score      Float          @default(0)
+  optionId   Int
+  option     MatrixOption   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  criteriaId Int
+  criteria   MatrixCriteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, criteriaId])
+}
+
+model PortfolioHolding {
+  id           Int      @id @default(autoincrement())
+  name         String
+  type         String
+  quantity     Float?
+  buyPrice     Float?
+  currentPrice Float?
+  balance      Float?
+  interestRate Float?
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+model Snapshot {
+  id             Int      @id @default(autoincrement())
+  date           DateTime @default(now())
+  wishlistTotal  Float
+  portfolioTotal Float
+}
