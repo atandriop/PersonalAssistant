@@ -1,0 +1,141 @@
+<h2>Portfolio & Trends Pages</h2>
+<p class="subtitle">Portfolio tracks your holdings manually. Trends charts wishlist cost and portfolio value over time.</p>
+
+<div class="mockup" style="margin-bottom:20px;">
+  <div class="mockup-header">Portfolio</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-secondary);">
+      <div style="display:flex;gap:8px;">
+        <select class="mock-input" style="width:130px;"><option>All types</option><option>Stocks</option><option>Crypto</option></select>
+      </div>
+      <button class="mock-button">+ Add Holding</button>
+    </div>
+
+    <!-- Summary strip -->
+    <div style="display:flex;gap:10px;padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 16px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:16px;">€14,320</div>
+        <div style="color:var(--text-secondary);">Total value</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 16px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:16px;color:var(--success);">+€1,840</div>
+        <div style="color:var(--text-secondary);">vs. purchase cost</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:#0071e3;"></div><div style="font-weight:600;font-size:13px;">Stocks</div></div>
+        <div style="color:var(--text-secondary);">€9,200</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff9f0a;"></div><div style="font-weight:600;font-size:13px;">Crypto</div></div>
+        <div style="color:var(--text-secondary);">€5,120</div>
+      </div>
+    </div>
+
+    <!-- Holdings table -->
+    <div style="padding:14px 16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--bg-primary);">
+            <th style="text-align:left;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Asset</th>
+            <th style="text-align:center;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Type</th>
+            <th style="text-align:right;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Qty</th>
+            <th style="text-align:right;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Buy price</th>
+            <th style="text-align:right;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Current price</th>
+            <th style="text-align:right;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">Value</th>
+            <th style="text-align:right;padding:7px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;">P&L</th>
+            <th style="border:1px solid var(--border);"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:9px 12px;border:1px solid var(--border);font-weight:600;">NVDA</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;"><span style="background:#e3f2fd;color:#0071e3;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">Stock</span></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">10</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">€480</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><input class="mock-input" value="€620" style="width:70px;text-align:right;padding:3px 6px;font-size:12px;"></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€6,200</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;color:var(--success);">+€1,400</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button></td>
+          </tr>
+          <tr style="background:var(--bg-primary);">
+            <td style="padding:9px 12px;border:1px solid var(--border);font-weight:600;">Bitcoin</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;"><span style="background:#fff3e0;color:#e65100;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">Crypto</span></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">0.08</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">€42,000</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><input class="mock-input" value="€64,000" style="width:70px;text-align:right;padding:3px 6px;font-size:12px;background:var(--bg-secondary);"></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€5,120</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;color:var(--success);">+€1,760</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button></td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px;border:1px solid var(--border);font-weight:600;">AAPL</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;"><span style="background:#e3f2fd;color:#0071e3;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;">Stock</span></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">15</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;">€210</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><input class="mock-input" value="€200" style="width:70px;text-align:right;padding:3px 6px;font-size:12px;"></td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€3,000</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;font-weight:600;color:var(--error);">-€150</td>
+            <td style="padding:9px 12px;border:1px solid var(--border);text-align:right;"><button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;">Edit current price inline to update your P&L — values auto-save.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Trends -->
+<div class="mockup">
+  <div class="mockup-header">Trends</div>
+  <div class="mockup-body" style="padding:16px;">
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+
+      <!-- Wishlist cost trend -->
+      <div style="flex:1;min-width:260px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-weight:600;margin-bottom:4px;">Wishlist total cost</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">How much you want to spend over time</div>
+        <!-- Fake line chart -->
+        <svg viewBox="0 0 260 80" style="width:100%;height:80px;">
+          <polyline points="0,60 40,55 80,50 120,45 160,52 200,38 260,30" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+          <polyline points="0,60 40,55 80,50 120,45 160,52 200,38 260,30 260,80 0,80" fill="var(--accent)" fill-opacity="0.08"/>
+          <circle cx="0" cy="60" r="3" fill="var(--accent)"/>
+          <circle cx="40" cy="55" r="3" fill="var(--accent)"/>
+          <circle cx="80" cy="50" r="3" fill="var(--accent)"/>
+          <circle cx="120" cy="45" r="3" fill="var(--accent)"/>
+          <circle cx="160" cy="52" r="3" fill="var(--accent)"/>
+          <circle cx="200" cy="38" r="3" fill="var(--accent)"/>
+          <circle cx="260" cy="30" r="3" fill="var(--accent)"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-top:4px;">
+          <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+        </div>
+      </div>
+
+      <!-- Portfolio value trend -->
+      <div style="flex:1;min-width:260px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-weight:600;margin-bottom:4px;">Portfolio value</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Total holdings value over time</div>
+        <svg viewBox="0 0 260 80" style="width:100%;height:80px;">
+          <polyline points="0,70 40,65 80,58 120,50 160,45 200,35 260,25" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linejoin="round"/>
+          <polyline points="0,70 40,65 80,58 120,50 160,45 200,35 260,25 260,80 0,80" fill="var(--success)" fill-opacity="0.08"/>
+          <circle cx="0" cy="70" r="3" fill="var(--success)"/>
+          <circle cx="40" cy="65" r="3" fill="var(--success)"/>
+          <circle cx="80" cy="58" r="3" fill="var(--success)"/>
+          <circle cx="120" cy="50" r="3" fill="var(--success)"/>
+          <circle cx="160" cy="45" r="3" fill="var(--success)"/>
+          <circle cx="200" cy="35" r="3" fill="var(--success)"/>
+          <circle cx="260" cy="25" r="3" fill="var(--success)"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-top:4px;">
+          <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:12px;">A snapshot is saved automatically each time you visit this page. The more often you visit, the more data points you accumulate.</div>
+  </div>
+</div>

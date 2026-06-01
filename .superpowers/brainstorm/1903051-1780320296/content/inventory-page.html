@@ -1,0 +1,116 @@
+<h2>Inventory Page</h2>
+<p class="subtitle">Items you own, with optional links to a wishlist item that would replace/upgrade them.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Inventory</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-secondary);">
+      <input class="mock-input" placeholder="Search inventory..." style="width:220px;">
+      <button class="mock-button">+ Add Item</button>
+    </div>
+
+    <!-- Stats strip -->
+    <div style="display:flex;gap:10px;padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);">
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:15px;">12</div>
+        <div style="color:var(--text-secondary);">Total items</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:15px;">€6,240</div>
+        <div style="color:var(--text-secondary);">Total value</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:15px;color:var(--warning);">3</div>
+        <div style="color:var(--text-secondary);">Upgrades available</div>
+      </div>
+    </div>
+
+    <!-- Item table -->
+    <div style="padding:14px 16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--bg-primary);">
+            <th style="text-align:left;padding:8px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Item</th>
+            <th style="text-align:left;padding:8px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Purchased</th>
+            <th style="text-align:right;padding:8px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Cost</th>
+            <th style="text-align:left;padding:8px 12px;border:1px solid var(--border);color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">Upgrade target</th>
+            <th style="padding:8px 12px;border:1px solid var(--border);"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Item with upgrade -->
+          <tr>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <div style="font-weight:600;">RTX 3080</div>
+              <div style="font-size:11px;color:var(--text-secondary);">GPU · Qty: 1</div>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);color:var(--text-secondary);">Mar 2022</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€700</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <span style="display:inline-flex;align-items:center;gap:5px;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;">
+                ↑ RTX 5090 (€1,750)
+              </span>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;">
+              <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            </td>
+          </tr>
+          <!-- Item with upgrade -->
+          <tr style="background:var(--bg-primary);">
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <div style="font-weight:600;">Herman Miller Aeron (old)</div>
+              <div style="font-size:11px;color:var(--text-secondary);">Furniture · Qty: 1</div>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);color:var(--text-secondary);">Jan 2019</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€900</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <span style="display:inline-flex;align-items:center;gap:5px;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;">
+                ↑ Standing Desk (€800)
+              </span>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;">
+              <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            </td>
+          </tr>
+          <!-- Item without upgrade -->
+          <tr>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <div style="font-weight:600;">MacBook Pro M3</div>
+              <div style="font-size:11px;color:var(--text-secondary);">Laptop · Qty: 1</div>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);color:var(--text-secondary);">Nov 2023</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€2,400</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <span style="color:var(--text-tertiary);font-size:12px;">— no upgrade set</span>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;">
+              <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            </td>
+          </tr>
+          <!-- Item without upgrade -->
+          <tr style="background:var(--bg-primary);">
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <div style="font-weight:600;">Sony WH-1000XM4</div>
+              <div style="font-size:11px;color:var(--text-secondary);">Audio · Qty: 1</div>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);color:var(--text-secondary);">Jun 2021</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;font-weight:600;">€280</td>
+            <td style="padding:10px 12px;border:1px solid var(--border);">
+              <span style="display:inline-flex;align-items:center;gap:5px;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;">
+                ↑ Sony WH-1000XM5 (€350)
+              </span>
+            </td>
+            <td style="padding:10px 12px;border:1px solid var(--border);text-align:right;">
+              <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<p style="margin-top:12px;color:var(--text-secondary);font-size:13px;">Clicking an upgrade badge navigates directly to that item in the Wishlist.</p>

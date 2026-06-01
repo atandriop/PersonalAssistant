@@ -1,0 +1,96 @@
+<h2>Wishlist Page</h2>
+<p class="subtitle">Does this layout feel right for browsing and managing your wishlist?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Wishlist — full page mockup</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg-secondary);">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="mock-input" placeholder="Search items..." style="width:200px;">
+        <select class="mock-input" style="width:130px;"><option>All categories</option></select>
+      </div>
+      <button class="mock-button">+ Add Item</button>
+    </div>
+
+    <!-- Category summary strip -->
+    <div style="display:flex;gap:10px;padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="font-weight:700;font-size:15px;color:var(--text-primary);">€4,280</div>
+        <div style="color:var(--text-secondary);">Total</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:#0071e3;"></div><div style="font-weight:600;font-size:13px;">Tech</div></div>
+        <div style="color:var(--text-secondary);">€2,100</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:#34c759;"></div><div style="font-weight:600;font-size:13px;">Fitness</div></div>
+        <div style="color:var(--text-secondary);">€890</div>
+      </div>
+      <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:#ff9f0a;"></div><div style="font-weight:600;font-size:13px;">Home</div></div>
+        <div style="color:var(--text-secondary);">€1,290</div>
+      </div>
+    </div>
+
+    <!-- Items grouped by category -->
+    <div style="padding:14px 16px;overflow-y:auto;max-height:320px;">
+
+      <!-- Category: Tech -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#0071e3;"></div>
+          <span style="font-weight:700;font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Tech</span>
+          <span style="font-size:12px;color:var(--text-tertiary);">3 items · €2,100</span>
+        </div>
+        <!-- Item row -->
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">Sony WH-1000XM5</div>
+            <div style="color:var(--text-secondary);font-size:12px;">⭐ High priority · <a href="#" style="color:var(--accent);">amazon.com</a></div>
+          </div>
+          <div style="font-weight:700;color:var(--text-primary);">€350</div>
+          <div style="display:flex;gap:6px;">
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;background:var(--success);color:#fff;border:none;">✓ Got it</button>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">RTX 5090</div>
+            <div style="color:var(--text-secondary);font-size:12px;">⭐ High priority · <a href="#" style="color:var(--accent);">newegg.com</a> · <span style="color:#ff9f0a;">Upgrades: RTX 3080 (inventory)</span></div>
+          </div>
+          <div style="font-weight:700;color:var(--text-primary);">€1,750</div>
+          <div style="display:flex;gap:6px;">
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;background:var(--success);color:#fff;border:none;">✓ Got it</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category: Home -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#ff9f0a;"></div>
+          <span style="font-weight:700;font-size:13px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Home</span>
+          <span style="font-size:12px;color:var(--text-tertiary);">2 items · €1,290</span>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">Standing Desk</div>
+            <div style="color:var(--text-secondary);font-size:12px;">Medium priority · <a href="#" style="color:var(--accent);">flexispot.com</a></div>
+          </div>
+          <div style="font-weight:700;color:var(--text-primary);">€800</div>
+          <div style="display:flex;gap:6px;">
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;">Edit</button>
+            <button class="mock-button" style="padding:4px 8px;font-size:11px;background:var(--success);color:#fff;border:none;">✓ Got it</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:12px;color:var(--text-secondary);font-size:13px;">Note: "Got it" marks an item as purchased and optionally moves it to Inventory.</p>

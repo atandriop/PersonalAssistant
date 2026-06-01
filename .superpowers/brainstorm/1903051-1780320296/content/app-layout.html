@@ -1,0 +1,56 @@
+<h2>Overall App Layout</h2>
+<p class="subtitle">How should the app be structured? Pick the navigation style that feels right.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;height:180px;background:var(--bg-tertiary);border-radius:6px;overflow:hidden;font-size:12px;">
+        <div style="width:180px;background:var(--bg-secondary);border-right:1px solid var(--border);padding:12px;flex-shrink:0;">
+          <div style="font-weight:700;color:var(--accent);margin-bottom:14px;font-size:13px;">PersonalAssistant</div>
+          <div style="padding:6px 8px;border-radius:5px;background:var(--accent);color:#fff;margin-bottom:4px;">Wishlist</div>
+          <div style="padding:6px 8px;border-radius:5px;color:var(--text-secondary);margin-bottom:4px;">Inventory</div>
+          <div style="padding:6px 8px;border-radius:5px;color:var(--text-secondary);margin-bottom:4px;">Matrices</div>
+          <div style="padding:6px 8px;border-radius:5px;color:var(--text-secondary);margin-bottom:4px;">Portfolio</div>
+          <div style="padding:6px 8px;border-radius:5px;color:var(--text-secondary);">Trends</div>
+        </div>
+        <div style="flex:1;padding:14px;">
+          <div style="font-weight:600;font-size:14px;margin-bottom:10px;">Wishlist</div>
+          <div style="height:12px;background:var(--bg-tertiary);border-radius:3px;margin-bottom:6px;"></div>
+          <div style="height:12px;background:var(--bg-tertiary);border-radius:3px;margin-bottom:6px;width:80%;"></div>
+          <div style="height:12px;background:var(--bg-tertiary);border-radius:3px;width:60%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Persistent Sidebar</h3>
+      <p>Fixed left nav always visible. Easy switching between sections. Works well with lots of content per page.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="topnav" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;flex-direction:column;height:180px;background:var(--bg-tertiary);border-radius:6px;overflow:hidden;font-size:12px;">
+        <div style="background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:16px;">
+          <span style="font-weight:700;color:var(--accent);font-size:13px;margin-right:8px;">PA</span>
+          <span style="color:var(--accent);font-weight:600;border-bottom:2px solid var(--accent);padding-bottom:2px;">Wishlist</span>
+          <span style="color:var(--text-secondary);">Inventory</span>
+          <span style="color:var(--text-secondary);">Matrices</span>
+          <span style="color:var(--text-secondary);">Portfolio</span>
+          <span style="color:var(--text-secondary);">Trends</span>
+        </div>
+        <div style="flex:1;padding:14px;">
+          <div style="font-weight:600;font-size:14px;margin-bottom:10px;">Wishlist</div>
+          <div style="height:12px;background:var(--bg-secondary);border-radius:3px;margin-bottom:6px;"></div>
+          <div style="height:12px;background:var(--bg-secondary);border-radius:3px;margin-bottom:6px;width:80%;"></div>
+          <div style="height:12px;background:var(--bg-secondary);border-radius:3px;width:60%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Top Navigation Bar</h3>
+      <p>Nav tabs across the top. More horizontal space for content. Cleaner feel for a small number of pages.</p>
+    </div>
+  </div>
+
+</div>
