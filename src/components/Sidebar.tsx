@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react'
 const NAV = [
   { href: '/wishlist', label: 'Wishlist', active: true },
   { href: '/inventory', label: 'Inventory', active: true },
-  { href: '/matrices', label: 'Matrices', active: false },
-  { href: '/portfolio', label: 'Portfolio', active: false },
-  { href: '/trends', label: 'Trends', active: false },
+  { href: '/matrices', label: 'Matrices', active: true },
+  { href: '/portfolio', label: 'Portfolio', active: true },
+  { href: '/trends', label: 'Trends', active: true },
 ]
 
 export default function Sidebar() {
