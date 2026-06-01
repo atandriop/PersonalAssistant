@@ -6,11 +6,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     where: { id: Number(params.id) },
     include: {
       criteria: { include: { scores: true } },
-      options: { include: { scores: true } },
+      options: true,
     },
   })
   if (!matrix) return new NextResponse(null, { status: 404 })
-  return NextResponse.json(matrix)
+
+  // Flatten scores to top level and strip from criteria for a clean response shape
+  const scores = matrix.criteria.flatMap(c => c.scores)
+  const criteria = matrix.criteria.map(({ scores: _s, ...c }) => c)
+
+  return NextResponse.json({ ...matrix, criteria, scores })
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
