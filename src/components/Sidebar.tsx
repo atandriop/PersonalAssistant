@@ -23,7 +23,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     const stored = localStorage.getItem('theme')
-    if (stored === 'dark') {
+    if (stored !== 'light') {
       document.documentElement.classList.add('dark')
       setDark(true)
     }
@@ -39,7 +39,7 @@ export default function Sidebar() {
   return (
     <aside className="w-52 shrink-0 flex flex-col h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
       <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700">
-        <span className="font-bold text-gray-900 dark:text-white text-lg">Personal</span>
+        <span className="font-bold text-gray-900 dark:text-white text-lg">Homebase</span>
       </div>
       <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
         {NAV.map(({ href, label, active }) =>

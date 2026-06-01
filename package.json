@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node -e \"const p=require('./config.json').port||3000;require('child_process').execSync('next dev -p '+p,{stdio:'inherit'})\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
