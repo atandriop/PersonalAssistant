@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import PromptModal from '@/components/ui/PromptModal'
 import Badge from '@/components/ui/Badge'
 import HoldingForm from './HoldingForm'
 
@@ -38,6 +39,7 @@ export default function PortfolioPage() {
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null)
   const [priceInput, setPriceInput] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const filtered = holdings.filter(h => !filterType || h.type === filterType)
   const totalValue = holdings.reduce((s, h) => s + holdingValue(h), 0)
@@ -69,13 +71,49 @@ export default function PortfolioPage() {
     mutate()
   }
 
+  function buildPortfolioPrompt(): string {
+    const lines = holdings.map(h => {
+      if (h.type === 'savings') {
+        return `[SAVINGS — ${h.name}]: balance €${(h.balance ?? 0).toFixed(2)}${h.interestRate ? `, interest ${h.interestRate}%` : ''}`
+      }
+      const v = holdingValue(h)
+      const p = holdingPnl(h)
+      return `[${h.type.toUpperCase()} — ${h.name}]: value €${v.toFixed(2)}, P&L ${p >= 0 ? '+' : ''}€${p.toFixed(2)}`
+    }).join('\n')
+    const byType = ['stock', 'crypto', 'savings', 'other']
+      .map(t => {
+        const total = holdings.filter(h => h.type === t).reduce((s, h) => s + holdingValue(h), 0)
+        return total > 0 ? `${t} €${total.toFixed(2)}` : ''
+      })
+      .filter(Boolean).join(', ')
+    return `Here is my current investment portfolio:
+
+${lines}
+
+Summary:
+- Total portfolio value: €${totalValue.toFixed(2)}
+- Total P&L (non-savings): ${totalPnl >= 0 ? '+' : ''}€${totalPnl.toFixed(2)}${totalCost > 0 ? ` (${((totalPnl / totalCost) * 100).toFixed(1)}%)` : ''}
+- Breakdown by type: ${byType}
+
+Please analyse this portfolio. Identify concentration risk, comment on the balance between asset types, flag any significant unrealised losses, and suggest 2-3 rebalancing considerations.`
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio</h1>
-        <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          + Add holding
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPrompt(true)}
+            disabled={holdings.length === 0}
+            className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+          >
+            AI Prompt
+          </button>
+          <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            + Add holding
+          </button>
+        </div>
       </div>
 
       {/* Summary strip */}
@@ -172,6 +210,13 @@ export default function PortfolioPage() {
         <Modal title="Edit holding" onClose={() => setEditing(null)}>
           <HoldingForm initial={editing} onSave={() => { setEditing(null); mutate() }} onCancel={() => setEditing(null)} />
         </Modal>
+      )}
+      {showPrompt && (
+        <PromptModal
+          title="Portfolio Health Check"
+          prompt={buildPortfolioPrompt()}
+          onClose={() => setShowPrompt(false)}
+        />
       )}
     </div>
   )

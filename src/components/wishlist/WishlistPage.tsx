@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import PromptModal from '@/components/ui/PromptModal'
 import Badge from '@/components/ui/Badge'
 import WishlistForm from './WishlistForm'
 import CategoryManager from '@/components/categories/CategoryManager'
@@ -27,6 +28,7 @@ export default function WishlistPage() {
   const [showCats, setShowCats] = useState(false)
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const active = items.filter(i => !i.purchased)
   const filtered = active
@@ -59,6 +61,22 @@ export default function WishlistPage() {
     mutate()
   }
 
+  function buildWishlistPrompt(): string {
+    const byPriority: Record<string, typeof active> = { High: [], Medium: [], Low: [] }
+    active.forEach(i => { byPriority[i.priority]?.push(i) })
+    const section = (label: string, items: typeof active) =>
+      items.length ? `${label.toUpperCase()} PRIORITY:\n${items.map(i => `- ${i.name} — €${i.cost.toFixed(2)}`).join('\n')}` : ''
+    const sections = ['High', 'Medium', 'Low'].map(p => section(p, byPriority[p])).filter(Boolean).join('\n\n')
+    const total = active.reduce((s, i) => s + i.cost, 0)
+    return `Here is my current wishlist (unpurchased items only), grouped by priority:
+
+${sections}
+
+Total wishlist value: €${total.toFixed(2)}
+
+Given typical budget constraints, suggest a sensible purchase order. Flag any items that seem overpriced relative to their priority, and identify any obvious quick wins (low cost, high priority).`
+  }
+
   const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
   return (
@@ -68,6 +86,13 @@ export default function WishlistPage() {
         <div className="flex gap-2">
           <button onClick={() => setShowCats(true)} className="text-sm px-3 py-1.5 border rounded-lg dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
             Categories
+          </button>
+          <button
+            onClick={() => setShowPrompt(true)}
+            disabled={active.length === 0}
+            className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+          >
+            AI Prompt
           </button>
           <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             + Add item
@@ -146,6 +171,13 @@ export default function WishlistPage() {
         <Modal title="Manage categories" onClose={() => setShowCats(false)}>
           <CategoryManager onClose={() => setShowCats(false)} />
         </Modal>
+      )}
+      {showPrompt && (
+        <PromptModal
+          title="Wishlist Priority Prompt"
+          prompt={buildWishlistPrompt()}
+          onClose={() => setShowPrompt(false)}
+        />
       )}
     </div>
   )
