@@ -98,3 +98,40 @@ model Snapshot {
   wishlistTotal  Float
   portfolioTotal Float
 }
+
+model Subscription {
+  id          Int       @id @default(autoincrement())
+  name        String
+  cost        Float
+  period      String
+  renewalDate DateTime?
+  url         String?
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model Habit {
+  id        Int        @id @default(autoincrement())
+  name      String
+  color     String
+  logs      HabitLog[]
+  createdAt DateTime   @default(now())
+}
+
+model HabitLog {
+  id      Int    @id @default(autoincrement())
+  habitId Int
+  habit   Habit  @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date    String
+  @@unique([habitId, date])
+}
+
+model TechRadarItem {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ring      String
+  category  String
+  notes     String?
+  createdAt DateTime @default(now())
+}
