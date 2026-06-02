@@ -112,11 +112,12 @@ model Subscription {
 }
 
 model Habit {
-  id        Int        @id @default(autoincrement())
+  id        Int             @id @default(autoincrement())
   name      String
   color     String
   logs      HabitLog[]
-  createdAt DateTime   @default(now())
+  goalLinks GoalHabitLink[]
+  createdAt DateTime        @default(now())
 }
 
 model HabitLog {
@@ -134,4 +135,43 @@ model TechRadarItem {
   category  String
   notes     String?
   createdAt DateTime @default(now())
+}
+
+model LifeArea {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String
+  goals     Goal[]
+  createdAt DateTime @default(now())
+}
+
+model Goal {
+  id          Int             @id @default(autoincrement())
+  lifeAreaId  Int
+  lifeArea    LifeArea        @relation(fields: [lifeAreaId], references: [id], onDelete: Cascade)
+  title       String
+  timePeriod  String
+  notes       String?
+  milestones  Milestone[]
+  habitLinks  GoalHabitLink[]
+  createdAt   DateTime        @default(now())
+}
+
+model Milestone {
+  id          Int       @id @default(autoincrement())
+  goalId      Int
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model GoalHabitLink {
+  id      Int   @id @default(autoincrement())
+  goalId  Int
+  goal    Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  habitId Int
+  habit   Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, habitId])
 }
