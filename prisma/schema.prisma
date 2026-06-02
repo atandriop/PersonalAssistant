@@ -302,3 +302,25 @@ model Document {
   expiryDate   String?
   createdAt    DateTime @default(now())
 }
+
+model BucketTrip {
+  id             Int      @id @default(autoincrement())
+  destination    String
+  cities         String?
+  budget         Float?
+  targetYear     Int?
+  notes          String?
+  done           Boolean  @default(false)
+  linkedToTravel Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model BucketExperience {
+  id         Int      @id @default(autoincrement())
+  title      String
+  category   String
+  notes      String?
+  targetYear Int?
+  done       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
