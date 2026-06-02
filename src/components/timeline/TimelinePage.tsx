@@ -70,7 +70,7 @@ function Bucket({ title, entries }: { title: string; entries: TimelineEntry[] })
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
       <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{title} ({entries.length})</h2>
-      {entries.map((e, i) => <TimelineRow key={i} entry={e} />)}
+      {entries.map(e => <TimelineRow key={`${e.type}-${e.label}-${e.date}`} entry={e} />)}
     </div>
   )
 }
