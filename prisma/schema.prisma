@@ -344,5 +344,27 @@ model TravelTrip {
   rating       Int?
   notes        String?
   bucketTripId Int?
+  memories     MemoryTrip[]
   createdAt    DateTime      @default(now())
+}
+
+model Memory {
+  id        Int          @id @default(autoincrement())
+  title     String
+  date      String
+  endDate   String?
+  category  String
+  location  String?
+  notes     String?
+  trips     MemoryTrip[]
+  createdAt DateTime     @default(now())
+}
+
+model MemoryTrip {
+  memoryId  Int
+  tripId    Int
+  memory    Memory     @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  trip      TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@id([memoryId, tripId])
 }
