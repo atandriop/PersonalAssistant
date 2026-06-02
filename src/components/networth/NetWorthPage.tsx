@@ -161,9 +161,10 @@ export default function NetWorthPage() {
   const [editing, setEditing] = useState<NetWorthEntry | null>(null)
 
   useEffect(() => {
-    const today = new Date().toDateString()
+    const today = new Date().toISOString().slice(0, 10)
     if (sessionStorage.getItem('lastNetWorthSnapshot') === today) return
-    fetch('/api/net-worth/snapshots', { method: 'POST' }).then(() => {
+    fetch('/api/net-worth/snapshots', { method: 'POST' }).then(r => {
+      if (!r.ok) return
       sessionStorage.setItem('lastNetWorthSnapshot', today)
       mutateSnapshots()
     })
