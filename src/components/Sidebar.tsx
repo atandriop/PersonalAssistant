@@ -14,6 +14,7 @@ const NAV = [
   { href: '/habits', label: 'Habits', active: true },
   { href: '/goals', label: 'Goals', active: true },
   { href: '/maintenance', label: 'Maintenance', active: true },
+  { href: '/timeline', label: 'Timeline', active: true },
   { href: '/gifts', label: 'Gifts', active: true },
   { href: '/tech-radar', label: 'Tech Radar', active: true },
   { href: '/system', label: 'System', active: true },
