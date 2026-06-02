@@ -4,9 +4,16 @@ import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson } from '@/types'
+import type { Habit, LifeArea, GiftPerson, Appointment } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
+
+const APPT_CATEGORY_COLOR: Record<string, string> = {
+  Medical: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  Vehicle: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  Personal: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+}
 
 // ─── Habits Done Count ──────────────────────────────────────────────────────
 function HabitDoneCheck({ habitId, today, onResult }: {
@@ -92,6 +99,7 @@ export default function DashboardPage() {
   const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: lifeAreas = [], isLoading: goalsLoading } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
+  const { data: appointments = [], isLoading: apptLoading } = useSWR<Appointment[]>('/api/appointments', fetcher)
 
   // ── Maintenance widget ──
   const alertItems = maintenanceItems.flatMap(item =>
@@ -123,6 +131,13 @@ export default function DashboardPage() {
 
   // ── Gifts widget ──
   const peopleWithIdeas = giftPeople.filter(p => p.ideas.length > 0)
+
+  // ── Appointments widget ──
+  const today = new Date().toISOString().slice(0, 10)
+  const upcomingAppts = appointments
+    .filter(a => !a.done && a.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5)
 
   return (
     <div>
@@ -229,6 +244,29 @@ export default function DashboardPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </WidgetCard>
+
+        {/* Upcoming Appointments */}
+        <WidgetCard title="Upcoming Appointments">
+          {apptLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : upcomingAppts.length === 0 ? (
+            <p className="text-sm text-gray-400">No upcoming appointments.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {upcomingAppts.map(a => (
+                <div key={a.id} className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{a.title}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${APPT_CATEGORY_COLOR[a.category] ?? APPT_CATEGORY_COLOR.Other}`}>
+                      {a.category}
+                    </span>
+                    <span className="text-xs text-gray-400">{a.date}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </WidgetCard>
