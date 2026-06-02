@@ -168,7 +168,7 @@ export default function WeeklyReviewPage() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const today30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const renewingSoon = subscriptions
-    .filter(s => s.active && s.renewalDate != null && s.renewalDate >= todayStr && s.renewalDate <= today30)
+    .filter(s => s.active && s.renewalDate != null && s.renewalDate.slice(0, 10) >= todayStr && s.renewalDate.slice(0, 10) <= today30)
     .sort((a, b) => (a.renewalDate ?? '').localeCompare(b.renewalDate ?? ''))
 
   useEffect(() => {

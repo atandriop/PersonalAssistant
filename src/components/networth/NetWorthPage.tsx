@@ -335,7 +335,7 @@ export default function NetWorthPage() {
             </div>
           )}
 
-          {liabilityEntries.length === 0 && (
+          {liabilityEntries.length === 0 && subscriptionAnnualTotal === 0 && (
             <p className="text-sm text-gray-400">No liabilities yet.</p>
           )}
         </div>

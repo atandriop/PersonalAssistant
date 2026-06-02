@@ -1,6 +1,7 @@
 'use client'
 
 import type React from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -50,17 +51,24 @@ function getTaskStatus(task: MaintenanceTask): TaskStatus {
 
 // ─── Habits Done Count ──────────────────────────────────────────────────────
 function HabitsDoneCount({ habits }: { habits: Habit[] }) {
-  // Fetches logs for all habits and counts how many are done today
-  // Uses a separate SWR call per habit (same data already fetched by HabitTodayRow — SWR deduplicates)
+  const [doneCount, setDoneCount] = useState(0)
   const today = new Date().toISOString().slice(0, 10)
-  const counts = habits.map(h => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { data: logs = [] } = useSWR<string[]>(`/api/habits/${h.id}/logs`, fetcher)
-    return logs.includes(today) ? 1 : 0
-  })
-  const done = counts.reduce((a, b) => a + b, 0 as number)
+
+  useEffect(() => {
+    if (habits.length === 0) return
+    Promise.allSettled(
+      habits.map(h =>
+        fetch(`/api/habits/${h.id}/logs`).then(r => r.json()).then((dates: string[]) => dates.includes(today))
+      )
+    ).then(results => {
+      const count = results.filter(r => r.status === 'fulfilled' && r.value).length
+      setDoneCount(count)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits.map(h => h.id).join(','), today])
+
   return (
-    <p className="text-xs text-gray-400 mb-2">{done} / {habits.length} done today</p>
+    <p className="text-xs text-gray-400 mb-2">{doneCount} / {habits.length} done today</p>
   )
 }
 

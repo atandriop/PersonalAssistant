@@ -153,7 +153,6 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
       <div className="flex flex-col gap-2">
         {filtered.map(h => {
           const v = holdingValue(h)
-          const p = holdingPnl(h)
           const isSavings = h.type === 'savings'
           const displayVal = isSavings ? (h.balance ?? 0) : (h.currentPrice ?? 0)
 
