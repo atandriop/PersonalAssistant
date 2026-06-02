@@ -1,5 +1,6 @@
 'use client'
 
+import type React from 'react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -45,6 +46,22 @@ function getTaskStatus(task: MaintenanceTask): TaskStatus {
   if (nextDue < today) return 'overdue'
   if (nextDue <= in30) return 'due-soon'
   return 'ok'
+}
+
+// ─── Habits Done Count ──────────────────────────────────────────────────────
+function HabitsDoneCount({ habits }: { habits: Habit[] }) {
+  // Fetches logs for all habits and counts how many are done today
+  // Uses a separate SWR call per habit (same data already fetched by HabitTodayRow — SWR deduplicates)
+  const today = new Date().toISOString().slice(0, 10)
+  const counts = habits.map(h => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { data: logs = [] } = useSWR<string[]>(`/api/habits/${h.id}/logs`, fetcher)
+    return logs.includes(today) ? 1 : 0
+  })
+  const done = counts.reduce((a, b) => a + b, 0 as number)
+  return (
+    <p className="text-xs text-gray-400 mb-2">{done} / {habits.length} done today</p>
+  )
 }
 
 // ─── Habit Today Row ────────────────────────────────────────────────────────
@@ -145,6 +162,7 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-400">No habits set up yet.</p>
           ) : (
             <div className="flex flex-col">
+              <HabitsDoneCount habits={habits} />
               {habits.map(h => <HabitTodayRow key={h.id} habit={h} />)}
             </div>
           )}
@@ -156,8 +174,8 @@ export default function DashboardPage() {
             <p className="text-sm text-green-600 dark:text-green-400">All up to date ✓</p>
           ) : (
             <div className="flex flex-col gap-1">
-              {alertItems.map(({ item, task, status }, i) => (
-                <div key={i} className="flex items-start justify-between gap-2 py-0.5">
+              {alertItems.map(({ item, task, status }) => (
+                <div key={task.id} className="flex items-start justify-between gap-2 py-0.5">
                   <div className="min-w-0">
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">{item.name}</span>
                     <span className="text-xs text-gray-400 truncate block">{task.description}</span>
