@@ -193,3 +193,34 @@ model NetWorthSnapshot {
 
   @@unique([date])
 }
+
+model HomeItem {
+  id        Int                @id @default(autoincrement())
+  name      String
+  notes     String?
+  tasks     MaintenanceTask[]
+  logs      MaintenanceLog[]
+  createdAt DateTime           @default(now())
+}
+
+model MaintenanceTask {
+  id             Int      @id @default(autoincrement())
+  homeItemId     Int
+  homeItem       HomeItem @relation(fields: [homeItemId], references: [id], onDelete: Cascade)
+  description    String
+  intervalMonths Int?
+  dueDate        String?
+  lastDoneDate   String?
+  createdAt      DateTime @default(now())
+}
+
+model MaintenanceLog {
+  id          Int      @id @default(autoincrement())
+  homeItemId  Int
+  homeItem    HomeItem @relation(fields: [homeItemId], references: [id], onDelete: Cascade)
+  description String
+  date        String
+  cost        Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
