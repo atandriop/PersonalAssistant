@@ -86,6 +86,22 @@ Returns all memories ordered by `date desc`. Each memory includes linked trips (
 export const dynamic = 'force-dynamic'
 ```
 
+Prisma include chain:
+```typescript
+include: {
+  trips: {
+    include: {
+      trip: {
+        include: { country: { select: { name: true } } },
+        select: { id: true, startDate: true, countryId: true }
+      }
+    }
+  }
+}
+```
+
+Serialize each memory's trips as `{ id: trip.id, countryName: trip.country.name, startDate: trip.startDate }`.
+
 Response: `Memory[]`
 
 ### `POST /api/memories`
@@ -160,7 +176,7 @@ include: {
 | Date | Single date ("Jun 2019") or range ("Jun 2019 – Aug 2019") |
 | Category chip | Color-coded: Career=blue, Education=purple, Travel=green, Personal=pink, Other=gray |
 | Location | Small gray line, only shown if present |
-| Trip chips | One chip per linked trip showing country name; clicking navigates to `/travel` (trips tab, filtered by that country) |
+| Trip chips | One chip per linked trip showing country name; clicking navigates to `/travel?tab=trips&country={countryName}` |
 | Notes | Truncated to 2 lines if long |
 
 ### `MemoryForm.tsx`
@@ -215,7 +231,8 @@ Inserted after Travel and before Maintenance.
 | `prisma/schema.prisma` | Add `Memory`, `MemoryTrip`; extend `TravelTrip` |
 | `src/types/index.ts` | Add `Memory` type; extend `TravelTrip` |
 | `src/app/api/travel/trips/route.ts` | Include memories in GET response |
-| `src/components/travel/TripCard.tsx` | Show "X memories" chip |
+| `src/components/travel/TripCard.tsx` | Show "X memories" chip (links to `/memories?tripId={id}`) |
+| `src/components/travel/TravelPage.tsx` | Read `?tab` and `?country` URL params on mount via `useSearchParams()` |
 | `src/components/Sidebar.tsx` | Add Memories nav entry |
 | `src/components/dashboard/DashboardPage.tsx` | Add Memories widget |
 
