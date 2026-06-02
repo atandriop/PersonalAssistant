@@ -63,3 +63,25 @@ export interface Document {
   expiryDate: string | null
   createdAt: string
 }
+
+export interface BucketTrip {
+  id: number
+  destination: string
+  cities: string[]
+  budget: number | null
+  targetYear: number | null
+  notes: string | null
+  done: boolean
+  linkedToTravel: boolean
+  createdAt: string
+}
+
+export interface BucketExperience {
+  id: number
+  title: string
+  category: string
+  notes: string | null
+  targetYear: number | null
+  done: boolean
+  createdAt: string
+}
