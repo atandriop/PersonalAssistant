@@ -4,7 +4,7 @@ import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience } from '@/types'
+import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -112,6 +112,8 @@ export default function DashboardPage() {
   const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
   const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
   const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
+  const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
+  const { data: travelTrips = [], isLoading: travelTripsLoading } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
 
   // ── Documents widget ──
   const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
@@ -287,6 +289,32 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          )}
+        </WidgetCard>
+
+        {/* Travel */}
+        <WidgetCard title="Travel">
+          {travelCountriesLoading || travelTripsLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : travelCountries.length === 0 && travelTrips.length === 0 ? (
+            <p className="text-sm text-gray-400">No trips logged yet.</p>
+          ) : (
+            <a href="/travel" className="flex gap-6 hover:opacity-80">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelCountries.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">countries</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelTrips.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">trips</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  €{travelTrips.reduce((s, t) => s + (t.actualCost ?? 0), 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
+              </div>
+            </a>
           )}
         </WidgetCard>
 
