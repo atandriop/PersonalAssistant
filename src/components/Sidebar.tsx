@@ -10,7 +10,6 @@ const NAV = [
   { href: '/matrices', label: 'Matrices', active: true },
   { href: '/portfolio', label: 'Portfolio', active: true },
   { href: '/net-worth', label: 'Net Worth', active: true },
-  { href: '/trends', label: 'Trends', active: true },
   { href: '/weekly-review', label: 'Weekly Review', active: true },
   { href: '/subscriptions', label: 'Subscriptions', active: true },
   { href: '/habits', label: 'Habits', active: true },

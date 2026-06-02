@@ -33,6 +33,10 @@ interface NetWorthSnapshot {
   total: number
 }
 
+interface Snapshot {
+  id: number; date: string; wishlistTotal: number; portfolioTotal: number
+}
+
 function holdingValue(h: PortfolioHolding): number {
   if (h.quantity != null && h.currentPrice != null) return h.quantity * h.currentPrice
   if (h.balance != null) return h.balance
@@ -46,7 +50,7 @@ function fmt(n: number): string {
 // ─── Line chart ───────────────────────────────────────────────────────────
 const SVG_W = 600, SVG_H = 160, PAD_L = 56, PAD_R = 16, PAD_T = 12, PAD_B = 24
 
-function LineChart({ data }: { data: { x: number; y: number }[] }) {
+function LineChart({ data, color = '#10b981' }: { data: { x: number; y: number }[]; color?: string }) {
   if (data.length < 2) {
     return <p className="text-sm text-gray-400 text-center py-6">Add more data to see the trend.</p>
   }
@@ -69,11 +73,11 @@ function LineChart({ data }: { data: { x: number; y: number }[] }) {
     { sx: toSx(minX), label: new Date(minX).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) },
     { sx: toSx(maxX), label: new Date(maxX).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) },
   ]
-  const color = '#10b981'
+  const gradId = `nw-grad-${color.replace('#', '')}`
   return (
     <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: SVG_H }}>
       <defs>
-        <linearGradient id="nw-grad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.15" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
@@ -92,7 +96,7 @@ function LineChart({ data }: { data: { x: number; y: number }[] }) {
           {l.label}
         </text>
       ))}
-      <path d={areaD} fill="url(#nw-grad)" />
+      <path d={areaD} fill={`url(#${gradId})`} />
       <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map((p, i) => (
         <circle key={i} cx={p.sx.toFixed(1)} cy={p.sy.toFixed(1)} r="3" fill={color}>
@@ -156,6 +160,7 @@ export default function NetWorthPage() {
   const { data: entries = [], mutate: mutateEntries } = useSWR<NetWorthEntry[]>('/api/net-worth/entries', fetcher)
   const { data: holdings = [] } = useSWR<PortfolioHolding[]>('/api/portfolio', fetcher)
   const { data: snapshots = [], mutate: mutateSnapshots } = useSWR<NetWorthSnapshot[]>('/api/net-worth/snapshots', fetcher)
+  const { data: snapshots2 = [], mutate: mutateSnapshots2 } = useSWR<Snapshot[]>('/api/snapshots', fetcher)
   const [addType, setAddType] = useState<'asset' | 'liability'>('asset')
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<NetWorthEntry | null>(null)
@@ -170,6 +175,15 @@ export default function NetWorthPage() {
     })
   }, [mutateSnapshots])
 
+  useEffect(() => {
+    const today = new Date().toDateString()
+    if (sessionStorage.getItem('lastSnapshot') === today) return
+    fetch('/api/snapshots', { method: 'POST' }).then(() => {
+      sessionStorage.setItem('lastSnapshot', today)
+      mutateSnapshots2()
+    })
+  }, [mutateSnapshots2])
+
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
   const assetEntries = entries.filter(e => e.type === 'asset')
   const liabilityEntries = entries.filter(e => e.type === 'liability')
@@ -179,6 +193,10 @@ export default function NetWorthPage() {
 
   const sortedSnapshots = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
   const chartData = sortedSnapshots.map(s => ({ x: new Date(s.date).getTime(), y: s.total }))
+
+  const sortedSnapshots2 = [...snapshots2].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const wishlistChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date).getTime(), y: s.wishlistTotal }))
+  const portfolioChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date).getTime(), y: s.portfolioTotal }))
 
   async function deleteEntry(id: number) {
     if (!confirm('Delete this entry?')) return
@@ -217,6 +235,16 @@ export default function NetWorthPage() {
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Net Worth Over Time</h2>
         <LineChart data={chartData} />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Wishlist Total Over Time</h2>
+        <LineChart data={wishlistChartData} color="#3b82f6" />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Portfolio Value Over Time</h2>
+        <LineChart data={portfolioChartData} color="#10b981" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
