@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge'
 import WishlistForm from './WishlistForm'
 import CategoryManager from '@/components/categories/CategoryManager'
 import InventoryForm from '@/components/inventory/InventoryForm'
+import ItemsTabs from '@/components/items/ItemsTabs'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -85,6 +86,7 @@ Given typical budget constraints, suggest a sensible purchase order. Flag any it
 
   return (
     <div>
+      <ItemsTabs active="wishlist" />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Wishlist</h1>
         <div className="flex gap-2">

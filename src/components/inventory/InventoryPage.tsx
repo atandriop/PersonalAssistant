@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge'
 import InventoryForm from './InventoryForm'
 import CategoryManager from '@/components/categories/CategoryManager'
 import { useRouter } from 'next/navigation'
+import ItemsTabs from '@/components/items/ItemsTabs'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -50,6 +51,7 @@ export default function InventoryPage() {
 
   return (
     <div>
+      <ItemsTabs active="inventory" />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
         <div className="flex gap-2">
