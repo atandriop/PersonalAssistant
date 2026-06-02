@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import TaskForm from '@/components/tasks/TaskForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -221,6 +222,7 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
   const [newMilestone, setNewMilestone] = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [showLinkHabit, setShowLinkHabit] = useState(false)
+  const [addToTask, setAddToTask] = useState<{ title: string; goalId: number } | null>(null)
 
   const pct = Math.round(calcProgress(goal, habitLogs) * 100)
 
@@ -298,6 +300,12 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
                     {m.completedAt && <span className="text-white text-xs">✓</span>}
                   </button>
                   <span className={`text-sm flex-1 ${m.completedAt ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{m.title}</span>
+                  <button
+                    onClick={() => setAddToTask({ title: m.title, goalId: m.goalId })}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-2"
+                  >
+                    + Task
+                  </button>
                   <button onClick={() => deleteMilestone(m.id)} className="text-xs text-gray-300 hover:text-red-400 dark:text-gray-600 dark:hover:text-red-400">×</button>
                 </div>
               ))}
@@ -350,6 +358,16 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
             </div>
           </div>
         </div>
+      )}
+      {addToTask && (
+        <Modal title="Add to Tasks" onClose={() => setAddToTask(null)}>
+          <TaskForm
+            preTitle={addToTask.title}
+            preSourceLink={{ sourceType: 'goal', sourceId: addToTask.goalId }}
+            onSave={() => setAddToTask(null)}
+            onCancel={() => setAddToTask(null)}
+          />
+        </Modal>
       )}
     </div>
   )
