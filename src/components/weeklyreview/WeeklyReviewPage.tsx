@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import PromptModal from '@/components/ui/PromptModal'
+import { MaintenanceTask, HomeItem, addMonths, getTaskStatus } from '@/lib/maintenance'
+import type { Habit, Goal, LifeArea, Subscription } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -22,52 +24,11 @@ interface WeeklyData {
   weekEnd: string
 }
 
-interface Habit { id: number; name: string; color: string }
-interface MaintenanceTask2 {
-  id: number; description: string; intervalMonths: number | null
-  dueDate: string | null; lastDoneDate: string | null; createdAt: string
-}
-interface HomeItem2 { id: number; name: string; tasks: MaintenanceTask2[] }
-interface Milestone2 { id: number; completedAt: string | null }
-interface Goal2 { id: number; title: string; milestones: Milestone2[] }
-interface LifeArea2 { id: number; name: string; goals: Goal2[] }
-interface Subscription2 {
-  id: number; name: string; cost: number; period: string
-  renewalDate: string | null; active: boolean
-}
-
 function getWeekKey(): string {
   const d = new Date()
   const startOfYear = new Date(d.getFullYear(), 0, 1)
   const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7)
   return `weekly-review-notes-${d.getFullYear()}-W${week}`
-}
-
-function addMonthsWR(dateStr: string, months: number): string {
-  const d = new Date(dateStr)
-  const targetMonth = d.getUTCMonth() + months
-  d.setUTCMonth(targetMonth)
-  if (d.getUTCMonth() !== ((targetMonth % 12) + 12) % 12) d.setUTCDate(0)
-  return d.toISOString().slice(0, 10)
-}
-
-type TaskStatus2 = 'overdue' | 'due-soon' | 'ok' | 'none'
-
-function getTaskStatusWR(task: MaintenanceTask2): TaskStatus2 {
-  const today = new Date().toISOString().slice(0, 10)
-  const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  let nextDue: string | null = null
-  if (task.intervalMonths != null) {
-    const base = task.lastDoneDate ?? task.createdAt.slice(0, 10)
-    nextDue = addMonthsWR(base, task.intervalMonths)
-  } else if (task.dueDate != null) {
-    if (task.lastDoneDate && task.lastDoneDate >= task.dueDate) return 'none'
-    nextDue = task.dueDate
-  }
-  if (!nextDue) return 'none'
-  if (nextDue < today) return 'overdue'
-  if (nextDue <= in30) return 'due-soon'
-  return 'ok'
 }
 
 function getWeekDates(): string[] {
@@ -118,9 +79,9 @@ function WeekSection({ title, children }: { title: string; children: React.React
 export default function WeeklyReviewPage() {
   const { data } = useSWR<WeeklyData>('/api/weekly-review', fetcher)
   const { data: habits = [] } = useSWR<Habit[]>('/api/habits', fetcher)
-  const { data: maintenanceItems = [] } = useSWR<HomeItem2[]>('/api/maintenance/items', fetcher)
-  const { data: lifeAreas = [] } = useSWR<LifeArea2[]>('/api/life-areas', fetcher)
-  const { data: subscriptions = [] } = useSWR<Subscription2[]>('/api/subscriptions', fetcher)
+  const { data: maintenanceItems = [] } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
+  const { data: lifeAreas = [] } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
+  const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
   const [notes, setNotes] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
   const weekKey = getWeekKey()
@@ -134,7 +95,7 @@ export default function WeeklyReviewPage() {
 
   const maintenanceAlerts = maintenanceItems.flatMap(item =>
     item.tasks
-      .map(t => ({ item, task: t, status: getTaskStatusWR(t) }))
+      .map(t => ({ item, task: t, status: getTaskStatus(t).status }))
       .filter(x => x.status === 'overdue' || x.status === 'due-soon')
   )
 
