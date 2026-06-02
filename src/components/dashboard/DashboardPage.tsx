@@ -3,51 +3,10 @@
 import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
+import { TaskStatus, MaintenanceTask, HomeItem, addMonths, getTaskStatus } from '@/lib/maintenance'
+import type { Habit, Milestone, Goal, LifeArea, GiftIdea, GiftPerson } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
-
-// ─── Types ─────────────────────────────────────────────────────────────────
-interface Habit { id: number; name: string; color: string }
-
-interface MaintenanceTask {
-  id: number; description: string; intervalMonths: number | null
-  dueDate: string | null; lastDoneDate: string | null; createdAt: string
-}
-interface HomeItem { id: number; name: string; tasks: MaintenanceTask[] }
-type TaskStatus = 'overdue' | 'due-soon' | 'ok' | 'none'
-
-interface Milestone { id: number; completedAt: string | null }
-interface Goal { id: number; title: string; milestones: Milestone[]; habitLinks: unknown[] }
-interface LifeArea { id: number; name: string; goals: Goal[] }
-
-interface GiftIdea { id: number; estimatedCost: number | null; purchased: boolean }
-interface GiftPerson { id: number; name: string; budget: number | null; ideas: GiftIdea[] }
-
-// ─── Maintenance helpers ────────────────────────────────────────────────────
-function addMonths(dateStr: string, months: number): string {
-  const d = new Date(dateStr)
-  const targetMonth = d.getUTCMonth() + months
-  d.setUTCMonth(targetMonth)
-  if (d.getUTCMonth() !== ((targetMonth % 12) + 12) % 12) d.setUTCDate(0)
-  return d.toISOString().slice(0, 10)
-}
-
-function getTaskStatus(task: MaintenanceTask): TaskStatus {
-  const today = new Date().toISOString().slice(0, 10)
-  const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  let nextDue: string | null = null
-  if (task.intervalMonths != null) {
-    const base = task.lastDoneDate ?? task.createdAt.slice(0, 10)
-    nextDue = addMonths(base, task.intervalMonths)
-  } else if (task.dueDate != null) {
-    if (task.lastDoneDate && task.lastDoneDate >= task.dueDate) return 'none'
-    nextDue = task.dueDate
-  }
-  if (!nextDue) return 'none'
-  if (nextDue < today) return 'overdue'
-  if (nextDue <= in30) return 'due-soon'
-  return 'ok'
-}
 
 // ─── Habits Done Count ──────────────────────────────────────────────────────
 function HabitDoneCheck({ habitId, today, onResult }: {
@@ -71,7 +30,9 @@ function HabitsDoneCount({ habits }: { habits: Habit[] }) {
       {habits.map(h => (
         <HabitDoneCheck key={h.id} habitId={h.id} today={today} onResult={handleResult} />
       ))}
-      <p className="text-xs text-gray-400 mb-2">{doneCount} / {habits.length} done today</p>
+      <p className="text-xs text-gray-400 mb-2">
+        {Object.keys(doneMap).length < habits.length ? '—' : doneCount} / {habits.length} done today
+      </p>
     </>
   )
 }
@@ -127,15 +88,15 @@ function WidgetCard({ title, borderStyle, children }: {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { data: habits = [] } = useSWR<Habit[]>('/api/habits', fetcher)
-  const { data: maintenanceItems = [] } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
-  const { data: lifeAreas = [] } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
-  const { data: giftPeople = [] } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
+  const { data: habits = [], isLoading: habitsLoading } = useSWR<Habit[]>('/api/habits', fetcher)
+  const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
+  const { data: lifeAreas = [], isLoading: goalsLoading } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
+  const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
 
   // ── Maintenance widget ──
   const alertItems = maintenanceItems.flatMap(item =>
     item.tasks
-      .map(t => ({ item, task: t, status: getTaskStatus(t) }))
+      .map(t => ({ item, task: t, status: getTaskStatus(t).status }))
       .filter(x => x.status === 'overdue' || x.status === 'due-soon')
   )
   const worstMaintenance: TaskStatus = alertItems.some(x => x.status === 'overdue')
@@ -170,7 +131,9 @@ export default function DashboardPage() {
 
         {/* Habits Today */}
         <WidgetCard title="Habits Today">
-          {habits.length === 0 ? (
+          {habitsLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : habits.length === 0 ? (
             <p className="text-sm text-gray-400">No habits set up yet.</p>
           ) : (
             <div className="flex flex-col">
@@ -182,7 +145,9 @@ export default function DashboardPage() {
 
         {/* Maintenance */}
         <WidgetCard title="Maintenance" borderStyle={maintenanceBorder}>
-          {alertItems.length === 0 ? (
+          {maintenanceLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : alertItems.length === 0 ? (
             <p className="text-sm text-green-600 dark:text-green-400">All up to date ✓</p>
           ) : (
             <div className="flex flex-col gap-1">
@@ -203,7 +168,9 @@ export default function DashboardPage() {
 
         {/* Goals */}
         <WidgetCard title="Goals">
-          {lowestGoals.length === 0 ? (
+          {goalsLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : lowestGoals.length === 0 ? (
             <p className="text-sm text-gray-400">No goals set up yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -228,7 +195,9 @@ export default function DashboardPage() {
 
         {/* Gifts */}
         <WidgetCard title="Gifts">
-          {peopleWithIdeas.length === 0 ? (
+          {giftsLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : peopleWithIdeas.length === 0 ? (
             <p className="text-sm text-gray-400">No gift ideas yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
