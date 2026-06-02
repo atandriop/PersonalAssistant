@@ -22,6 +22,26 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
   if (done === true) updateData.linkedToTravel = true
   const trip = await prisma.bucketTrip.update({ where: { id }, data: updateData })
+
+  // Auto-import to Travel when marking done (only once per bucket trip)
+  if (done === true) {
+    const existing = await prisma.travelTrip.findFirst({ where: { bucketTripId: id } })
+    if (!existing) {
+      const country = await prisma.travelCountry.upsert({
+        where: { name: destination },
+        update: {},
+        create: { name: destination },
+      })
+      await prisma.travelTrip.create({
+        data: {
+          countryId: country.id,
+          cities: trip.cities,
+          bucketTripId: id,
+        },
+      })
+    }
+  }
+
   return NextResponse.json(
     { ...trip, cities: trip.cities ? JSON.parse(trip.cities) as string[] : [] }
   )
