@@ -155,32 +155,51 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link to</label>
-        <div className="flex gap-2">
-          <select
-            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            value={sourceType}
-            onChange={e => { setSourceType(e.target.value as '' | 'wishlist' | 'goal'); setSourceId('') }}
-          >
-            <option value="">None</option>
-            <option value="wishlist">Wishlist item</option>
-            <option value="goal">Goal</option>
-          </select>
-          {sourceType && (
-            <select
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              value={sourceId}
-              onChange={e => setSourceId(Number(e.target.value))}
-            >
-              <option value="">Select…</option>
-              {sourceOptions.map(item => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          )}
+      {initial && initial.subtasks.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subtasks</label>
+          <div className="flex flex-col gap-1">
+            {initial.subtasks.map(s => (
+              <div key={s.id} className="flex items-center gap-2">
+                <span className={`w-4 h-4 rounded border flex items-center justify-center text-xs shrink-0 ${s.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-600'}`}>
+                  {s.done ? '✓' : ''}
+                </span>
+                <span className={`text-sm ${s.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{s.title}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">Manage subtasks by expanding the task row.</p>
         </div>
-      </div>
+      )}
+
+      {!initial && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link to</label>
+          <div className="flex gap-2">
+            <select
+              className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              value={sourceType}
+              onChange={e => { setSourceType(e.target.value as '' | 'wishlist' | 'goal'); setSourceId('') }}
+            >
+              <option value="">None</option>
+              <option value="wishlist">Wishlist item</option>
+              <option value="goal">Goal</option>
+            </select>
+            {sourceType && (
+              <select
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                value={sourceId}
+                onChange={e => setSourceId(Number(e.target.value))}
+              >
+                <option value="">Select…</option>
+                {sourceOptions.map(item => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
