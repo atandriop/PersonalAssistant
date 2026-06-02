@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import DashboardPage from '@/components/dashboard/DashboardPage'
 
 export default function Home() {
-  redirect('/wishlist')
+  return <DashboardPage />
 }
