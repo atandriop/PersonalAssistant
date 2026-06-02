@@ -137,8 +137,8 @@ function TaskForm({ itemId, initial, onSave, onCancel }: { itemId: number; initi
     <form onSubmit={submit} className="flex flex-col gap-3">
       <input required value={description} onChange={e => setDescription(e.target.value)} placeholder="Task description (e.g. Annual service)" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
       <div className="flex gap-2">
-        <button type="button" onClick={() => setType('recurring')} className={`flex-1 py-2 text-sm rounded-lg border ${type === 'recurring' ? 'bg-blue-600 text-white border-blue-600' : 'dark:border-gray-600 dark:text-gray-300'}`}>Recurring</button>
-        <button type="button" onClick={() => setType('once')} className={`flex-1 py-2 text-sm rounded-lg border ${type === 'once' ? 'bg-blue-600 text-white border-blue-600' : 'dark:border-gray-600 dark:text-gray-300'}`}>One-off</button>
+        <button type="button" onClick={() => setType('recurring')} className={`flex-1 py-2 text-sm rounded-lg border ${type === 'recurring' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'}`}>Recurring</button>
+        <button type="button" onClick={() => setType('once')} className={`flex-1 py-2 text-sm rounded-lg border ${type === 'once' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'}`}>One-off</button>
       </div>
       {type === 'recurring' ? (
         <div className="flex items-center gap-2">
