@@ -245,3 +245,47 @@ model GiftIdea {
   notes         String?
   createdAt     DateTime   @default(now())
 }
+
+model Task {
+  id         Int             @id @default(autoincrement())
+  title      String
+  priority   String          @default("Medium")
+  dueDate    DateTime?
+  category   String?
+  notes      String?
+  done       Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  subtasks   Subtask[]
+  sourceLink TaskSourceLink?
+}
+
+model Subtask {
+  id     Int     @id @default(autoincrement())
+  taskId Int
+  task   Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title  String
+  done   Boolean @default(false)
+}
+
+model TaskSourceLink {
+  id         Int    @id @default(autoincrement())
+  taskId     Int    @unique
+  task       Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  sourceType String
+  sourceId   Int
+}
+
+model Appointment {
+  id                Int      @id @default(autoincrement())
+  title             String
+  date              String
+  time              String?
+  location          String?
+  category          String   @default("Other")
+  notes             String?
+  done              Boolean  @default(false)
+  cost              Float?
+  recurring         Boolean  @default(false)
+  recurringInterval String?
+  createdAt         DateTime @default(now())
+}
