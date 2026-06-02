@@ -28,6 +28,16 @@ function holdingPnl(h: Holding): number {
   return ((h.currentPrice ?? 0) - (h.buyPrice ?? 0)) * (h.quantity ?? 0)
 }
 
+function pnlDisplay(h: Holding): { text: string; cls: string } {
+  if (h.quantity == null || h.currentPrice == null || h.buyPrice == null) {
+    return { text: '—', cls: 'text-gray-400' }
+  }
+  const pnl = (h.currentPrice - h.buyPrice) * h.quantity
+  if (pnl === 0) return { text: '€0', cls: 'text-gray-400' }
+  if (pnl > 0) return { text: `+€${pnl.toFixed(2)}`, cls: 'text-green-600 dark:text-green-400' }
+  return { text: `−€${Math.abs(pnl).toFixed(2)}`, cls: 'text-red-500' }
+}
+
 function projected(h: Holding): number {
   return (h.balance ?? 0) * (1 + (h.interestRate ?? 0) / 100)
 }
@@ -181,11 +191,10 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
                     €{v.toFixed(2)}
                   </button>
                 )}
-                {!isSavings && (
-                  <div className={`text-xs font-medium ${p >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                    {p >= 0 ? '+' : ''}€{p.toFixed(2)}
-                  </div>
-                )}
+                {(() => {
+                  const { text, cls } = pnlDisplay(h)
+                  return <div className={`text-xs font-medium ${cls}`}>{text}</div>
+                })()}
               </div>
 
               <div className="flex gap-1 shrink-0">
