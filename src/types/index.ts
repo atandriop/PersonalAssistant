@@ -85,3 +85,27 @@ export interface BucketExperience {
   done: boolean
   createdAt: string
 }
+
+export interface TravelCountry {
+  id: number
+  name: string
+  notes: string | null
+  createdAt: string
+  tripCount: number
+  totalSpend: number
+  firstVisit: string | null
+}
+
+export interface TravelTrip {
+  id: number
+  countryId: number
+  countryName: string
+  cities: string[]
+  startDate: string | null
+  endDate: string | null
+  actualCost: number | null
+  rating: number | null
+  notes: string | null
+  bucketTripId: number | null
+  createdAt: string
+}
