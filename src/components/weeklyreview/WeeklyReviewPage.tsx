@@ -22,11 +22,84 @@ interface WeeklyData {
   weekEnd: string
 }
 
+interface Habit { id: number; name: string; color: string }
+interface MaintenanceTask2 {
+  id: number; description: string; intervalMonths: number | null
+  dueDate: string | null; lastDoneDate: string | null; createdAt: string
+}
+interface HomeItem2 { id: number; name: string; tasks: MaintenanceTask2[] }
+interface Milestone2 { id: number; completedAt: string | null }
+interface Goal2 { id: number; title: string; milestones: Milestone2[] }
+interface LifeArea2 { id: number; name: string; goals: Goal2[] }
+interface Subscription2 {
+  id: number; name: string; cost: number; period: string
+  renewalDate: string | null; active: boolean
+}
+
 function getWeekKey(): string {
   const d = new Date()
   const startOfYear = new Date(d.getFullYear(), 0, 1)
   const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7)
   return `weekly-review-notes-${d.getFullYear()}-W${week}`
+}
+
+function addMonthsWR(dateStr: string, months: number): string {
+  const d = new Date(dateStr)
+  const targetMonth = d.getUTCMonth() + months
+  d.setUTCMonth(targetMonth)
+  if (d.getUTCMonth() !== ((targetMonth % 12) + 12) % 12) d.setUTCDate(0)
+  return d.toISOString().slice(0, 10)
+}
+
+type TaskStatus2 = 'overdue' | 'due-soon' | 'ok' | 'none'
+
+function getTaskStatusWR(task: MaintenanceTask2): TaskStatus2 {
+  const today = new Date().toISOString().slice(0, 10)
+  const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  let nextDue: string | null = null
+  if (task.intervalMonths != null) {
+    const base = task.lastDoneDate ?? task.createdAt.slice(0, 10)
+    nextDue = addMonthsWR(base, task.intervalMonths)
+  } else if (task.dueDate != null) {
+    if (task.lastDoneDate && task.lastDoneDate >= task.dueDate) return 'none'
+    nextDue = task.dueDate
+  }
+  if (!nextDue) return 'none'
+  if (nextDue < today) return 'overdue'
+  if (nextDue <= in30) return 'due-soon'
+  return 'ok'
+}
+
+function getWeekDates(): string[] {
+  const today = new Date()
+  const dow = today.getDay() || 7
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - (dow - 1))
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+}
+
+function HabitWeekRow({ habit, weekDates }: { habit: Habit; weekDates: string[] }) {
+  const { data: logs = [] } = useSWR<string[]>(`/api/habits/${habit.id}/logs`, fetcher)
+  const count = weekDates.filter(d => logs.includes(d)).length
+  const pct = count / 7
+  return (
+    <div className="mb-2">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: habit.color }} />
+          {habit.name}
+        </span>
+        <span className="text-xs text-gray-500">{count}/7</span>
+      </div>
+      <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round(pct * 100)}%` }} />
+      </div>
+    </div>
+  )
 }
 
 function WeekSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -40,9 +113,38 @@ function WeekSection({ title, children }: { title: string; children: React.React
 
 export default function WeeklyReviewPage() {
   const { data } = useSWR<WeeklyData>('/api/weekly-review', fetcher)
+  const { data: habits = [] } = useSWR<Habit[]>('/api/habits', fetcher)
+  const { data: maintenanceItems = [] } = useSWR<HomeItem2[]>('/api/maintenance/items', fetcher)
+  const { data: lifeAreas = [] } = useSWR<LifeArea2[]>('/api/life-areas', fetcher)
+  const { data: subscriptions = [] } = useSWR<Subscription2[]>('/api/subscriptions', fetcher)
   const [notes, setNotes] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
   const weekKey = getWeekKey()
+
+  const weekDates = getWeekDates()
+
+  const maintenanceAlerts = maintenanceItems.flatMap(item =>
+    item.tasks
+      .map(t => ({ item, task: t, status: getTaskStatusWR(t) }))
+      .filter(x => x.status === 'overdue' || x.status === 'due-soon')
+  )
+
+  const goalsWithMilestones = lifeAreas.flatMap(area =>
+    area.goals
+      .filter(g => g.milestones.length > 0)
+      .map(g => ({
+        ...g,
+        areaName: area.name,
+        done: g.milestones.filter(m => m.completedAt !== null).length,
+        total: g.milestones.length,
+      }))
+  )
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const today30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const renewingSoon = subscriptions
+    .filter(s => s.active && s.renewalDate != null && s.renewalDate >= todayStr && s.renewalDate <= today30)
+    .sort((a, b) => (a.renewalDate ?? '').localeCompare(b.renewalDate ?? ''))
 
   useEffect(() => {
     setNotes(localStorage.getItem(weekKey) ?? '')
@@ -158,6 +260,80 @@ Please identify patterns in this week's activity, flag anything I should follow 
               </p>
             )}
           </WeekSection>
+
+          <WeekSection title="Habits This Week">
+            {habits.length === 0 ? (
+              <p className="text-sm text-gray-400">No habits tracked.</p>
+            ) : (
+              <div>
+                {habits.map(h => <HabitWeekRow key={h.id} habit={h} weekDates={weekDates} />)}
+              </div>
+            )}
+          </WeekSection>
+
+          <WeekSection title="Goal Progress">
+            {goalsWithMilestones.length === 0 ? (
+              <p className="text-sm text-gray-400">No goals with milestones.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {goalsWithMilestones.map(g => (
+                  <div key={g.id}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{g.title}</span>
+                      <span className="text-xs text-gray-400 shrink-0 ml-2">{g.done} / {g.total}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 block mb-1">{g.areaName}</span>
+                    <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500 rounded-full"
+                        style={{ width: `${g.total > 0 ? Math.round((g.done / g.total) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </WeekSection>
+
+          <WeekSection title="Maintenance Alerts">
+            {maintenanceAlerts.length === 0 ? (
+              <p className="text-sm text-gray-400">Nothing overdue or due soon.</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {maintenanceAlerts.map(({ item, task, status }) => (
+                  <div key={task.id} className="flex items-start justify-between gap-2 py-0.5">
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">{item.name}</span>
+                      <span className="text-xs text-gray-400 truncate block">{task.description}</span>
+                    </div>
+                    <span className={`text-xs font-medium shrink-0 ${status === 'overdue' ? 'text-red-500' : 'text-amber-500'}`}>
+                      {status === 'overdue' ? 'Overdue' : 'Due soon'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </WeekSection>
+
+          {renewingSoon.length > 0 && (
+            <WeekSection title="Subscriptions Renewing Soon">
+              <div className="flex flex-col gap-1">
+                {renewingSoon.map(s => (
+                  <div key={s.id} className="flex items-center justify-between py-0.5">
+                    <span className="text-sm text-gray-800 dark:text-gray-200">{s.name}</span>
+                    <div className="text-right shrink-0 ml-2">
+                      <span className="text-xs text-gray-500 block">
+                        {new Date(s.renewalDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        €{s.cost.toFixed(2)} / {s.period}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </WeekSection>
+          )}
         </div>
 
         <div className="flex flex-col">
