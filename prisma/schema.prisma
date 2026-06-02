@@ -324,3 +324,25 @@ model BucketExperience {
   done       Boolean  @default(false)
   createdAt  DateTime @default(now())
 }
+
+model TravelCountry {
+  id        Int          @id @default(autoincrement())
+  name      String       @unique
+  notes     String?
+  trips     TravelTrip[]
+  createdAt DateTime     @default(now())
+}
+
+model TravelTrip {
+  id           Int           @id @default(autoincrement())
+  countryId    Int
+  country      TravelCountry @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  cities       String?
+  startDate    String?
+  endDate      String?
+  actualCost   Float?
+  rating       Int?
+  notes        String?
+  bucketTripId Int?
+  createdAt    DateTime      @default(now())
+}
