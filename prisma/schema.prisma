@@ -289,3 +289,16 @@ model Appointment {
   recurringInterval String?
   createdAt         DateTime @default(now())
 }
+
+model Document {
+  id           Int      @id @default(autoincrement())
+  name         String
+  filename     String   @unique
+  originalName String
+  mimeType     String
+  size         Int
+  category     String
+  notes        String?
+  expiryDate   String?
+  createdAt    DateTime @default(now())
+}
