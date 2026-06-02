@@ -4,7 +4,7 @@ import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson, Appointment, Document } from '@/types'
+import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -110,6 +110,8 @@ export default function DashboardPage() {
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
   const { data: appointments = [], isLoading: apptLoading } = useSWR<Appointment[]>('/api/appointments', fetcher)
   const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
+  const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
+  const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
 
   // ── Documents widget ──
   const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
@@ -284,6 +286,54 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </WidgetCard>
+
+        {/* Bucket List */}
+        <WidgetCard title="Bucket List">
+          {tripsLoading || experiencesLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : bucketTrips.length === 0 && bucketExperiences.length === 0 ? (
+            <p className="text-sm text-gray-400">Nothing on your bucket list yet.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
+                <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
+                  <span>Trips</span>
+                  <span className="text-xs text-gray-400">
+                    {bucketTrips.filter(t => t.done).length} / {bucketTrips.length} done
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 rounded-full"
+                    style={{
+                      width: bucketTrips.length === 0
+                        ? '0%'
+                        : `${Math.round((bucketTrips.filter(t => t.done).length / bucketTrips.length) * 100)}%`
+                    }}
+                  />
+                </div>
+              </a>
+              <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
+                <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
+                  <span>Experiences</span>
+                  <span className="text-xs text-gray-400">
+                    {bucketExperiences.filter(e => e.done).length} / {bucketExperiences.length} done
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full"
+                    style={{
+                      width: bucketExperiences.length === 0
+                        ? '0%'
+                        : `${Math.round((bucketExperiences.filter(e => e.done).length / bucketExperiences.length) * 100)}%`
+                    }}
+                  />
+                </div>
+              </a>
             </div>
           )}
         </WidgetCard>
