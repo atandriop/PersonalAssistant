@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 
@@ -55,13 +55,15 @@ function useHabitLogs(habitIds: number[]): Record<number, string[]> {
   const [logs, setLogs] = useState<Record<number, string[]>>({})
   useEffect(() => {
     if (habitIds.length === 0) return
-    Promise.all(
+    Promise.allSettled(
       habitIds.map(id =>
         fetch(`/api/habits/${id}/logs`).then(r => r.json()).then((dates: string[]) => ({ id, dates }))
       )
     ).then(results => {
       const map: Record<number, string[]> = {}
-      results.forEach(({ id, dates }) => { map[id] = dates })
+      results.forEach(r => {
+        if (r.status === 'fulfilled') map[r.value.id] = r.value.dates
+      })
       setLogs(map)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,8 +149,9 @@ export default function GoalsPage() {
   const [expandedAreaId, setExpandedAreaId] = useState<number | null>(null)
   const [showAddArea, setShowAddArea] = useState(false)
   const [editingArea, setEditingArea] = useState<LifeArea | null>(null)
-  const allLinkedHabitIds = Array.from(
-    new Set(areas.flatMap(a => a.goals.flatMap(g => g.habitLinks.map(l => l.habitId))))
+  const allLinkedHabitIds = useMemo(
+    () => Array.from(new Set(areas.flatMap(a => a.goals.flatMap(g => g.habitLinks.map(l => l.habitId))))),
+    [areas]
   )
   const habitLogs = useHabitLogs(allLinkedHabitIds)
 
