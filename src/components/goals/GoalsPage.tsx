@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 
@@ -48,6 +48,25 @@ function calcAreaProgress(area: LifeArea, habitLogs: Record<number, string[]>): 
   if (area.goals.length === 0) return 0
   const sum = area.goals.reduce((acc, g) => acc + calcProgress(g, habitLogs), 0)
   return sum / area.goals.length
+}
+
+function useHabitLogs(habitIds: number[]): Record<number, string[]> {
+  // Fetch all in one effect rather than per-habit to avoid rule-of-hooks violations
+  const [logs, setLogs] = useState<Record<number, string[]>>({})
+  useEffect(() => {
+    if (habitIds.length === 0) return
+    Promise.all(
+      habitIds.map(id =>
+        fetch(`/api/habits/${id}/logs`).then(r => r.json()).then((dates: string[]) => ({ id, dates }))
+      )
+    ).then(results => {
+      const map: Record<number, string[]> = {}
+      results.forEach(({ id, dates }) => { map[id] = dates })
+      setLogs(map)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitIds.join(',')])
+  return logs
 }
 
 function AreaForm({ initial, onSave, onCancel }: { initial?: LifeArea; onSave: () => void; onCancel: () => void }) {
@@ -128,7 +147,10 @@ export default function GoalsPage() {
   const [expandedAreaId, setExpandedAreaId] = useState<number | null>(null)
   const [showAddArea, setShowAddArea] = useState(false)
   const [editingArea, setEditingArea] = useState<LifeArea | null>(null)
-  const [habitLogs] = useState<Record<number, string[]>>({})
+  const allLinkedHabitIds = Array.from(
+    new Set(areas.flatMap(a => a.goals.flatMap(g => g.habitLinks.map(l => l.habitId))))
+  )
+  const habitLogs = useHabitLogs(allLinkedHabitIds)
 
   async function deleteArea(id: number) {
     if (!confirm('Delete this area and all its goals?')) return
