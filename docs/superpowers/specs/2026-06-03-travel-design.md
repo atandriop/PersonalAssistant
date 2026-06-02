@@ -84,7 +84,7 @@ The GET response computes three derived fields per country:
 
 | Method | Path                       | Action                                                                                                  |
 |--------|----------------------------|---------------------------------------------------------------------------------------------------------|
-| GET    | `/api/travel/trips`        | List all trips ordered by `startDate` desc (nulls last). Each entry includes `countryName` and `cities` parsed from JSON. `export const dynamic = 'force-dynamic'` |
+| GET    | `/api/travel/trips`        | List all trips ordered by `startDate` desc, nulls first (drafts at top). Each entry includes `countryName` and `cities` parsed from JSON. `export const dynamic = 'force-dynamic'` |
 | POST   | `/api/travel/trips`        | Create trip. Accepts `countryId` (existing) or `countryName` (creates country if not found). Serialises `cities` array to JSON. |
 | PUT    | `/api/travel/trips/[id]`   | Update trip fields.                                                                                     |
 | DELETE | `/api/travel/trips/[id]`   | Delete trip.                                                                                            |
