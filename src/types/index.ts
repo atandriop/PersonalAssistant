@@ -50,3 +50,16 @@ export interface Appointment {
   recurringInterval: string | null
   createdAt: string
 }
+
+export interface Document {
+  id: number
+  name: string
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  category: string
+  notes: string | null
+  expiryDate: string | null
+  createdAt: string
+}
