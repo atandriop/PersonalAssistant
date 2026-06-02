@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -50,25 +50,29 @@ function getTaskStatus(task: MaintenanceTask): TaskStatus {
 }
 
 // ─── Habits Done Count ──────────────────────────────────────────────────────
+function HabitDoneCheck({ habitId, today, onResult }: {
+  habitId: number; today: string
+  onResult: (id: number, done: boolean) => void
+}) {
+  const { data: logs = [] } = useSWR<string[]>(`/api/habits/${habitId}/logs`, fetcher)
+  useEffect(() => { onResult(habitId, logs.includes(today)) }, [habitId, today, logs, onResult])
+  return null
+}
+
 function HabitsDoneCount({ habits }: { habits: Habit[] }) {
-  const [doneCount, setDoneCount] = useState(0)
   const today = new Date().toISOString().slice(0, 10)
-
-  useEffect(() => {
-    if (habits.length === 0) return
-    Promise.allSettled(
-      habits.map(h =>
-        fetch(`/api/habits/${h.id}/logs`).then(r => r.json()).then((dates: string[]) => dates.includes(today))
-      )
-    ).then(results => {
-      const count = results.filter(r => r.status === 'fulfilled' && r.value).length
-      setDoneCount(count)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [habits.map(h => h.id).join(','), today])
-
+  const [doneMap, setDoneMap] = useState<Record<number, boolean>>({})
+  const handleResult = useCallback((id: number, done: boolean) => {
+    setDoneMap(prev => prev[id] === done ? prev : { ...prev, [id]: done })
+  }, [])
+  const doneCount = Object.values(doneMap).filter(Boolean).length
   return (
-    <p className="text-xs text-gray-400 mb-2">{doneCount} / {habits.length} done today</p>
+    <>
+      {habits.map(h => (
+        <HabitDoneCheck key={h.id} habitId={h.id} today={today} onResult={handleResult} />
+      ))}
+      <p className="text-xs text-gray-400 mb-2">{doneCount} / {habits.length} done today</p>
+    </>
   )
 }
 
