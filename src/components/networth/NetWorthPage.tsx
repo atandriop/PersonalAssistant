@@ -178,7 +178,8 @@ export default function NetWorthPage() {
   useEffect(() => {
     const today = new Date().toDateString()
     if (sessionStorage.getItem('lastSnapshot') === today) return
-    fetch('/api/snapshots', { method: 'POST' }).then(() => {
+    fetch('/api/snapshots', { method: 'POST' }).then(r => {
+      if (!r.ok) return
       sessionStorage.setItem('lastSnapshot', today)
       mutateSnapshots2()
     })
