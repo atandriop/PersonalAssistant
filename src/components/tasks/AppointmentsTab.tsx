@@ -15,6 +15,13 @@ const CATEGORY_COLOR: Record<string, string> = {
   Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
 }
 
+const INTERVAL_LABEL: Record<string, string> = {
+  monthly: 'every month',
+  quarterly: 'every 3 months',
+  '6months': 'every 6 months',
+  yearly: 'every year',
+}
+
 function advanceDate(dateStr: string, interval: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   if (interval === 'monthly') d.setMonth(d.getMonth() + 1)
@@ -46,28 +53,33 @@ function ApptRow({
   }
 
   async function markDoneAndScheduleNext() {
-    await fetch(`/api/appointments/${appt.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...appt, done: true }),
-    })
-    const nextDate = advanceDate(appt.date, appt.recurringInterval ?? 'yearly')
-    await fetch('/api/appointments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: appt.title,
-        date: nextDate,
-        time: appt.time,
-        location: appt.location,
-        category: appt.category,
-        notes: appt.notes,
-        cost: appt.cost,
-        recurring: true,
-        recurringInterval: appt.recurringInterval,
-      }),
-    })
-    onMutate()
+    try {
+      await fetch(`/api/appointments/${appt.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...appt, done: true }),
+      })
+      const nextDate = advanceDate(appt.date, appt.recurringInterval ?? 'yearly')
+      await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: appt.title,
+          date: nextDate,
+          time: appt.time,
+          location: appt.location,
+          category: appt.category,
+          notes: appt.notes,
+          cost: appt.cost,
+          recurring: true,
+          recurringInterval: appt.recurringInterval,
+        }),
+      })
+      onMutate()
+    } catch {
+      alert('Failed to schedule next occurrence. Please try again.')
+      onMutate()
+    }
   }
 
   async function handleDelete() {
@@ -111,7 +123,7 @@ function ApptRow({
           )}
           {appt.recurring && appt.recurringInterval && (
             <p className="text-xs text-gray-400 mb-3">
-              Recurring: {appt.recurringInterval === '6months' ? 'every 6 months' : appt.recurringInterval}
+              Recurring: {INTERVAL_LABEL[appt.recurringInterval] ?? appt.recurringInterval}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
