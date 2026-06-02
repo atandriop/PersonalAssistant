@@ -199,7 +199,7 @@ export default function GoalsPage() {
               </div>
 
               {isExpanded && (
-                <AreaDetail area={area} allHabits={allHabits} onMutate={mutate} />
+                <AreaDetail area={area} allHabits={allHabits} habitLogs={habitLogs} onMutate={mutate} />
               )}
             </div>
           )
@@ -216,15 +216,13 @@ export default function GoalsPage() {
   )
 }
 
-function GoalRow({ goal, allHabits, onMutate }: { goal: Goal; allHabits: Habit[]; onMutate: () => void }) {
+function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabits: Habit[]; habitLogs: Record<number, string[]>; onMutate: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [newMilestone, setNewMilestone] = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [showLinkHabit, setShowLinkHabit] = useState(false)
 
-  const total = goal.milestones.length
-  const done = goal.milestones.filter(m => m.completedAt !== null).length
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100)
+  const pct = Math.round(calcProgress(goal, habitLogs) * 100)
 
   async function toggleMilestone(m: Milestone) {
     await fetch(`/api/milestones/${m.id}`, {
@@ -269,7 +267,7 @@ function GoalRow({ goal, allHabits, onMutate }: { goal: Goal; allHabits: Habit[]
   }
 
   const linkedHabitIds = new Set(goal.habitLinks.map(l => l.habitId))
-  const unlinkableHabits = allHabits.filter(h => !linkedHabitIds.has(h.id))
+  const linkableHabits = allHabits.filter(h => !linkedHabitIds.has(h.id))
 
   return (
     <div className="border-b border-gray-100 dark:border-gray-700 last:border-0">
@@ -333,10 +331,10 @@ function GoalRow({ goal, allHabits, onMutate }: { goal: Goal; allHabits: Habit[]
               ))}
               {showLinkHabit ? (
                 <div className="flex flex-col gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-2 shadow-sm">
-                  {unlinkableHabits.length === 0 ? (
+                  {linkableHabits.length === 0 ? (
                     <p className="text-xs text-gray-400 px-1">All habits already linked</p>
                   ) : (
-                    unlinkableHabits.map(h => (
+                    linkableHabits.map(h => (
                       <button key={h.id} onClick={() => linkHabit(h.id)}
                         className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: h.color }} />
@@ -357,7 +355,7 @@ function GoalRow({ goal, allHabits, onMutate }: { goal: Goal; allHabits: Habit[]
   )
 }
 
-function AreaDetail({ area, allHabits, onMutate }: { area: LifeArea; allHabits: Habit[]; onMutate: () => void }) {
+function AreaDetail({ area, allHabits, habitLogs, onMutate }: { area: LifeArea; allHabits: Habit[]; habitLogs: Record<number, string[]>; onMutate: () => void }) {
   const [showAddGoal, setShowAddGoal] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
 
@@ -371,7 +369,7 @@ function AreaDetail({ area, allHabits, onMutate }: { area: LifeArea; allHabits: 
     <div className="border-t border-gray-100 dark:border-gray-700">
       {area.goals.map(goal => (
         <div key={goal.id} className="relative group">
-          <GoalRow goal={goal} allHabits={allHabits} onMutate={onMutate} />
+          <GoalRow goal={goal} allHabits={allHabits} habitLogs={habitLogs} onMutate={onMutate} />
           <div className="absolute top-2.5 right-10 hidden group-hover:flex gap-1" onClick={e => e.stopPropagation()}>
             <button onClick={() => setEditingGoal(goal)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-900">Edit</button>
             <button onClick={() => deleteGoal(goal.id)} className="text-xs px-1.5 py-0.5 text-red-400 border border-red-200 rounded hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20 bg-white dark:bg-gray-900">Del</button>
