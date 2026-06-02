@@ -9,6 +9,7 @@ const NAV = [
   { href: '/wishlist', label: 'Items', active: true },
   { href: '/matrices', label: 'Matrices', active: true },
   { href: '/net-worth', label: 'Net Worth', active: true },
+  { href: '/finance', label: 'Finance', active: true },
   { href: '/weekly-review', label: 'Weekly Review', active: true },
   { href: '/subscriptions', label: 'Subscriptions', active: true },
   { href: '/habits', label: 'Habits', active: true },
