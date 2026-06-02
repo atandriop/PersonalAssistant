@@ -9,6 +9,7 @@ import WishlistForm from './WishlistForm'
 import CategoryManager from '@/components/categories/CategoryManager'
 import InventoryForm from '@/components/inventory/InventoryForm'
 import ItemsTabs from '@/components/items/ItemsTabs'
+import TaskForm from '@/components/tasks/TaskForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -32,6 +33,7 @@ export default function WishlistPage() {
   const [filterCat, setFilterCat] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
   const [toInventory, setToInventory] = useState<WishlistItem | null>(null)
+  const [addToTask, setAddToTask] = useState<{ title: string; sourceId: number } | null>(null)
 
   const active = items.filter(i => !i.purchased)
   const filtered = active
@@ -151,6 +153,12 @@ Given typical budget constraints, suggest a sensible purchase order. Flag any it
                 <div className="flex gap-1 shrink-0">
                   <button onClick={() => markGotIt(item)} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400">Got it</button>
                   <button onClick={() => setEditing(item)} className="text-xs px-2 py-1 border rounded-md dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
+                  <button
+                    onClick={() => setAddToTask({ title: item.name, sourceId: item.id })}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    + Task
+                  </button>
                   <button onClick={() => del(item.id)} className="text-xs px-2 py-1 text-red-500 border border-red-200 rounded-md hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">Del</button>
                 </div>
               </div>
@@ -222,6 +230,16 @@ Given typical budget constraints, suggest a sensible purchase order. Flag any it
             }}
             onSave={() => { setToInventory(null); mutate() }}
             onCancel={() => setToInventory(null)}
+          />
+        </Modal>
+      )}
+      {addToTask && (
+        <Modal title="Add to Tasks" onClose={() => setAddToTask(null)}>
+          <TaskForm
+            preTitle={addToTask.title}
+            preSourceLink={{ sourceType: 'wishlist', sourceId: addToTask.sourceId }}
+            onSave={() => setAddToTask(null)}
+            onCancel={() => setAddToTask(null)}
           />
         </Modal>
       )}
