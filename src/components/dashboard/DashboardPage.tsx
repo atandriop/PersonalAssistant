@@ -4,9 +4,18 @@ import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson, Appointment } from '@/types'
+import type { Habit, LifeArea, GiftPerson, Appointment, Document } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
+
+const DOC_CATEGORY_COLOR: Record<string, string> = {
+  Identity: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  Finance: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  Vehicle: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  Health: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  Insurance: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+}
 
 const APPT_CATEGORY_COLOR: Record<string, string> = {
   Medical: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -100,6 +109,14 @@ export default function DashboardPage() {
   const { data: lifeAreas = [], isLoading: goalsLoading } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
   const { data: appointments = [], isLoading: apptLoading } = useSWR<Appointment[]>('/api/appointments', fetcher)
+  const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
+
+  // ── Documents widget ──
+  const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
+  const expiringDocs = allDocs
+    .filter(d => d.expiryDate != null && d.expiryDate <= in90Days)
+    .sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''))
+    .slice(0, 5)
 
   // ── Maintenance widget ──
   const alertItems = maintenanceItems.flatMap(item =>
@@ -267,6 +284,37 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </WidgetCard>
+
+        {/* Expiring Documents */}
+        <WidgetCard title="Expiring Documents">
+          {docsLoading ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : expiringDocs.length === 0 ? (
+            <p className="text-sm text-gray-400">No documents expiring soon.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {expiringDocs.map(d => {
+                const now = new Date()
+                now.setHours(0, 0, 0, 0)
+                const exp = new Date(d.expiryDate! + 'T00:00:00')
+                const days = Math.round((exp.getTime() - now.getTime()) / 86400000)
+                return (
+                  <a key={d.id} href="/documents" className="flex items-center justify-between gap-2 hover:opacity-80">
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{d.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${DOC_CATEGORY_COLOR[d.category] ?? DOC_CATEGORY_COLOR.Other}`}>
+                        {d.category}
+                      </span>
+                      <span className={`text-xs font-medium ${days < 0 ? 'text-red-500' : days <= 30 ? 'text-red-500' : 'text-orange-500'}`}>
+                        {days < 0 ? 'Expired' : `${days}d`}
+                      </span>
+                    </div>
+                  </a>
+                )
+              })}
             </div>
           )}
         </WidgetCard>

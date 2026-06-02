@@ -31,5 +31,5 @@ export async function GET(
     headers['Content-Disposition'] = `attachment; filename="${doc.originalName}"`
   }
 
-  return new Response(buffer, { headers })
+  return new Response(new Uint8Array(buffer), { headers })
 }
