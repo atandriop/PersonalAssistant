@@ -224,3 +224,24 @@ model MaintenanceLog {
   notes       String?
   createdAt   DateTime @default(now())
 }
+
+model GiftPerson {
+  id        Int        @id @default(autoincrement())
+  name      String
+  budget    Float?
+  notes     String?
+  ideas     GiftIdea[]
+  createdAt DateTime   @default(now())
+}
+
+model GiftIdea {
+  id            Int        @id @default(autoincrement())
+  giftPersonId  Int
+  giftPerson    GiftPerson @relation(fields: [giftPersonId], references: [id], onDelete: Cascade)
+  title         String
+  occasion      String?
+  estimatedCost Float?
+  purchased     Boolean    @default(false)
+  notes         String?
+  createdAt     DateTime   @default(now())
+}
