@@ -42,7 +42,7 @@ function projected(h: Holding): number {
   return (h.balance ?? 0) * (1 + (h.interestRate ?? 0) / 100)
 }
 
-export default function PortfolioPage() {
+export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { data: holdings = [], mutate } = useSWR<Holding[]>('/api/portfolio', fetcher)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<Holding | null>(null)
@@ -111,7 +111,7 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio</h1>
+        {!hideHeader && <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio</h1>}
         <div className="flex gap-2">
           <button
             onClick={() => setShowPrompt(true)}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import PortfolioPage from '@/components/portfolio/PortfolioPage'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -169,6 +170,7 @@ export default function NetWorthPage() {
   const [addType, setAddType] = useState<'asset' | 'liability'>('asset')
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<NetWorthEntry | null>(null)
+  const [showPortfolio, setShowPortfolio] = useState(false)
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -273,7 +275,15 @@ export default function NetWorthPage() {
                 </div>
               ))}
               <div className="flex justify-between items-center pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-xs text-gray-400">Portfolio subtotal</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Portfolio subtotal</span>
+                  <button
+                    onClick={() => setShowPortfolio(true)}
+                    className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  >
+                    Manage →
+                  </button>
+                </div>
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{fmt(portfolioTotal)}</span>
               </div>
             </div>
@@ -349,6 +359,13 @@ export default function NetWorthPage() {
       {editing && (
         <Modal title="Edit entry" onClose={() => setEditing(null)}>
           <EntryForm initial={editing} defaultType={editing.type} onSave={() => { setEditing(null); mutateEntries() }} onCancel={() => setEditing(null)} />
+        </Modal>
+      )}
+      {showPortfolio && (
+        <Modal title="Portfolio Holdings" onClose={() => setShowPortfolio(false)}>
+          <div className="max-h-[70vh] overflow-y-auto -mx-4 px-4">
+            <PortfolioPage hideHeader />
+          </div>
         </Modal>
       )}
     </div>
