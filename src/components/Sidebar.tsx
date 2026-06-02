@@ -16,6 +16,7 @@ const NAV = [
   { href: '/goals', label: 'Goals', active: true },
   { href: '/tasks', label: 'Tasks', active: true },
   { href: '/documents', label: 'Documents', active: true },
+  { href: '/bucket-list', label: 'Bucket List', active: true },
   { href: '/maintenance', label: 'Maintenance', active: true },
   { href: '/timeline', label: 'Timeline', active: true },
   { href: '/gifts', label: 'Gifts', active: true },
