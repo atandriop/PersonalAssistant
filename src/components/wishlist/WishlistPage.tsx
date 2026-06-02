@@ -7,6 +7,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import Badge from '@/components/ui/Badge'
 import WishlistForm from './WishlistForm'
 import CategoryManager from '@/components/categories/CategoryManager'
+import InventoryForm from '@/components/inventory/InventoryForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -29,6 +30,7 @@ export default function WishlistPage() {
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
+  const [toInventory, setToInventory] = useState<WishlistItem | null>(null)
 
   const active = items.filter(i => !i.purchased)
   const filtered = active
@@ -41,6 +43,8 @@ export default function WishlistPage() {
   const grouped = categories
     .map(c => ({ cat: c, items: filtered.filter(i => i.categoryId === c.id).sort((a, b) => PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] - PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER]) }))
     .filter(g => g.items.length > 0)
+
+  const purchasedNeedingInventory = items.filter(i => i.purchased && i.inventoryUpgrades.length === 0)
 
   async function markGotIt(item: WishlistItem) {
     if (!confirm(`Move "${item.name}" to inventory?`)) return
@@ -157,6 +161,31 @@ Given typical budget constraints, suggest a sensible purchase order. Flag any it
         <p className="text-sm text-gray-400 text-center py-12">No wishlist items yet. Add one to get started.</p>
       )}
 
+      {purchasedNeedingInventory.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            Purchased — not yet in inventory ({purchasedNeedingInventory.length})
+          </h2>
+          <div className="flex flex-col gap-2">
+            {purchasedNeedingInventory.map(item => (
+              <div key={item.id} className="flex items-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-gray-900 dark:text-white truncate block">{item.name}</span>
+                  {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
+                </div>
+                <span className="font-semibold text-gray-900 dark:text-white shrink-0">€{item.cost.toFixed(2)}</span>
+                <button
+                  onClick={() => setToInventory(item)}
+                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 shrink-0"
+                >
+                  → Inventory
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <Modal title="Add wishlist item" onClose={() => setShowAdd(false)}>
           <WishlistForm onSave={() => { setShowAdd(false); mutate() }} onCancel={() => setShowAdd(false)} />
@@ -178,6 +207,21 @@ Given typical budget constraints, suggest a sensible purchase order. Flag any it
           prompt={buildWishlistPrompt()}
           onClose={() => setShowPrompt(false)}
         />
+      )}
+      {toInventory && (
+        <Modal title={`Add "${toInventory.name}" to Inventory`} onClose={() => setToInventory(null)}>
+          <InventoryForm
+            initial={{
+              name: toInventory.name,
+              cost: toInventory.cost,
+              quantity: 1,
+              categoryId: toInventory.categoryId,
+              upgradeTargetId: toInventory.id,
+            }}
+            onSave={() => { setToInventory(null); mutate() }}
+            onCancel={() => setToInventory(null)}
+          />
+        </Modal>
       )}
     </div>
   )
