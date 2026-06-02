@@ -37,6 +37,10 @@ interface Snapshot {
   id: number; date: string; wishlistTotal: number; portfolioTotal: number
 }
 
+interface Subscription {
+  id: number; name: string; cost: number; period: string; active: boolean
+}
+
 function holdingValue(h: PortfolioHolding): number {
   if (h.quantity != null && h.currentPrice != null) return h.quantity * h.currentPrice
   if (h.balance != null) return h.balance
@@ -161,6 +165,7 @@ export default function NetWorthPage() {
   const { data: holdings = [] } = useSWR<PortfolioHolding[]>('/api/portfolio', fetcher)
   const { data: snapshots = [], mutate: mutateSnapshots } = useSWR<NetWorthSnapshot[]>('/api/net-worth/snapshots', fetcher)
   const { data: snapshots2 = [], mutate: mutateSnapshots2 } = useSWR<Snapshot[]>('/api/snapshots', fetcher)
+  const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
   const [addType, setAddType] = useState<'asset' | 'liability'>('asset')
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<NetWorthEntry | null>(null)
@@ -189,7 +194,10 @@ export default function NetWorthPage() {
   const assetEntries = entries.filter(e => e.type === 'asset')
   const liabilityEntries = entries.filter(e => e.type === 'liability')
   const totalAssets = portfolioTotal + assetEntries.reduce((s, e) => s + e.value, 0)
-  const totalLiabilities = liabilityEntries.reduce((s, e) => s + e.value, 0)
+  const subscriptionAnnualTotal = subscriptions
+    .filter(s => s.active)
+    .reduce((sum, s) => sum + (s.period === 'yearly' ? s.cost : s.cost * 12), 0)
+  const totalLiabilities = liabilityEntries.reduce((s, e) => s + e.value, 0) + subscriptionAnnualTotal
   const netWorth = totalAssets - totalLiabilities
 
   const sortedSnapshots = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
@@ -313,6 +321,19 @@ export default function NetWorthPage() {
               ))}
             </div>
           ))}
+
+          {subscriptionAnnualTotal > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Subscriptions</p>
+              <div className="flex justify-between items-center py-1">
+                <div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Subscriptions (annual)</span>
+                  <p className="text-xs text-gray-400 italic">estimated annual cost</p>
+                </div>
+                <span className="text-sm text-gray-900 dark:text-white mr-3">{fmt(subscriptionAnnualTotal)}</span>
+              </div>
+            </div>
+          )}
 
           {liabilityEntries.length === 0 && (
             <p className="text-sm text-gray-400">No liabilities yet.</p>
