@@ -107,5 +107,18 @@ export interface TravelTrip {
   rating: number | null
   notes: string | null
   bucketTripId: number | null
+  memories: { id: number; title: string; date: string }[]
+  createdAt: string
+}
+
+export interface Memory {
+  id: number
+  title: string
+  date: string
+  endDate: string | null
+  category: 'Career' | 'Education' | 'Travel' | 'Personal' | 'Other'
+  location: string | null
+  notes: string | null
+  trips: { id: number; countryName: string; startDate: string | null }[]
   createdAt: string
 }
