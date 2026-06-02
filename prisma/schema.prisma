@@ -175,3 +175,21 @@ model GoalHabitLink {
 
   @@unique([goalId, habitId])
 }
+
+model NetWorthEntry {
+  id        Int      @id @default(autoincrement())
+  name      String
+  value     Float
+  type      String
+  category  String
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model NetWorthSnapshot {
+  id    Int    @id @default(autoincrement())
+  date  String
+  total Float
+
+  @@unique([date])
+}
