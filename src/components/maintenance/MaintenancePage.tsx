@@ -38,7 +38,12 @@ type TaskStatus = 'overdue' | 'due-soon' | 'ok' | 'none'
 
 function addMonths(dateStr: string, months: number): string {
   const d = new Date(dateStr)
-  d.setUTCMonth(d.getUTCMonth() + months)
+  const targetMonth = d.getUTCMonth() + months
+  d.setUTCMonth(targetMonth)
+  // If day overflowed into next month, go back to last day of intended month
+  if (d.getUTCMonth() !== ((targetMonth % 12) + 12) % 12) {
+    d.setUTCDate(0)
+  }
   return d.toISOString().slice(0, 10)
 }
 
@@ -216,33 +221,33 @@ function ItemDetail({ item, onMutate }: { item: HomeItem; onMutate: () => void }
   const [showAddLog, setShowAddLog] = useState(false)
 
   async function deleteTask(id: number) {
-    await fetch(`/api/maintenance/tasks/${id}`, { method: 'DELETE' })
-    onMutate()
+    try {
+      await fetch(`/api/maintenance/tasks/${id}`, { method: 'DELETE' })
+      onMutate()
+    } catch { alert('Network error — could not delete task.') }
   }
 
   async function deleteLog(id: number) {
-    await fetch(`/api/maintenance/logs/${id}`, { method: 'DELETE' })
-    onMutate()
+    try {
+      await fetch(`/api/maintenance/logs/${id}`, { method: 'DELETE' })
+      onMutate()
+    } catch { alert('Network error — could not delete log.') }
   }
 
   async function handleMarkDone(task: MaintenanceTask, logDate: string) {
     try {
-      const [logRes, taskRes] = await Promise.all([
-        fetch(`/api/maintenance/items/${item.id}/logs`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: task.description, date: logDate }),
-        }),
-        fetch(`/api/maintenance/tasks/${task.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: task.description, intervalMonths: task.intervalMonths, dueDate: task.dueDate, lastDoneDate: logDate }),
-        }),
-      ])
-      if (!logRes.ok || !taskRes.ok) {
-        alert('Failed to save — please try again.')
-        return
-      }
+      const taskRes = await fetch(`/api/maintenance/tasks/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: task.description, intervalMonths: task.intervalMonths, dueDate: task.dueDate, lastDoneDate: logDate }),
+      })
+      if (!taskRes.ok) { alert('Failed to save — please try again.'); return }
+      const logRes = await fetch(`/api/maintenance/items/${item.id}/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: task.description, date: logDate }),
+      })
+      if (!logRes.ok) { alert('Failed to save log — please try again.'); return }
     } catch {
       alert('Network error — please try again.')
       return
@@ -341,8 +346,9 @@ export default function MaintenancePage() {
           const isExpanded = expandedId === item.id
           const mostUrgentTask = item.tasks
             .map(t => ({ task: t, ...getTaskStatus(t) }))
+            .filter(t => t.status !== 'none')
             .sort((a, b) => {
-              const order: TaskStatus[] = ['overdue', 'due-soon', 'ok', 'none']
+              const order: TaskStatus[] = ['overdue', 'due-soon', 'ok']
               return order.indexOf(a.status) - order.indexOf(b.status)
             })[0]
           const lastLog = item.logs[0]

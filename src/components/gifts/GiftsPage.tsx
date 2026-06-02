@@ -71,7 +71,7 @@ function IdeaForm({ personId, initial, onSave, onCancel }: { personId: number; i
       title,
       occasion: occasion || null,
       estimatedCost: estimatedCost ? Number(estimatedCost) : null,
-      purchased: initial?.purchased ?? false,
+      purchased: initial ? initial.purchased : false,
       notes: notes || null,
     }
     if (initial?.id) {
