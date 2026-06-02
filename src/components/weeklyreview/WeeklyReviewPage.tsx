@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import PromptModal from '@/components/ui/PromptModal'
-import { MaintenanceTask, HomeItem, addMonths, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, Goal, LifeArea, Subscription } from '@/types'
+import { HomeItem, getTaskStatus } from '@/lib/maintenance'
+import type { Habit, LifeArea, Subscription } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 

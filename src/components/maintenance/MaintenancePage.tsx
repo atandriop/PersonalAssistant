@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
-import { TaskStatus, addMonths, getTaskStatus } from '@/lib/maintenance'
+import { TaskStatus, getTaskStatus } from '@/lib/maintenance'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 

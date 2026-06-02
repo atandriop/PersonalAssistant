@@ -3,8 +3,8 @@
 import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
-import { TaskStatus, MaintenanceTask, HomeItem, addMonths, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, Milestone, Goal, LifeArea, GiftIdea, GiftPerson } from '@/types'
+import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
+import type { Habit, LifeArea, GiftPerson } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
