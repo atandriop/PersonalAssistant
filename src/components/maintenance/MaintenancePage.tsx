@@ -38,7 +38,7 @@ type TaskStatus = 'overdue' | 'due-soon' | 'ok' | 'none'
 
 function addMonths(dateStr: string, months: number): string {
   const d = new Date(dateStr)
-  d.setMonth(d.getMonth() + months)
+  d.setUTCMonth(d.getUTCMonth() + months)
   return d.toISOString().slice(0, 10)
 }
 
@@ -51,6 +51,9 @@ function getTaskStatus(task: MaintenanceTask): { status: TaskStatus; nextDue: st
     const base = task.lastDoneDate ?? task.createdAt.slice(0, 10)
     nextDue = addMonths(base, task.intervalMonths)
   } else if (task.dueDate != null) {
+    if (task.lastDoneDate && task.lastDoneDate >= task.dueDate) {
+      return { status: 'none', nextDue: null }
+    }
     nextDue = task.dueDate
   }
 
@@ -62,11 +65,11 @@ function getTaskStatus(task: MaintenanceTask): { status: TaskStatus; nextDue: st
 
 function getItemStatus(item: HomeItem): TaskStatus {
   if (item.tasks.length === 0) return 'none'
-  const statuses = item.tasks.map(t => getTaskStatus(t).status)
-  if (statuses.includes('overdue')) return 'overdue'
-  if (statuses.includes('due-soon')) return 'due-soon'
-  if (statuses.every(s => s === 'ok')) return 'ok'
-  return 'none'
+  const active = item.tasks.map(t => getTaskStatus(t).status).filter(s => s !== 'none')
+  if (active.length === 0) return 'none'
+  if (active.includes('overdue')) return 'overdue'
+  if (active.includes('due-soon')) return 'due-soon'
+  return 'ok'
 }
 
 const STATUS_BORDER: Record<TaskStatus, string> = {
@@ -223,18 +226,27 @@ function ItemDetail({ item, onMutate }: { item: HomeItem; onMutate: () => void }
   }
 
   async function handleMarkDone(task: MaintenanceTask, logDate: string) {
-    await Promise.all([
-      fetch(`/api/maintenance/items/${item.id}/logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: task.description, date: logDate }),
-      }),
-      fetch(`/api/maintenance/tasks/${task.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: task.description, intervalMonths: task.intervalMonths, dueDate: task.dueDate, lastDoneDate: logDate }),
-      }),
-    ])
+    try {
+      const [logRes, taskRes] = await Promise.all([
+        fetch(`/api/maintenance/items/${item.id}/logs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: task.description, date: logDate }),
+        }),
+        fetch(`/api/maintenance/tasks/${task.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: task.description, intervalMonths: task.intervalMonths, dueDate: task.dueDate, lastDoneDate: logDate }),
+        }),
+      ])
+      if (!logRes.ok || !taskRes.ok) {
+        alert('Failed to save — please try again.')
+        return
+      }
+    } catch {
+      alert('Network error — please try again.')
+      return
+    }
     setMarkingDoneTask(null)
     onMutate()
   }
