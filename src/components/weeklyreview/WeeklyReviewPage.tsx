@@ -82,6 +82,29 @@ function getWeekDates(): string[] {
   })
 }
 
+function useHabitWeekLogs(habitIds: number[], weekDates: string[]): Record<number, number> {
+  const [counts, setCounts] = useState<Record<number, number>>({})
+  useEffect(() => {
+    if (habitIds.length === 0) return
+    Promise.allSettled(
+      habitIds.map(id =>
+        fetch(`/api/habits/${id}/logs`).then(r => r.json()).then((dates: string[]) => ({
+          id,
+          count: weekDates.filter(d => dates.includes(d)).length,
+        }))
+      )
+    ).then(results => {
+      const map: Record<number, number> = {}
+      results.forEach(r => {
+        if (r.status === 'fulfilled') map[r.value.id] = r.value.count
+      })
+      setCounts(map)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitIds.join(','), weekDates.join(',')])
+  return counts
+}
+
 function HabitWeekRow({ habit, weekDates }: { habit: Habit; weekDates: string[] }) {
   const { data: logs = [] } = useSWR<string[]>(`/api/habits/${habit.id}/logs`, fetcher)
   const count = weekDates.filter(d => logs.includes(d)).length
@@ -122,6 +145,8 @@ export default function WeeklyReviewPage() {
   const weekKey = getWeekKey()
 
   const weekDates = getWeekDates()
+  const habitWeekCounts = useHabitWeekLogs(habits.map(h => h.id), weekDates)
+  const sortedHabits = [...habits].sort((a, b) => (habitWeekCounts[a.id] ?? 0) - (habitWeekCounts[b.id] ?? 0))
 
   const maintenanceAlerts = maintenanceItems.flatMap(item =>
     item.tasks
@@ -266,7 +291,7 @@ Please identify patterns in this week's activity, flag anything I should follow 
               <p className="text-sm text-gray-400">No habits tracked.</p>
             ) : (
               <div>
-                {habits.map(h => <HabitWeekRow key={h.id} habit={h} weekDates={weekDates} />)}
+                {sortedHabits.map(h => <HabitWeekRow key={h.id} habit={h} weekDates={weekDates} />)}
               </div>
             )}
           </WeekSection>
