@@ -54,7 +54,7 @@ export default function WishlistPage() {
     })
     await fetch('/api/inventory', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: item.name, cost: item.cost, quantity: 1, purchaseDate: new Date().toISOString(), notes: item.notes, categoryId: item.categoryId }),
+      body: JSON.stringify({ name: item.name, cost: item.cost, quantity: 1, purchaseDate: new Date().toISOString(), notes: item.notes, categoryId: item.categoryId, upgradeTargetId: item.id }),
     })
     mutate()
   }
