@@ -4,7 +4,7 @@ import type React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip } from '@/types'
+import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -114,6 +114,13 @@ export default function DashboardPage() {
   const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
   const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
   const { data: travelTrips = [], isLoading: travelTripsLoading } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
+  const { data: memories = [] } = useSWR<Memory[]>('/api/memories', fetcher)
+
+  // ── Memories widget ──
+  const MEMORY_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
+  const memoryCounts = MEMORY_CATEGORIES
+    .map(cat => ({ category: cat, count: memories.filter(m => m.category === cat).length }))
+    .filter(c => c.count > 0)
 
   // ── Documents widget ──
   const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
@@ -314,6 +321,20 @@ export default function DashboardPage() {
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
               </div>
+            </a>
+          )}
+        </WidgetCard>
+
+        {/* Memories */}
+        <WidgetCard title="Memories">
+          {memories.length === 0 ? (
+            <p className="text-sm text-gray-400">No memories yet.</p>
+          ) : (
+            <a href="/memories" className="hover:opacity-80 block">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {memoryCounts.map(c => `${c.category} ${c.count}`).join(' · ')}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{memories.length} total</p>
             </a>
           )}
         </WidgetCard>
