@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import TaskForm from '@/components/tasks/TaskForm'
+import PromptModal from '@/components/ui/PromptModal'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -150,11 +151,45 @@ export default function GoalsPage() {
   const [expandedAreaId, setExpandedAreaId] = useState<number | null>(null)
   const [showAddArea, setShowAddArea] = useState(false)
   const [editingArea, setEditingArea] = useState<LifeArea | null>(null)
+  const [showPrompt, setShowPrompt] = useState(false)
   const allLinkedHabitIds = useMemo(
     () => Array.from(new Set(areas.flatMap(a => a.goals.flatMap(g => g.habitLinks.map(l => l.habitId))))),
     [areas]
   )
   const habitLogs = useHabitLogs(allLinkedHabitIds)
+
+  function buildGoalsPrompt(): string {
+    const now = new Date()
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+
+    const areaLines = areas.map(area => {
+      const goalLines = area.goals.map(goal => {
+        const done = goal.milestones.filter(m => m.completedAt !== null).length
+        const total = goal.milestones.length
+        const milestonesStr = total > 0
+          ? `Milestones: ${done}/${total} done` + (goal.milestones.length > 0
+            ? '\n      ' + goal.milestones.map(m => `[${m.completedAt ? 'x' : ' '}] ${m.title}`).join('\n      ')
+            : '')
+          : 'No milestones'
+        const habitStr = goal.habitLinks.length > 0
+          ? 'Habits: ' + goal.habitLinks.map(l => {
+              const logs = habitLogs[l.habitId] ?? []
+              const count = logs.filter(d => d.startsWith(monthPrefix)).length
+              return `${l.habit.name} (${count}/${daysInMonth} days this month)`
+            }).join(', ')
+          : 'No linked habits'
+        return `  Goal: ${goal.title} [${goal.timePeriod}]\n    ${milestonesStr}\n    ${habitStr}`
+      }).join('\n')
+      return `Area: ${area.name}\n${goalLines || '  No goals yet'}`
+    }).join('\n\n')
+
+    return `Here is my current goals snapshot as of ${now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.
+
+${areaLines}
+
+Please analyse this snapshot. Identify which areas or goals are on track versus at risk, flag any goals with no milestones or habits backing them up, and suggest 2-3 concrete actions I should focus on this week to make the most progress.`
+  }
 
   async function deleteArea(id: number) {
     if (!confirm('Delete this area and all its goals?')) return
@@ -166,9 +201,19 @@ export default function GoalsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
-        <button onClick={() => setShowAddArea(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          + Add area
-        </button>
+        <div className="flex gap-2">
+          {areas.length > 0 && (
+            <button
+              onClick={() => setShowPrompt(true)}
+              className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              Generate AI Prompt
+            </button>
+          )}
+          <button onClick={() => setShowAddArea(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            + Add area
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -213,6 +258,13 @@ export default function GoalsPage() {
 
       {showAddArea && <Modal title="Add life area" onClose={() => setShowAddArea(false)}><AreaForm onSave={() => { setShowAddArea(false); mutate() }} onCancel={() => setShowAddArea(false)} /></Modal>}
       {editingArea && <Modal title="Edit life area" onClose={() => setEditingArea(null)}><AreaForm initial={editingArea} onSave={() => { setEditingArea(null); mutate() }} onCancel={() => setEditingArea(null)} /></Modal>}
+      {showPrompt && (
+        <PromptModal
+          title="Goals AI Prompt"
+          prompt={buildGoalsPrompt()}
+          onClose={() => setShowPrompt(false)}
+        />
+      )}
     </div>
   )
 }

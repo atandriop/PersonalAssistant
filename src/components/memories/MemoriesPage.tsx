@@ -6,6 +6,7 @@ import useSWR from 'swr'
 import type { Memory } from '@/types'
 import MemoryCard from './MemoryCard'
 import MemoryForm from './MemoryForm'
+import PromptModal from '@/components/ui/PromptModal'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -20,6 +21,23 @@ export default function MemoriesPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('All')
   const [adding, setAdding] = useState(false)
   const [editMemory, setEditMemory] = useState<Memory | null>(null)
+  const [showPrompt, setShowPrompt] = useState(false)
+
+  function buildMemoriesPrompt(): string {
+    const sorted = [...memories].sort((a, b) => a.date.localeCompare(b.date))
+    const lines = sorted.map(m => {
+      const dateStr = m.endDate ? `${m.date} – ${m.endDate}` : m.date
+      const locationStr = m.location ? ` · ${m.location}` : ''
+      const tripStr = m.trips.length > 0 ? ` (linked to: ${m.trips.map(t => t.countryName).join(', ')})` : ''
+      const notesStr = m.notes ? `\n    Notes: ${m.notes}` : ''
+      return `- [${m.category}] ${m.title} (${dateStr}${locationStr})${tripStr}${notesStr}`
+    }).join('\n')
+    return `Here are my logged life memories, sorted chronologically:
+
+${lines}
+
+Please reflect on this life timeline. Identify recurring themes or patterns across categories, highlight any significant transitions or chapters, and suggest one or two things I might want to document or explore further based on what seems underrepresented.`
+  }
 
   const filtered = memories
     .filter(m => !tripIdFilter || m.trips.some(t => t.id === tripIdFilter))
@@ -29,12 +47,22 @@ export default function MemoriesPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Memories</h1>
-        <button
-          onClick={() => setAdding(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-        >
-          + Add Memory
-        </button>
+        <div className="flex gap-2">
+          {memories.length > 0 && (
+            <button
+              onClick={() => setShowPrompt(true)}
+              className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
+            >
+              Generate AI Prompt
+            </button>
+          )}
+          <button
+            onClick={() => setAdding(true)}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            + Add Memory
+          </button>
+        </div>
       </div>
 
       {/* Trip filter banner */}
@@ -91,6 +119,13 @@ export default function MemoriesPage() {
           initial={editMemory}
           onSave={() => { mutate(); setEditMemory(null) }}
           onCancel={() => setEditMemory(null)}
+        />
+      )}
+      {showPrompt && (
+        <PromptModal
+          title="Memories AI Prompt"
+          prompt={buildMemoriesPrompt()}
+          onClose={() => setShowPrompt(false)}
         />
       )}
     </div>

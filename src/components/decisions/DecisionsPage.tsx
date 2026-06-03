@@ -37,8 +37,8 @@ function InlineEdit({ value, onSave }: { value: string; onSave: (v: string) => v
   )
 }
 
-export default function MatricesPage() {
-  const { data: matrices = [], mutate: mutateList } = useSWR<MatrixSummary[]>('/api/matrices', fetcher)
+export default function DecisionsPage() {
+  const { data: decisions = [], mutate: mutateList } = useSWR<MatrixSummary[]>('/api/matrices', fetcher)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
@@ -50,7 +50,7 @@ export default function MatricesPage() {
     fetcher
   )
 
-  async function createMatrix() {
+  async function createDecision() {
     if (!newName.trim()) return
     const res = await fetch('/api/matrices', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -62,8 +62,8 @@ export default function MatricesPage() {
     mutateList()
   }
 
-  async function deleteMatrix() {
-    if (!selectedId || !confirm('Delete this matrix and all its data?')) return
+  async function deleteDecision() {
+    if (!selectedId || !confirm('Delete this decision matrix and all its data?')) return
     await fetch(`/api/matrices/${selectedId}`, { method: 'DELETE' })
     setSelectedId(null)
     mutateList()
@@ -135,7 +135,7 @@ export default function MatricesPage() {
     return criteria.reduce((total, c) => total + getScore(c.id, optionId) * c.weight / 100, 0)
   }
 
-  function buildMatrixPrompt(): string {
+  function buildPrompt(): string {
     if (!matrix || !criteria.length || !options.length) return ''
     const criteriaLines = criteria.map(c => `- ${c.name} — ${c.weight}%`).join('\n')
     const optionLines = options.map(opt => {
@@ -147,6 +147,8 @@ export default function MatricesPage() {
       .map((opt, i) => `${i + 1}. ${opt.name} — ${getWeightedScore(opt.id).toFixed(2)}`)
       .join('\n')
     return `I'm evaluating options using a weighted decision matrix.
+
+Decision: ${matrix.name}${matrix.description ? `\nContext: ${matrix.description}` : ''}
 
 Criteria and weights:
 ${criteriaLines}
@@ -165,49 +167,49 @@ Please analyse my scoring. Identify potential biases, flag criteria that may be 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Matrices</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Decisions</h1>
         <button onClick={() => setShowCreate(!showCreate)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          + New matrix
+          + New decision
         </button>
       </div>
 
       {showCreate && (
         <div className="mb-4 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col gap-2">
-          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Matrix name" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Decision name" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
           <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Description (optional)" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
           <div className="flex gap-2">
-            <button onClick={createMatrix} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700">Create</button>
+            <button onClick={createDecision} className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700">Create</button>
             <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm border rounded-lg dark:border-gray-600 dark:text-gray-300">Cancel</button>
           </div>
         </div>
       )}
 
-      {matrices.length > 0 && (
+      {decisions.length > 0 && (
         <div className="flex items-center gap-3 mb-6">
           <select
             value={selectedId ?? ''}
             onChange={e => setSelectedId(e.target.value ? Number(e.target.value) : null)}
             className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
           >
-            <option value="">Select a matrix…</option>
-            {matrices.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            <option value="">Select a decision…</option>
+            {decisions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           {selectedId && (
-            <button onClick={deleteMatrix} className="text-sm text-red-500 hover:underline">Delete</button>
+            <button onClick={deleteDecision} className="text-sm text-red-500 hover:underline">Delete</button>
           )}
           {selectedId && matrix && criteria.length > 0 && options.length > 0 && (
             <button
               onClick={() => setShowPrompt(true)}
               className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
-              AI Brief
+              Generate AI Prompt
             </button>
           )}
         </div>
       )}
 
-      {matrices.length === 0 && !showCreate && (
-        <p className="text-sm text-gray-400 text-center py-12">No matrices yet. Create one to get started.</p>
+      {decisions.length === 0 && !showCreate && (
+        <p className="text-sm text-gray-400 text-center py-12">No decisions yet. Create one to get started.</p>
       )}
 
       {matrix && (
@@ -320,8 +322,8 @@ Please analyse my scoring. Identify potential biases, flag criteria that may be 
 
       {showPrompt && (
         <PromptModal
-          title="Decision Matrix AI Brief"
-          prompt={buildMatrixPrompt()}
+          title="Decision Matrix AI Prompt"
+          prompt={buildPrompt()}
           onClose={() => setShowPrompt(false)}
         />
       )}
