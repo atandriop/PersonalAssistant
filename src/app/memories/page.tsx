@@ -1,10 +1,2 @@
-import { Suspense } from 'react'
-import MemoriesPage from '@/components/memories/MemoriesPage'
-
-export default function Page() {
-  return (
-    <Suspense>
-      <MemoriesPage />
-    </Suspense>
-  )
-}
+import ExperiencesPage from '@/components/experiences/ExperiencesPage'
+export default function Page() { return <ExperiencesPage defaultTab="memories" /> }

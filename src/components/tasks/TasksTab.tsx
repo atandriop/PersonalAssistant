@@ -38,10 +38,16 @@ function TaskRow({
   task,
   onMutate,
   onEdit,
+  selectMode,
+  selected,
+  onSelect,
 }: {
   task: Task
   onMutate: () => void
   onEdit: (t: Task) => void
+  selectMode: boolean
+  selected: boolean
+  onSelect: (id: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [newSub, setNewSub] = useState('')
@@ -60,6 +66,9 @@ function TaskRow({
         category: task.category,
         notes: task.notes,
         done: !task.done,
+        recurring: task.recurring,
+        recurringInterval: task.recurringInterval,
+        blockedById: task.blockedById,
       }),
     })
     onMutate()
@@ -89,20 +98,46 @@ function TaskRow({
     onMutate()
   }
 
+  function handleRowClick() {
+    if (selectMode) {
+      onSelect(task.id)
+    } else {
+      setExpanded(e => !e)
+    }
+  }
+
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div
+      className={`border rounded-lg overflow-hidden transition-colors ${
+        selectMode && selected
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+          : 'border-gray-200 dark:border-gray-700'
+      }`}
+    >
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-        onClick={() => setExpanded(e => !e)}
+        onClick={handleRowClick}
       >
-        <button
-          onClick={e => { e.stopPropagation(); toggleDone() }}
-          className={`w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
-            task.done
-              ? 'bg-green-500 border-green-500'
-              : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
-          }`}
-        />
+        {selectMode ? (
+          <div
+            className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+              selected
+                ? 'bg-blue-500 border-blue-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
+          >
+            {selected && <span className="text-white text-xs">✓</span>}
+          </div>
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); toggleDone() }}
+            className={`w-5 h-5 rounded-full border-2 shrink-0 transition-colors ${
+              task.done
+                ? 'bg-green-500 border-green-500'
+                : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
+            }`}
+          />
+        )}
         <span className={`flex-1 text-sm font-medium min-w-0 truncate ${
           task.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
         }`}>
@@ -119,12 +154,22 @@ function TaskRow({
             {task.category}
           </span>
         )}
+        {task.recurring && (
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shrink-0" title={`Repeats ${task.recurringInterval}`}>
+            ↻
+          </span>
+        )}
+        {task.blockedByTitle && (
+          <span className="text-xs text-orange-500 shrink-0" title={`Blocked by: ${task.blockedByTitle}`}>
+            🚫
+          </span>
+        )}
         {task.dueDate && (
           <span className="text-xs text-gray-400 shrink-0">{task.dueDate.slice(0, 10)}</span>
         )}
       </div>
 
-      {expanded && (
+      {!selectMode && expanded && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
           {task.notes && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{task.notes}</p>
@@ -134,8 +179,12 @@ function TaskRow({
               Linked from: {task.sourceLink.sourceType === 'wishlist' ? 'Wishlist' : 'Goal'} #{task.sourceLink.sourceId}
             </p>
           )}
+          {task.blockedByTitle && (
+            <p className="text-xs text-orange-500 dark:text-orange-400 mb-3">
+              🚫 Blocked by: {task.blockedByTitle}
+            </p>
+          )}
 
-          {/* Subtasks */}
           <div className="flex flex-col gap-1.5 mb-3">
             {task.subtasks.map(s => (
               <div key={s.id} className="flex items-center gap-2">
@@ -176,12 +225,42 @@ function TaskRow({
             </button>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button onClick={() => onEdit(task)} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               Edit
             </button>
             <button onClick={handleDeleteTask} className="text-sm text-red-500 hover:underline">
               Delete
+            </button>
+            <button
+              onClick={async () => {
+                const base = task.dueDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+                const next = new Date(base + 'T00:00:00')
+                next.setDate(next.getDate() + 1)
+                await fetch(`/api/tasks/${task.id}`, {
+                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...task, dueDate: next.toISOString().slice(0, 10) }),
+                })
+                onMutate()
+              }}
+              className="text-sm text-amber-600 dark:text-amber-400 hover:underline"
+            >
+              Defer +1d
+            </button>
+            <button
+              onClick={async () => {
+                const base = task.dueDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+                const next = new Date(base + 'T00:00:00')
+                next.setDate(next.getDate() + 7)
+                await fetch(`/api/tasks/${task.id}`, {
+                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ...task, dueDate: next.toISOString().slice(0, 10) }),
+                })
+                onMutate()
+              }}
+              className="text-sm text-amber-600 dark:text-amber-400 hover:underline"
+            >
+              Defer +1w
             </button>
           </div>
         </div>
@@ -195,12 +274,18 @@ function Section({
   tasks,
   onMutate,
   onEdit,
+  selectMode,
+  selectedIds,
+  onSelect,
   defaultOpen = true,
 }: {
   title: string
   tasks: Task[]
   onMutate: () => void
   onEdit: (t: Task) => void
+  selectMode: boolean
+  selectedIds: Set<number>
+  onSelect: (id: number) => void
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -218,7 +303,15 @@ function Section({
       {open && (
         <div className="flex flex-col gap-2">
           {tasks.map(t => (
-            <TaskRow key={t.id} task={t} onMutate={onMutate} onEdit={onEdit} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              onMutate={onMutate}
+              onEdit={onEdit}
+              selectMode={selectMode}
+              selected={selectedIds.has(t.id)}
+              onSelect={onSelect}
+            />
           ))}
         </div>
       )}
@@ -230,6 +323,8 @@ export default function TasksTab() {
   const { data: tasks = [], mutate } = useSWR<Task[]>('/api/tasks', fetcher)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   const today = new Date().toISOString().slice(0, 10)
   const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
@@ -243,31 +338,108 @@ export default function TasksTab() {
   const noDate = active.filter(t => !t.dueDate)
   const done = tasks.filter(t => t.done)
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function bulkMarkDone() {
+    const ids = Array.from(selectedIds)
+    await fetch('/api/tasks/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'markDone', ids }),
+    })
+    mutate()
+    exitSelectMode()
+  }
+
+  async function bulkDelete() {
+    const ids = Array.from(selectedIds)
+    if (!confirm(`Delete ${ids.length} task${ids.length !== 1 ? 's' : ''}?`)) return
+    await fetch('/api/tasks/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', ids }),
+    })
+    mutate()
+    exitSelectMode()
+  }
+
   function closeModal() {
     setShowAdd(false)
     setEditing(null)
   }
 
+  const sectionProps = { onMutate: mutate, onEdit: setEditing, selectMode, selectedIds, onSelect: toggleSelect }
+
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-        >
-          + Add task
-        </button>
+      <div className="flex items-center justify-between mb-4">
+        {selectMode ? (
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+              {selectedIds.size} selected
+            </span>
+            {selectedIds.size > 0 && (
+              <>
+                <button
+                  onClick={bulkMarkDone}
+                  className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Mark done
+                </button>
+                <button
+                  onClick={bulkDelete}
+                  className="text-sm px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+            <button
+              onClick={exitSelectMode}
+              className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 ml-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setSelectMode(true)}
+              className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              Select
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+            >
+              + Add task
+            </button>
+          </>
+        )}
       </div>
 
       {tasks.length === 0 && (
         <p className="text-sm text-gray-400 text-center py-12">No tasks yet. Add your first task!</p>
       )}
 
-      <Section title="Overdue" tasks={overdue} onMutate={mutate} onEdit={setEditing} />
-      <Section title="Due soon (7 days)" tasks={dueSoon} onMutate={mutate} onEdit={setEditing} />
-      <Section title="Upcoming" tasks={upcoming} onMutate={mutate} onEdit={setEditing} />
-      <Section title="No due date" tasks={noDate} onMutate={mutate} onEdit={setEditing} />
-      <Section title="Done" tasks={done} onMutate={mutate} onEdit={setEditing} defaultOpen={false} />
+      <Section title="Overdue" tasks={overdue} defaultOpen {...sectionProps} />
+      <Section title="Due soon (7 days)" tasks={dueSoon} defaultOpen {...sectionProps} />
+      <Section title="Upcoming" tasks={upcoming} defaultOpen {...sectionProps} />
+      <Section title="No due date" tasks={noDate} defaultOpen {...sectionProps} />
+      <Section title="Done" tasks={done} defaultOpen={false} {...sectionProps} />
 
       {(showAdd || editing) && (
         <Modal title={editing ? 'Edit task' : 'New task'} onClose={closeModal}>

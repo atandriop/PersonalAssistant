@@ -20,6 +20,7 @@ const TRIP_INCLUDE = {
 function serializeMemory(m: {
   id: number; title: string; date: string; endDate: string | null
   category: string; location: string | null; notes: string | null
+  tags: string
   createdAt: Date
   trips: { trip: { id: number; startDate: string | null; country: { name: string } } }[]
 }) {
@@ -31,6 +32,7 @@ function serializeMemory(m: {
     category: m.category,
     location: m.location,
     notes: m.notes,
+    tags: m.tags ? m.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     createdAt: m.createdAt.toISOString(),
     trips: m.trips.map(mt => ({
       id: mt.trip.id,
@@ -49,7 +51,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { title, date, endDate, category, location, notes, tripIds } = await req.json()
+  const { title, date, endDate, category, location, notes, tripIds, tags } = await req.json()
   if (!title?.trim() || !date) {
     return NextResponse.json({ error: 'title and date are required' }, { status: 400 })
   }
@@ -65,6 +67,7 @@ export async function POST(req: Request) {
       category,
       location: location?.trim() || null,
       notes: notes?.trim() || null,
+      tags: Array.isArray(tags) ? tags.filter(Boolean).join(',') : '',
       trips: Array.isArray(tripIds) && tripIds.length > 0
         ? { create: (tripIds as number[]).map(tripId => ({ tripId })) }
         : undefined,

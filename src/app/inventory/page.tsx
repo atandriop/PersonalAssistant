@@ -1,5 +1,2 @@
-import InventoryPage from '@/components/inventory/InventoryPage'
-
-export default function Page() {
-  return <InventoryPage />
-}
+import ItemsPage from '@/components/items/ItemsPage'
+export default function Page() { return <ItemsPage /> }

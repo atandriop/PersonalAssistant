@@ -1,7 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import useSWR from 'swr'
 import type { Subscription } from '@/types'
+import PromptModal from '@/components/ui/PromptModal'
+import NetWorthPage from '@/components/networth/NetWorthPage'
+import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -34,11 +38,21 @@ const TYPE_COLOR: Record<string, string> = {
 const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const
 const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
-export default function FinancePage() {
+type FinanceSection = 'overview' | 'net-worth' | 'subscriptions'
+
+const SECTIONS: { id: FinanceSection; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'net-worth', label: 'Net Worth' },
+  { id: 'subscriptions', label: 'Subscriptions' },
+]
+
+export default function FinancePage({ defaultSection = 'overview' }: { defaultSection?: FinanceSection }) {
+  const [section, setSection] = useState<FinanceSection>(defaultSection)
   const { data: holdings = [] } = useSWR<Holding[]>('/api/portfolio', fetcher)
   const { data: entries = [] } = useSWR<NetWorthEntry[]>('/api/net-worth/entries', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
   const { data: wishlist = [] } = useSWR<WishlistItem[]>('/api/wishlist', fetcher)
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
   const assetTotal = portfolioTotal + entries.filter(e => e.type === 'asset').reduce((s, e) => s + e.value, 0)
@@ -72,9 +86,76 @@ export default function FinancePage() {
     value: activeWishlist.filter(i => i.priority === p).reduce((s, i) => s + i.cost, 0),
   })).filter(p => p.count > 0)
 
+  function buildFinancePrompt(): string {
+    const portfolioLines = byType.map(x =>
+      `  ${x.type.charAt(0).toUpperCase() + x.type.slice(1)}: ${fmt(x.value)} (${((x.value / (portfolioTotal || 1)) * 100).toFixed(0)}%)`
+    ).join('\n')
+    const holdingLines = holdings.map(h => {
+      const val = holdingValue(h)
+      const pnl = h.buyPrice != null && h.currentPrice != null && h.quantity != null
+        ? ` · P&L: ${h.currentPrice >= h.buyPrice ? '+' : ''}${fmtDecimal((h.currentPrice - h.buyPrice) * h.quantity)}`
+        : ''
+      return `  - ${h.name} (${h.type}): ${fmt(val)}${pnl}`
+    }).join('\n')
+    const subLines = activeSubs.map(s => `  - ${s.name}: ${fmtDecimal(s.monthly)}/mo`).join('\n')
+    const wishlistLines = byPriority.map(p =>
+      `  ${p.priority}: ${p.count} item(s) — ${fmt(p.value)}`
+    ).join('\n')
+
+    return `Here is my financial snapshot as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:
+
+Net Worth: ${fmt(netWorth)}
+  Assets: ${fmt(assetTotal)}
+  Liabilities: ${fmt(liabilityTotal)}
+
+Portfolio (${fmt(portfolioTotal)} total, P&L: ${portfolioPnl >= 0 ? '+' : ''}${fmtDecimal(portfolioPnl)}):
+${portfolioLines}
+${holdingLines}
+
+Active Subscriptions (${fmtDecimal(monthlySubCost)}/mo · ${fmt(annualSubCost)}/yr):
+${subLines || '  None'}
+
+Wishlist (unpurchased):
+${wishlistLines || '  Empty'}
+  Total: ${fmt(activeWishlist.reduce((s, i) => s + i.cost, 0))} across ${activeWishlist.length} item(s)
+
+Please analyse this. Comment on portfolio allocation and whether it looks balanced or concentrated. Flag any subscriptions that seem high relative to their likely value. Compare the wishlist total against liquid assets and suggest a prioritisation approach.`
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const in14 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  const hasData = holdings.length > 0 || entries.length > 0 || subscriptions.length > 0
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Finance</h1>
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
+        {SECTIONS.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setSection(s.id)}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              section === s.id
+                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === 'net-worth' && <NetWorthPage />}
+      {section === 'subscriptions' && <SubscriptionsPage />}
+      {section === 'overview' && <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
+        {hasData && (
+          <button onClick={() => setShowPrompt(true)} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+            Generate AI Prompt
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
@@ -141,19 +222,25 @@ export default function FinancePage() {
           ) : (
             <>
               <div className="flex flex-col gap-1 mb-3">
-                {activeSubs.map(s => (
-                  <div key={s.id} className="flex items-center justify-between py-1 border-b border-gray-50 dark:border-gray-800 last:border-0">
-                    <div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{s.name}</span>
-                      {s.renewalDate && (
-                        <span className="text-xs text-gray-400 ml-2">
-                          renews {new Date(s.renewalDate.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                        </span>
-                      )}
+                {activeSubs.map(s => {
+                  const renewSoon = s.renewalDate &&
+                    s.renewalDate.slice(0, 10) >= today &&
+                    s.renewalDate.slice(0, 10) <= in14
+                  return (
+                    <div key={s.id} className="flex items-center justify-between py-1 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                      <div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{s.name}</span>
+                        {s.renewalDate && (
+                          <span className={`text-xs ml-2 ${renewSoon ? 'text-amber-500 font-medium' : 'text-gray-400'}`}>
+                            renews {new Date(s.renewalDate.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            {renewSoon && ' ⚠'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white shrink-0 ml-2">{fmtDecimal(s.monthly)}/mo</span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white shrink-0 ml-2">{fmtDecimal(s.monthly)}/mo</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               <div className="flex justify-between text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2">
                 <span>Monthly total</span><span className="font-medium">{fmtDecimal(monthlySubCost)}</span>
@@ -204,6 +291,11 @@ export default function FinancePage() {
         </div>
 
       </div>
+
+      {showPrompt && (
+        <PromptModal title="Finance AI Prompt" prompt={buildFinancePrompt()} onClose={() => setShowPrompt(false)} />
+      )}
+      </div>}
     </div>
   )
 }

@@ -30,7 +30,19 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
   const [selectedTripIds, setSelectedTripIds] = useState<number[]>(
     initial?.trips.map(t => t.id) ?? []
   )
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
+  const [tagInput, setTagInput] = useState('')
   const [saving, setSaving] = useState(false)
+
+  function addTag() {
+    const t = tagInput.trim().toLowerCase()
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t])
+    setTagInput('')
+  }
+
+  function removeTag(t: string) {
+    setTags(prev => prev.filter(x => x !== t))
+  }
 
   function toggleTrip(tripId: number) {
     setSelectedTripIds(prev =>
@@ -50,6 +62,7 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
       location: location.trim() || null,
       notes: notes.trim() || null,
       tripIds: selectedTripIds,
+      tags,
     }
     if (initial) {
       await fetch(`/api/memories/${initial.id}`, {
@@ -165,6 +178,28 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
               placeholder="Any notes…"
               className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none"
             />
+          </div>
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {tags.map(t => (
+                <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                  {t}
+                  <button type="button" onClick={() => removeTag(t)} className="opacity-70 hover:opacity-100">×</button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+                placeholder="Add tag…"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              />
+              <button type="button" onClick={addTag} className="px-3 py-1.5 text-sm border rounded-lg dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Add</button>
+            </div>
           </div>
           {/* Linked Trips */}
           {trips.length > 0 && (

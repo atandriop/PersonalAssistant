@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { BucketTrip, BucketExperience } from '@/types'
+import PromptModal from '@/components/ui/PromptModal'
 import TripCard from './TripCard'
 import TripForm from './TripForm'
 import ExperienceCard from './ExperienceCard'
@@ -25,6 +26,42 @@ export default function BucketListPage() {
   const [addingExperience, setAddingExperience] = useState(false)
   const [editTrip, setEditTrip] = useState<BucketTrip | null>(null)
   const [editExperience, setEditExperience] = useState<BucketExperience | null>(null)
+  const [showPrompt, setShowPrompt] = useState(false)
+
+  function buildBucketListPrompt(): string {
+    const pendingTrips = trips.filter(t => !t.done)
+    const doneTrips = trips.filter(t => t.done)
+    const tripLines = pendingTrips.map(t => {
+      const year = t.targetYear ? ` (target: ${t.targetYear})` : ''
+      const budget = t.budget ? ` · budget: €${t.budget.toLocaleString()}` : ''
+      const cities = t.cities.length > 0 ? ` — ${t.cities.join(', ')}` : ''
+      return `  - ${t.destination}${cities}${year}${budget}`
+    }).join('\n')
+
+    const pendingExp = experiences.filter(e => !e.done)
+    const doneExp = experiences.filter(e => e.done)
+    const expByCategory: Record<string, BucketExperience[]> = {}
+    pendingExp.forEach(e => {
+      if (!expByCategory[e.category]) expByCategory[e.category] = []
+      expByCategory[e.category].push(e)
+    })
+    const expLines = Object.entries(expByCategory).map(([cat, items]) =>
+      `  ${cat}:\n` + items.map(e => {
+        const year = e.targetYear ? ` (target: ${e.targetYear})` : ''
+        return `    - ${e.title}${year}`
+      }).join('\n')
+    ).join('\n')
+
+    return `Here is my bucket list as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:
+
+Trips — ${pendingTrips.length} pending, ${doneTrips.length} completed:
+${tripLines || '  None'}
+
+Experiences — ${pendingExp.length} pending, ${doneExp.length} completed:
+${expLines || '  None'}
+
+Please reflect on this bucket list. Identify any themes or patterns across the trips and experiences. Suggest which 2–3 items look most achievable in the next 12 months based on what's listed. Flag any categories that seem underrepresented based on a balanced life.`
+  }
 
   const filteredTrips = trips.filter(t => {
     if (tripFilter === 'Done') return t.done
@@ -74,12 +111,19 @@ export default function BucketListPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bucket List</h1>
-        <button
-          onClick={() => tab === 'trips' ? setAddingTrip(true) : setAddingExperience(true)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-        >
-          {tab === 'trips' ? '+ Add Trip' : '+ Add Experience'}
-        </button>
+        <div className="flex gap-2">
+          {(trips.length > 0 || experiences.length > 0) && (
+            <button onClick={() => setShowPrompt(true)} className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700">
+              Generate AI Prompt
+            </button>
+          )}
+          <button
+            onClick={() => tab === 'trips' ? setAddingTrip(true) : setAddingExperience(true)}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            {tab === 'trips' ? '+ Add Trip' : '+ Add Experience'}
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -202,6 +246,9 @@ export default function BucketListPage() {
           onSave={() => { mutateExperiences(); setEditExperience(null) }}
           onCancel={() => setEditExperience(null)}
         />
+      )}
+      {showPrompt && (
+        <PromptModal title="Bucket List AI Prompt" prompt={buildBucketListPrompt()} onClose={() => setShowPrompt(false)} />
       )}
     </div>
   )

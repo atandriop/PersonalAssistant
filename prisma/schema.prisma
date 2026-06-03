@@ -112,29 +112,33 @@ model Subscription {
 }
 
 model Habit {
-  id        Int             @id @default(autoincrement())
-  name      String
-  color     String
-  logs      HabitLog[]
-  goalLinks GoalHabitLink[]
-  createdAt DateTime        @default(now())
+  id         Int             @id @default(autoincrement())
+  name       String
+  color      String
+  logs       HabitLog[]
+  goalLinks  GoalHabitLink[]
+  archivedAt DateTime?
+  createdAt  DateTime        @default(now())
 }
 
 model HabitLog {
-  id      Int    @id @default(autoincrement())
+  id      Int     @id @default(autoincrement())
   habitId Int
-  habit   Habit  @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
   date    String
+  note    String?
   @@unique([habitId, date])
 }
 
 model TechRadarItem {
-  id        Int      @id @default(autoincrement())
-  name      String
-  ring      String
-  category  String
-  notes     String?
-  createdAt DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String
+  ring         String
+  category     String
+  notes        String?
+  previousRing String?
+  ringChangedAt String?
+  createdAt    DateTime @default(now())
 }
 
 model LifeArea {
@@ -163,6 +167,7 @@ model Milestone {
   goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
   title       String
   completedAt DateTime?
+  targetDate  String?
   createdAt   DateTime  @default(now())
 }
 
@@ -247,16 +252,21 @@ model GiftIdea {
 }
 
 model Task {
-  id         Int             @id @default(autoincrement())
-  title      String
-  priority   String          @default("Medium")
-  dueDate    DateTime?
-  category   String?
-  notes      String?
-  done       Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  subtasks   Subtask[]
-  sourceLink TaskSourceLink?
+  id                Int              @id @default(autoincrement())
+  title             String
+  priority          String           @default("Medium")
+  dueDate           String?
+  category          String?
+  notes             String?
+  done              Boolean          @default(false)
+  recurring         Boolean          @default(false)
+  recurringInterval String?
+  blockedById       Int?
+  blockedBy         Task?            @relation("TaskBlocking", fields: [blockedById], references: [id])
+  blocking          Task[]           @relation("TaskBlocking")
+  createdAt         DateTime         @default(now())
+  subtasks          Subtask[]
+  sourceLink        TaskSourceLink?
 }
 
 model Subtask {
@@ -300,6 +310,7 @@ model Document {
   category     String
   notes        String?
   expiryDate   String?
+  tags         String   @default("")
   createdAt    DateTime @default(now())
 }
 
@@ -356,6 +367,7 @@ model Memory {
   category  String
   location  String?
   notes     String?
+  tags      String       @default("")
   trips     MemoryTrip[]
   createdAt DateTime     @default(now())
 }

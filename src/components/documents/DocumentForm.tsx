@@ -21,6 +21,8 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [expiryDate, setExpiryDate] = useState(initial?.expiryDate ?? '')
   const [file, setFile] = useState<File | null>(null)
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
+  const [tagInput, setTagInput] = useState('')
   const [saving, setSaving] = useState(false)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -30,6 +32,16 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
     if (!name) {
       setName(f.name.replace(/\.[^/.]+$/, ''))
     }
+  }
+
+  function addTag() {
+    const t = tagInput.trim().toLowerCase()
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t])
+    setTagInput('')
+  }
+
+  function removeTag(t: string) {
+    setTags(prev => prev.filter(x => x !== t))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,6 +57,7 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
             category,
             notes: notes || null,
             expiryDate: expiryDate || null,
+            tags,
           }),
         })
       } else {
@@ -55,6 +68,7 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
         form.append('category', category)
         if (notes) form.append('notes', notes)
         if (expiryDate) form.append('expiryDate', expiryDate)
+        form.append('tags', tags.join(','))
         await fetch('/api/documents', { method: 'POST', body: form })
       }
       onSave()
@@ -126,6 +140,27 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
               rows={3}
               className={inputCls}
             />
+          </div>
+          <div>
+            <label className={labelCls}>Tags</label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {tags.map(t => (
+                <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                  {t}
+                  <button type="button" onClick={() => removeTag(t)} className="opacity-70 hover:opacity-100">×</button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+                placeholder="Add tag…"
+                className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 text-sm"
+              />
+              <button type="button" onClick={addTag} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Add</button>
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button

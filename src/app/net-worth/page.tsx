@@ -1,5 +1,2 @@
-import NetWorthPage from '@/components/networth/NetWorthPage'
-
-export default function Page() {
-  return <NetWorthPage />
-}
+import FinancePage from '@/components/finance/FinancePage'
+export default function Page() { return <FinancePage defaultSection="net-worth" /> }

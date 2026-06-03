@@ -44,6 +44,7 @@ export default function DecisionsPage() {
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
+  const [showXvsY, setShowXvsY] = useState(false)
 
   const { data: matrix, mutate: mutateMatrix } = useSWR<Matrix>(
     selectedId ? `/api/matrices/${selectedId}` : null,
@@ -162,6 +163,37 @@ ${resultLines}
 Please analyse my scoring. Identify potential biases, flag criteria that may be under/over-weighted relative to their importance, and suggest whether the top-ranked option is clearly the right choice or if the decision is too close to call.`
   }
 
+  function buildXvsYPrompt(): string {
+    if (!matrix || options.length < 2) return ''
+    const ranked = [...options].sort((a, b) => getWeightedScore(b.id) - getWeightedScore(a.id))
+    const top = ranked[0]
+    const second = ranked[1]
+    const topScore = getWeightedScore(top.id).toFixed(2)
+    const secondScore = getWeightedScore(second.id).toFixed(2)
+
+    const topStrengths = criteria
+      .filter(c => getScore(c.id, top.id) > getScore(c.id, second.id))
+      .map(c => `${c.name} (${getScore(c.id, top.id)} vs ${getScore(c.id, second.id)})`)
+    const secondStrengths = criteria
+      .filter(c => getScore(c.id, second.id) > getScore(c.id, top.id))
+      .map(c => `${c.name} (${getScore(c.id, second.id)} vs ${getScore(c.id, top.id)})`)
+
+    const context = matrix.description ? `\nContext: ${matrix.description}` : ''
+
+    return `I'm trying to decide: ${matrix.name}${context}
+
+My weighted scoring puts two options close to each other:
+- ${top.name}: ${topScore}/10
+- ${second.name}: ${secondScore}/10
+
+Where ${top.name} scores higher: ${topStrengths.join(', ') || 'none'}
+Where ${second.name} scores higher: ${secondStrengths.join(', ') || 'none'}
+
+The criteria I weighted most: ${[...criteria].sort((a, b) => b.weight - a.weight).slice(0, 3).map(c => `${c.name} (${c.weight}%)`).join(', ')}
+
+Please help me think through this ${top.name} vs ${second.name} decision. What does my scoring reveal about my priorities? Are there any non-quantifiable factors I might be overlooking? Which would you recommend and why?`
+  }
+
   const maxWS = Math.max(...options.map(o => getWeightedScore(o.id)), 0.001)
 
   return (
@@ -202,7 +234,15 @@ Please analyse my scoring. Identify potential biases, flag criteria that may be 
               onClick={() => setShowPrompt(true)}
               className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
-              Generate AI Prompt
+              Detailed Analysis
+            </button>
+          )}
+          {selectedId && matrix && criteria.length > 0 && options.length >= 2 && (
+            <button
+              onClick={() => setShowXvsY(true)}
+              className="text-sm px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+            >
+              X vs Y
             </button>
           )}
         </div>
@@ -296,25 +336,51 @@ Please analyse my scoring. Identify potential biases, flag criteria that may be 
           {options.length > 0 && criteria.length > 0 && (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Results (sorted by score)</h3>
-              <div className="flex flex-col gap-2">
-                {[...options]
-                  .sort((a, b) => getWeightedScore(b.id) - getWeightedScore(a.id))
-                  .map(opt => {
-                    const ws = getWeightedScore(opt.id)
-                    return (
-                      <div key={opt.id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate shrink-0">{opt.name}</span>
-                        <div className="flex-1 h-5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                            style={{ width: `${(ws / maxWS) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white w-12 text-right shrink-0">{ws.toFixed(2)}</span>
+              {(() => {
+                const sorted = [...options].sort((a, b) => getWeightedScore(b.id) - getWeightedScore(a.id))
+                const winner = sorted[0]
+                const winnerScore = getWeightedScore(winner.id)
+                const runnerUp = sorted[1]
+                const gap = runnerUp ? winnerScore - getWeightedScore(runnerUp.id) : 99
+                return (
+                  <>
+                    <div className="mb-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">Recommended</span>
+                        <p className="text-sm font-bold text-green-900 dark:text-green-200 mt-0.5">{winner.name}</p>
                       </div>
-                    )
-                  })}
-              </div>
+                      <div className="text-right">
+                        <span className="text-xl font-bold text-green-700 dark:text-green-400">{winnerScore.toFixed(2)}</span>
+                        {gap < 0.5 && runnerUp && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400">Close call — gap only {gap.toFixed(2)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {sorted.map((opt, rank) => {
+                        const ws = getWeightedScore(opt.id)
+                        const isWinner = rank === 0
+                        return (
+                          <div key={opt.id} className="flex items-center gap-3">
+                            <span className={`text-sm w-32 truncate shrink-0 ${isWinner ? 'font-semibold text-green-700 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                              {isWinner && '★ '}{opt.name}
+                            </span>
+                            <div className="flex-1 h-5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${isWinner ? 'bg-green-500' : 'bg-blue-400'}`}
+                                style={{ width: `${(ws / maxWS) * 100}%` }}
+                              />
+                            </div>
+                            <span className={`text-sm font-semibold w-12 text-right shrink-0 ${isWinner ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                              {ws.toFixed(2)}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>
@@ -322,9 +388,16 @@ Please analyse my scoring. Identify potential biases, flag criteria that may be 
 
       {showPrompt && (
         <PromptModal
-          title="Decision Matrix AI Prompt"
+          title="Decision Matrix — Detailed Analysis"
           prompt={buildPrompt()}
           onClose={() => setShowPrompt(false)}
+        />
+      )}
+      {showXvsY && (
+        <PromptModal
+          title={`Decision — X vs Y`}
+          prompt={buildXvsYPrompt()}
+          onClose={() => setShowXvsY(false)}
         />
       )}
     </div>

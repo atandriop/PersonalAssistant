@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const { completedAt } = await req.json()
+  const { completedAt, targetDate } = await req.json()
   const milestone = await prisma.milestone.update({
     where: { id: Number(params.id) },
-    data: { completedAt: completedAt ? new Date(completedAt) : null },
+    data: {
+      completedAt: completedAt ? new Date(completedAt) : null,
+      ...(targetDate !== undefined ? { targetDate: targetDate ?? null } : {}),
+    },
   })
   return NextResponse.json(milestone)
 }

@@ -15,11 +15,18 @@ interface PortfolioHoldingRow {
   currentPrice?: number | null; buyPrice?: number | null; quantity?: number | null
   balance?: number | null; interestRate?: number | null
 }
+interface CompletedTask { id: number; title: string; priority: string; dueDate: string | null; category: string | null }
+interface CompletedAppt { id: number; title: string; date: string; category: string }
+interface NewMemory { id: number; title: string; date: string; category: string }
+
 interface WeeklyData {
   wishlistItems: WishlistItemRow[]
   inventoryItems: InventoryItemRow[]
   portfolioHoldings: PortfolioHoldingRow[]
   portfolioDelta: number | null
+  completedTasks: CompletedTask[]
+  completedAppointments: CompletedAppt[]
+  newMemories: NewMemory[]
   weekStart: string
   weekEnd: string
 }
@@ -47,8 +54,9 @@ function HabitWeekRow({ habit, weekDates, onCount }: {
   habit: Habit; weekDates: string[]
   onCount?: (id: number, count: number) => void
 }) {
-  const { data: logs = [] } = useSWR<string[]>(`/api/habits/${habit.id}/logs`, fetcher)
-  const count = weekDates.filter(d => logs.includes(d)).length
+  const { data: logs = [] } = useSWR<{ date: string; note: string | null }[]>(`/api/habits/${habit.id}/logs`, fetcher)
+  const logDates = logs.map(l => l.date)
+  const count = weekDates.filter(d => logDates.includes(d)).length
   const pct = count / 7
   useEffect(() => { onCount?.(habit.id, count) }, [habit.id, count, onCount])
   return (
@@ -147,7 +155,61 @@ export default function WeeklyReviewPage() {
     const delta = portfolioDelta !== null
       ? `Portfolio delta vs 7 days ago: ${portfolioDelta >= 0 ? '+' : ''}€${portfolioDelta.toFixed(2)}`
       : 'Portfolio delta: not enough data'
+
+    const habitLines = sortedHabits.length
+      ? sortedHabits.map(h => `- ${h.name}: ${weekCounts[h.id] ?? 0}/7 days`).join('\n')
+      : '(no habits)'
+
+    const goalLines = goalsWithMilestones.length
+      ? goalsWithMilestones.map(g => `- ${g.title} (${g.areaName}): ${g.done}/${g.total} milestones`).join('\n')
+      : '(no goals with milestones)'
+
+    const maintenanceLines = maintenanceAlerts.length
+      ? maintenanceAlerts.map(({ item, task, status }) =>
+          `- ${item.name} — ${task.description} [${status}]`
+        ).join('\n')
+      : '(none)'
+
+    const renewLines = renewingSoon.length
+      ? renewingSoon.map(s =>
+          `- ${s.name}: €${s.cost.toFixed(2)}/${s.period} on ${new Date(s.renewalDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+        ).join('\n')
+      : '(none)'
+
+    const taskLines = data.completedTasks.length
+      ? data.completedTasks.map(t => `- ${t.title}${t.category ? ` [${t.category}]` : ''}`).join('\n')
+      : '(none)'
+
+    const apptLines = data.completedAppointments.length
+      ? data.completedAppointments.map(a => `- ${a.title} (${a.category}) on ${a.date}`).join('\n')
+      : '(none)'
+
+    const memLines = data.newMemories.length
+      ? data.newMemories.map(m => `- ${m.title} (${m.category})`).join('\n')
+      : '(none)'
+
     return `Weekly review — ${fmt(weekStart)} to ${fmt(weekEnd)}
+
+TASKS COMPLETED (${data.completedTasks.length}):
+${taskLines}
+
+APPOINTMENTS ATTENDED (${data.completedAppointments.length}):
+${apptLines}
+
+MEMORIES LOGGED (${data.newMemories.length}):
+${memLines}
+
+HABITS (this week):
+${habitLines}
+
+GOALS:
+${goalLines}
+
+MAINTENANCE ALERTS:
+${maintenanceLines}
+
+SUBSCRIPTIONS RENEWING SOON:
+${renewLines}
 
 WISHLIST (${wishlistItems.length} added${wishlistItems.length ? `, €${wTotal.toFixed(2)} total` : ''}):
 ${wLines}
@@ -157,13 +219,12 @@ ${iLines}
 
 PORTFOLIO (${portfolioHoldings.length} added):
 ${pLines}
-
 ${delta}
 
 MY NOTES:
 ${notes.trim() || '(none)'}
 
-Please identify patterns in this week's activity, flag anything I should follow up on, and suggest 2-3 priorities for next week.`
+Please identify patterns in this week's activity across habits, goals, and finances. Flag anything I should follow up on, and suggest 2-3 priorities for next week.`
   }
 
   const dateRange = data
@@ -188,6 +249,45 @@ Please identify patterns in this week's activity, flag anything I should follow 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-4">
+          <WeekSection title={`Tasks completed (${data?.completedTasks.length ?? 0})`}>
+            {data?.completedTasks.length ? (
+              <ul className="flex flex-col gap-1">
+                {data.completedTasks.map(t => (
+                  <li key={t.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-800 dark:text-gray-200 truncate">{t.title}</span>
+                    {t.category && <span className="text-xs text-gray-400 shrink-0 ml-2">{t.category}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-gray-400">No tasks completed this week.</p>}
+          </WeekSection>
+
+          <WeekSection title={`Appointments attended (${data?.completedAppointments.length ?? 0})`}>
+            {data?.completedAppointments.length ? (
+              <ul className="flex flex-col gap-1">
+                {data.completedAppointments.map(a => (
+                  <li key={a.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-800 dark:text-gray-200 truncate">{a.title}</span>
+                    <span className="text-xs text-gray-400 shrink-0 ml-2">{a.date}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-gray-400">No appointments this week.</p>}
+          </WeekSection>
+
+          <WeekSection title={`Memories logged (${data?.newMemories.length ?? 0})`}>
+            {data?.newMemories.length ? (
+              <ul className="flex flex-col gap-1">
+                {data.newMemories.map(m => (
+                  <li key={m.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-800 dark:text-gray-200 truncate">{m.title}</span>
+                    <span className="text-xs text-gray-400 shrink-0 ml-2">{m.category}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-gray-400">No memories added this week.</p>}
+          </WeekSection>
+
           <WeekSection title={`Wishlist added (${data?.wishlistItems.length ?? 0})`}>
             {data?.wishlistItems.length ? (
               <ul className="flex flex-col gap-1">

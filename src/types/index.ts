@@ -1,5 +1,7 @@
-export interface Habit { id: number; name: string; color: string }
-export interface Milestone { id: number; completedAt: string | null }
+export interface GoalRef { id: number; title: string; timePeriod: string }
+export interface GoalLink { id: number; goalId: number; goal: GoalRef }
+export interface Habit { id: number; name: string; color: string; goalLinks: GoalLink[]; doneToday?: boolean }
+export interface Milestone { id: number; completedAt: string | null; targetDate?: string | null; title?: string }
 export interface Goal { id: number; title: string; milestones: Milestone[] }
 export interface LifeArea { id: number; name: string; goals: Goal[] }
 export interface GiftIdea { id: number; estimatedCost: number | null; purchased: boolean }
@@ -31,6 +33,10 @@ export interface Task {
   category: string | null
   notes: string | null
   done: boolean
+  recurring: boolean
+  recurringInterval: string | null
+  blockedById: number | null
+  blockedByTitle: string | null
   createdAt: string
   subtasks: Subtask[]
   sourceLink: TaskSourceLink | null
@@ -61,6 +67,7 @@ export interface Document {
   category: string
   notes: string | null
   expiryDate: string | null
+  tags: string[]
   createdAt: string
 }
 
@@ -119,6 +126,7 @@ export interface Memory {
   category: 'Career' | 'Education' | 'Travel' | 'Personal' | 'Other'
   location: string | null
   notes: string | null
+  tags: string[]
   trips: { id: number; countryName: string; startDate: string | null }[]
   createdAt: string
 }

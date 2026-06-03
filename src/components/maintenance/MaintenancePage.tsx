@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import PromptModal from '@/components/ui/PromptModal'
 import { TaskStatus, getTaskStatus } from '@/lib/maintenance'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -293,6 +294,42 @@ export default function MaintenancePage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<HomeItem | null>(null)
+  const [showPrompt, setShowPrompt] = useState(false)
+
+  function buildMaintenancePrompt(): string {
+    const today = new Date().toISOString().slice(0, 10)
+    const groups: Record<'overdue' | 'due-soon' | 'ok' | 'none', string[]> = {
+      overdue: [], 'due-soon': [], ok: [], none: [],
+    }
+
+    items.forEach(item => {
+      if (item.tasks.length === 0) {
+        groups.none.push(`  - ${item.name}: no scheduled tasks`)
+        return
+      }
+      item.tasks.forEach(task => {
+        const { status, nextDue } = getTaskStatus(task)
+        const dueStr = nextDue ? ` (due: ${nextDue})` : ''
+        const lastStr = task.lastDoneDate ? `, last done: ${task.lastDoneDate}` : ''
+        groups[status].push(`  - ${item.name} — ${task.description}${dueStr}${lastStr}`)
+      })
+    })
+
+    const section = (title: string, lines: string[]) =>
+      lines.length > 0 ? `${title}:\n${lines.join('\n')}` : ''
+
+    return `Here is my home maintenance snapshot as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:
+
+${section('Overdue', groups.overdue) || 'Overdue: None'}
+
+${section('Due within 30 days', groups['due-soon']) || 'Due within 30 days: None'}
+
+${section('Scheduled and on track', groups.ok) || 'On track: None'}
+
+${section('No schedule set', groups.none)}
+
+Please analyse this. Prioritise the overdue and upcoming tasks by urgency and risk of deferring further. For anything overdue, flag the potential consequence of continued delay. Suggest what I should tackle first this month.`
+  }
 
   async function deleteItem(id: number) {
     if (!confirm('Delete this item and all its tasks and logs?')) return
@@ -304,7 +341,14 @@ export default function MaintenancePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Maintenance</h1>
-        <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ Add item</button>
+        <div className="flex gap-2">
+          {items.length > 0 && (
+            <button onClick={() => setShowPrompt(true)} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+              Generate AI Prompt
+            </button>
+          )}
+          <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ Add item</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -353,6 +397,7 @@ export default function MaintenancePage() {
 
       {showAdd && <Modal title="Add item" onClose={() => setShowAdd(false)}><ItemForm onSave={() => { setShowAdd(false); mutate() }} onCancel={() => setShowAdd(false)} /></Modal>}
       {editing && <Modal title="Edit item" onClose={() => setEditing(null)}><ItemForm initial={editing} onSave={() => { setEditing(null); mutate() }} onCancel={() => setEditing(null)} /></Modal>}
+      {showPrompt && <PromptModal title="Maintenance AI Prompt" prompt={buildMaintenancePrompt()} onClose={() => setShowPrompt(false)} />}
     </div>
   )
 }

@@ -1,5 +1,2 @@
-import BucketListPage from '@/components/bucket-list/BucketListPage'
-
-export default function Page() {
-  return <BucketListPage />
-}
+import ExperiencesPage from '@/components/experiences/ExperiencesPage'
+export default function Page() { return <ExperiencesPage defaultTab="bucket-list" /> }

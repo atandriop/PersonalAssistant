@@ -9,6 +9,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface TechRadarItem {
   id: number; name: string; ring: string; category: string; notes?: string | null
+  previousRing?: string | null; ringChangedAt?: string | null
 }
 
 const RINGS = [
@@ -177,6 +178,11 @@ export default function TechRadarPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</span>
                             <Badge color={CAT_COLOR[item.category]}>{item.category}</Badge>
+                            {item.previousRing && (
+                              <span className="text-xs text-gray-400 dark:text-gray-500" title={item.ringChangedAt ? `Moved on ${item.ringChangedAt}` : undefined}>
+                                ← {item.previousRing}
+                              </span>
+                            )}
                             {item.notes && (
                               <button onClick={() => toggleNotes(item.id)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                 {expandedNotes.has(item.id) ? '▲' : '▼'}

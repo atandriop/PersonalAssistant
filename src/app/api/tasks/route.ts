@@ -3,23 +3,51 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+function serializeTask(t: {
+  id: number; title: string; priority: string; dueDate: string | null; category: string | null
+  notes: string | null; done: boolean; recurring: boolean; recurringInterval: string | null
+  blockedById: number | null; createdAt: Date
+  subtasks: { id: number; taskId: number; title: string; done: boolean }[]
+  sourceLink: { id: number; taskId: number; sourceType: string; sourceId: number } | null
+  blockedBy: { title: string } | null
+}) {
+  return {
+    ...t,
+    createdAt: t.createdAt.toISOString(),
+    blockedByTitle: t.blockedBy?.title ?? null,
+  }
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const doneFilter = searchParams.get('done')
+
+  const where = doneFilter !== null ? { done: doneFilter === 'true' } : {}
+
   const tasks = await prisma.task.findMany({
-    include: { subtasks: true, sourceLink: true },
+    where,
+    include: {
+      subtasks: true,
+      sourceLink: true,
+      blockedBy: { select: { title: true } },
+    },
     orderBy: { createdAt: 'desc' },
   })
-  return NextResponse.json(tasks)
+  return NextResponse.json(tasks.map(serializeTask))
 }
 
 export async function POST(req: Request) {
-  const { title, priority, dueDate, category, notes, subtasks = [], sourceLink } = await req.json()
+  const { title, priority, dueDate, category, notes, subtasks = [], sourceLink, recurring, recurringInterval, blockedById } = await req.json()
   const task = await prisma.task.create({
     data: {
       title,
       priority: priority ?? 'Medium',
-      dueDate: dueDate ? new Date(dueDate) : null,
+      dueDate: dueDate ?? null,
       category: category ?? null,
       notes: notes ?? null,
+      recurring: recurring ?? false,
+      recurringInterval: recurringInterval ?? null,
+      blockedById: blockedById ? Number(blockedById) : null,
       subtasks: subtasks.length > 0
         ? { create: subtasks.map((s: { title: string }) => ({ title: s.title })) }
         : undefined,
@@ -27,7 +55,11 @@ export async function POST(req: Request) {
         ? { create: { sourceType: sourceLink.sourceType, sourceId: Number(sourceLink.sourceId) } }
         : undefined,
     },
-    include: { subtasks: true, sourceLink: true },
+    include: {
+      subtasks: true,
+      sourceLink: true,
+      blockedBy: { select: { title: true } },
+    },
   })
-  return NextResponse.json(task, { status: 201 })
+  return NextResponse.json(serializeTask(task), { status: 201 })
 }

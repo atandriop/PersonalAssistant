@@ -34,6 +34,9 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
   const [sourceId, setSourceId] = useState<number | ''>(
     initial?.sourceLink?.sourceId ?? preSourceLink?.sourceId ?? ''
   )
+  const [recurring, setRecurring] = useState(initial?.recurring ?? false)
+  const [recurringInterval, setRecurringInterval] = useState(initial?.recurringInterval ?? 'weekly')
+  const [blockedById, setBlockedById] = useState<number | ''>(initial?.blockedById ?? '')
 
   const { data: wishlistItems = [] } = useSWR<WishlistOption[]>(
     sourceType === 'wishlist' ? '/api/wishlist' : null,
@@ -43,6 +46,9 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
     sourceType === 'goal' ? '/api/life-areas' : null,
     fetcher
   )
+  const { data: allTasks = [] } = useSWR<{ id: number; title: string; done: boolean }[]>('/api/tasks', fetcher)
+  const blockableOptions = allTasks.filter(t => !t.done && t.id !== initial?.id)
+
   const goalOptions = lifeAreas.flatMap(a =>
     a.goals.map(g => ({ id: g.id, name: g.title }))
   )
@@ -68,6 +74,9 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
       sourceLink: sourceType && sourceId
         ? { sourceType, sourceId: Number(sourceId) }
         : null,
+      recurring,
+      recurringInterval: recurring ? recurringInterval : null,
+      blockedById: blockedById !== '' ? Number(blockedById) : null,
     }
     if (initial?.id) {
       await fetch(`/api/tasks/${initial.id}`, {
@@ -117,6 +126,44 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
         <textarea rows={2} className={inputCls} value={notes} onChange={e => setNotes(e.target.value)} />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={recurring}
+            onChange={e => setRecurring(e.target.checked)}
+            className="rounded"
+          />
+          Recurring
+        </label>
+        {recurring && (
+          <select
+            value={recurringInterval}
+            onChange={e => setRecurringInterval(e.target.value)}
+            className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Blocked by</label>
+        <select
+          className={inputCls}
+          value={blockedById}
+          onChange={e => setBlockedById(e.target.value === '' ? '' : Number(e.target.value))}
+        >
+          <option value="">None</option>
+          {blockableOptions.map(t => (
+            <option key={t.id} value={t.id}>{t.title}</option>
+          ))}
+        </select>
       </div>
 
       {!initial && (

@@ -1,2 +1,2 @@
-import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
-export default function Page() { return <SubscriptionsPage /> }
+import FinancePage from '@/components/finance/FinancePage'
+export default function Page() { return <FinancePage defaultSection="subscriptions" /> }

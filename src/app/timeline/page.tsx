@@ -1,5 +1,2 @@
-import TimelinePage from '@/components/timeline/TimelinePage'
-
-export default function Page() {
-  return <TimelinePage />
-}
+import ExperiencesPage from '@/components/experiences/ExperiencesPage'
+export default function Page() { return <ExperiencesPage defaultTab="timeline" /> }

@@ -1,12 +1,48 @@
 'use client'
 
 import type React from 'react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
-import { TaskStatus, HomeItem, getTaskStatus } from '@/lib/maintenance'
-import type { Habit, LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory } from '@/types'
+import { HomeItem, getTaskStatus, TaskStatus } from '@/lib/maintenance'
+import type { LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory, Task, Subscription } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
+
+const ALL_WIDGETS = [
+  'habits', 'maintenance', 'goals', 'gifts',
+  'appointments', 'overdue-tasks', 'on-this-day', 'subscriptions',
+  'travel', 'memories', 'bucket-list', 'expiring-docs',
+] as const
+type WidgetId = typeof ALL_WIDGETS[number]
+
+const WIDGET_LABELS: Record<WidgetId, string> = {
+  'habits': 'Habits Today',
+  'maintenance': 'Maintenance',
+  'goals': 'Goals',
+  'gifts': 'Gifts',
+  'appointments': 'Upcoming Appointments',
+  'overdue-tasks': 'Overdue Tasks',
+  'on-this-day': 'On This Day',
+  'subscriptions': 'Subscriptions Renewing',
+  'travel': 'Travel',
+  'memories': 'Memories',
+  'bucket-list': 'Bucket List',
+  'expiring-docs': 'Expiring Documents',
+}
+
+const LS_KEY = 'dashboard-hidden-widgets'
+
+function loadHidden(): Set<WidgetId> {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) return new Set(JSON.parse(raw) as WidgetId[])
+  } catch { /* ignore */ }
+  return new Set()
+}
+
+function saveHidden(hidden: Set<WidgetId>) {
+  localStorage.setItem(LS_KEY, JSON.stringify(Array.from(hidden)))
+}
 
 const DOC_CATEGORY_COLOR: Record<string, string> = {
   Identity: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -24,44 +60,19 @@ const APPT_CATEGORY_COLOR: Record<string, string> = {
   Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
 }
 
-// ─── Habits Done Count ──────────────────────────────────────────────────────
-function HabitDoneCheck({ habitId, today, onResult }: {
-  habitId: number; today: string
-  onResult: (id: number, done: boolean) => void
-}) {
-  const { data: logs = [] } = useSWR<string[]>(`/api/habits/${habitId}/logs`, fetcher)
-  useEffect(() => { onResult(habitId, logs.includes(today)) }, [habitId, today, logs, onResult])
-  return null
+interface HabitWithToday {
+  id: number; name: string; color: string; doneToday: boolean
 }
 
-function HabitsDoneCount({ habits }: { habits: Habit[] }) {
-  const today = new Date().toISOString().slice(0, 10)
-  const [doneMap, setDoneMap] = useState<Record<number, boolean>>({})
-  const handleResult = useCallback((id: number, done: boolean) => {
-    setDoneMap(prev => prev[id] === done ? prev : { ...prev, [id]: done })
-  }, [])
-  const doneCount = Object.values(doneMap).filter(Boolean).length
-  return (
-    <>
-      {habits.map(h => (
-        <HabitDoneCheck key={h.id} habitId={h.id} today={today} onResult={handleResult} />
-      ))}
-      <p className="text-xs text-gray-400 mb-2">
-        {Object.keys(doneMap).length < habits.length ? '—' : doneCount} / {habits.length} done today
-      </p>
-    </>
-  )
-}
-
-// ─── Habit Today Row ────────────────────────────────────────────────────────
-function HabitTodayRow({ habit }: { habit: Habit }) {
-  const today = new Date().toISOString().slice(0, 10)
-  const { data: logs = [], mutate } = useSWR<string[]>(`/api/habits/${habit.id}/logs`, fetcher)
-  const done = logs.includes(today)
-
+// Single request for all habits + today status — no N+1
+function HabitTodayRow({ habit, onToggle }: { habit: HabitWithToday; onToggle: () => void }) {
   async function toggle() {
-    await fetch(`/api/habits/${habit.id}/logs`, { method: 'POST' })
-    mutate()
+    await fetch(`/api/habits/${habit.id}/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    onToggle()
   }
 
   return (
@@ -72,9 +83,9 @@ function HabitTodayRow({ habit }: { habit: Habit }) {
       </span>
       <button
         onClick={toggle}
-        title={done ? 'Done today' : 'Mark done'}
+        title={habit.doneToday ? 'Done today' : 'Mark done'}
         className={`w-5 h-5 rounded-full border-2 transition-colors shrink-0 ${
-          done
+          habit.doneToday
             ? 'bg-green-500 border-green-500'
             : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
         }`}
@@ -83,17 +94,13 @@ function HabitTodayRow({ habit }: { habit: Habit }) {
   )
 }
 
-// ─── Widget card ────────────────────────────────────────────────────────────
 function WidgetCard({ title, borderStyle, children }: {
   title: string
   borderStyle?: React.CSSProperties
   children: React.ReactNode
 }) {
   return (
-    <div
-      className="bg-white dark:bg-gray-900 border rounded-xl p-4"
-      style={borderStyle ?? {}}
-    >
+    <div className="bg-white dark:bg-gray-900 border rounded-xl p-4" style={borderStyle ?? {}}>
       <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
         {title}
       </h3>
@@ -102,9 +109,24 @@ function WidgetCard({ title, borderStyle, children }: {
   )
 }
 
-// ─── Dashboard ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { data: habits = [], isLoading: habitsLoading } = useSWR<Habit[]>('/api/habits', fetcher)
+  const [hidden, setHidden] = useState<Set<WidgetId>>(new Set())
+  const [configuring, setConfiguring] = useState(false)
+
+  useEffect(() => { setHidden(loadHidden()) }, [])
+
+  function toggleWidget(id: WidgetId) {
+    setHidden(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      saveHidden(next)
+      return next
+    })
+  }
+
+  function show(id: WidgetId) { return !hidden.has(id) }
+
+  const { data: habits = [], isLoading: habitsLoading, mutate: mutateHabits } = useSWR<HabitWithToday[]>('/api/habits?includeToday=true', fetcher)
   const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: lifeAreas = [], isLoading: goalsLoading } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
@@ -115,12 +137,23 @@ export default function DashboardPage() {
   const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
   const { data: travelTrips = [], isLoading: travelTripsLoading } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
   const { data: memories = [] } = useSWR<Memory[]>('/api/memories', fetcher)
+  const { data: tasks = [] } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
+  const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
 
-  // ── Memories widget ──
-  const MEMORY_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
-  const memoryCounts = MEMORY_CATEGORIES
-    .map(cat => ({ category: cat, count: memories.filter(m => m.category === cat).length }))
-    .filter(c => c.count > 0)
+  const today = new Date().toISOString().slice(0, 10)
+
+  // ── Habits ──
+  const doneCount = habits.filter(h => h.doneToday).length
+
+  // ── On This Day ──
+  const monthDay = today.slice(5) // MM-DD
+  const onThisDayMemories = memories
+    .filter(m => {
+      const mmd = m.date.slice(5, 10)
+      return mmd === monthDay && m.date.slice(0, 4) !== today.slice(0, 4)
+    })
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5)
 
   // ── Documents widget ──
   const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
@@ -160,263 +193,383 @@ export default function DashboardPage() {
   // ── Gifts widget ──
   const peopleWithIdeas = giftPeople.filter(p => p.ideas.length > 0)
 
+  // ── Overdue tasks ──
+  const overdueTasks = tasks
+    .filter(t => t.dueDate && t.dueDate.slice(0, 10) < today)
+    .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))
+    .slice(0, 5)
+
+  // ── Subscriptions renewing soon ──
+  const today30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const renewingSoon = subscriptions
+    .filter(s => s.active && s.renewalDate != null)
+    .filter(s => {
+      const d = s.renewalDate!.slice(0, 10)
+      return d >= today && d <= today30
+    })
+    .sort((a, b) => (a.renewalDate ?? '').localeCompare(b.renewalDate ?? ''))
+
   // ── Appointments widget ──
-  const today = new Date().toISOString().slice(0, 10)
   const upcomingAppts = appointments
     .filter(a => !a.done && a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)
 
+  // ── Memory counts ──
+  const MEMORY_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
+  const memoryCounts = MEMORY_CATEGORIES
+    .map(cat => ({ category: cat, count: memories.filter(m => m.category === cat).length }))
+    .filter(c => c.count > 0)
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <button
+          onClick={() => setConfiguring(c => !c)}
+          className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          {configuring ? 'Done' : 'Configure'}
+        </button>
+      </div>
+
+      {configuring && (
+        <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Show / hide widgets</p>
+          <div className="flex flex-wrap gap-2">
+            {ALL_WIDGETS.map(id => (
+              <button
+                key={id}
+                onClick={() => toggleWidget(id)}
+                className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
+                  hidden.has(id)
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 line-through'
+                    : 'bg-blue-600 text-white'
+                }`}
+              >
+                {WIDGET_LABELS[id]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Habits Today */}
-        <WidgetCard title="Habits Today">
-          {habitsLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : habits.length === 0 ? (
-            <p className="text-sm text-gray-400">No habits set up yet.</p>
-          ) : (
-            <div className="flex flex-col">
-              <HabitsDoneCount habits={habits} />
-              {habits.map(h => <HabitTodayRow key={h.id} habit={h} />)}
-            </div>
-          )}
-        </WidgetCard>
+        {/* Habits Today — single request, no N+1 */}
+        {show('habits') && (
+          <WidgetCard title="Habits Today">
+            {habitsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : habits.length === 0 ? (
+              <p className="text-sm text-gray-400">No habits set up yet.</p>
+            ) : (
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-400 mb-2">{doneCount} / {habits.length} done today</p>
+                {habits.map(h => (
+                  <HabitTodayRow key={h.id} habit={h} onToggle={() => mutateHabits()} />
+                ))}
+              </div>
+            )}
+          </WidgetCard>
+        )}
 
         {/* Maintenance */}
-        <WidgetCard title="Maintenance" borderStyle={maintenanceBorder}>
-          {maintenanceLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : alertItems.length === 0 ? (
-            <p className="text-sm text-green-600 dark:text-green-400">All up to date ✓</p>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {alertItems.map(({ item, task, status }) => (
-                <div key={task.id} className="flex items-start justify-between gap-2 py-0.5">
-                  <div className="min-w-0">
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">{item.name}</span>
-                    <span className="text-xs text-gray-400 truncate block">{task.description}</span>
+        {show('maintenance') && (
+          <WidgetCard title="Maintenance" borderStyle={maintenanceBorder}>
+            {maintenanceLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : alertItems.length === 0 ? (
+              <p className="text-sm text-green-600 dark:text-green-400">All up to date ✓</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {alertItems.map(({ item, task, status }) => (
+                  <div key={task.id} className="flex items-start justify-between gap-2 py-0.5">
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">{item.name}</span>
+                      <span className="text-xs text-gray-400 truncate block">{task.description}</span>
+                    </div>
+                    <span className={`text-xs font-medium shrink-0 ${status === 'overdue' ? 'text-red-500' : 'text-amber-500'}`}>
+                      {status === 'overdue' ? 'Overdue' : 'Due soon'}
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium shrink-0 ${status === 'overdue' ? 'text-red-500' : 'text-amber-500'}`}>
-                    {status === 'overdue' ? 'Overdue' : 'Due soon'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </WidgetCard>
+                ))}
+              </div>
+            )}
+          </WidgetCard>
+        )}
 
         {/* Goals */}
-        <WidgetCard title="Goals">
-          {goalsLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : lowestGoals.length === 0 ? (
-            <p className="text-sm text-gray-400">No goals set up yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {lowestGoals.map(g => (
-                <div key={g.id}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{g.title}</span>
-                    <span className="text-xs text-gray-400 shrink-0 ml-2">{Math.round(g.pct * 100)}%</span>
+        {show('goals') && (
+          <WidgetCard title="Goals">
+            {goalsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : lowestGoals.length === 0 ? (
+              <p className="text-sm text-gray-400">No goals set up yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {lowestGoals.map(g => (
+                  <div key={g.id}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{g.title}</span>
+                      <span className="text-xs text-gray-400 shrink-0 ml-2">{Math.round(g.pct * 100)}%</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{g.areaName}</span>
+                    <div className="mt-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round(g.pct * 100)}%` }} />
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-400">{g.areaName}</span>
-                  <div className="mt-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${Math.round(g.pct * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </WidgetCard>
+                ))}
+              </div>
+            )}
+          </WidgetCard>
+        )}
 
         {/* Gifts */}
-        <WidgetCard title="Gifts">
-          {giftsLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : peopleWithIdeas.length === 0 ? (
-            <p className="text-sm text-gray-400">No gift ideas yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {peopleWithIdeas.map(p => {
-                const bought = p.ideas.filter(i => i.purchased).length
-                const total = p.ideas.length
-                const committed = p.ideas
-                  .filter(i => i.purchased)
-                  .reduce((s, i) => s + (i.estimatedCost ?? 0), 0)
-                return (
-                  <div key={p.id}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</span>
-                      <span className="text-xs text-gray-500">{bought} / {total} bought</span>
-                    </div>
-                    {p.budget != null && p.budget > 0 && (
-                      <div className="mt-1">
-                        <div className="flex justify-between text-xs text-gray-400 mb-0.5">
-                          <span>€{committed.toFixed(0)} / €{p.budget.toFixed(0)}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-purple-500 rounded-full"
-                            style={{ width: `${Math.min(100, (committed / p.budget) * 100).toFixed(0)}%` }}
-                          />
-                        </div>
+        {show('gifts') && (
+          <WidgetCard title="Gifts">
+            {giftsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : peopleWithIdeas.length === 0 ? (
+              <p className="text-sm text-gray-400">No gift ideas yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {peopleWithIdeas.map(p => {
+                  const bought = p.ideas.filter(i => i.purchased).length
+                  const total = p.ideas.length
+                  const committed = p.ideas.filter(i => i.purchased).reduce((s, i) => s + (i.estimatedCost ?? 0), 0)
+                  return (
+                    <div key={p.id}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</span>
+                        <span className="text-xs text-gray-500">{bought} / {total} bought</span>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </WidgetCard>
+                      {p.budget != null && p.budget > 0 && (
+                        <div className="mt-1">
+                          <div className="flex justify-between text-xs text-gray-400 mb-0.5">
+                            <span>€{committed.toFixed(0)} / €{p.budget.toFixed(0)}</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (committed / p.budget) * 100).toFixed(0)}%` }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </WidgetCard>
+        )}
 
         {/* Upcoming Appointments */}
-        <WidgetCard title="Upcoming Appointments">
-          {apptLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : upcomingAppts.length === 0 ? (
-            <p className="text-sm text-gray-400">No upcoming appointments.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {upcomingAppts.map(a => (
-                <div key={a.id} className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{a.title}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${APPT_CATEGORY_COLOR[a.category] ?? APPT_CATEGORY_COLOR.Other}`}>
-                      {a.category}
-                    </span>
-                    <span className="text-xs text-gray-400">{a.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </WidgetCard>
-
-        {/* Travel */}
-        <WidgetCard title="Travel">
-          {travelCountriesLoading || travelTripsLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : travelCountries.length === 0 && travelTrips.length === 0 ? (
-            <p className="text-sm text-gray-400">No trips logged yet.</p>
-          ) : (
-            <a href="/travel" className="flex gap-6 hover:opacity-80">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelCountries.length}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">countries</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelTrips.length}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">trips</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  €{travelTrips.reduce((s, t) => s + (t.actualCost ?? 0), 0).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
-              </div>
-            </a>
-          )}
-        </WidgetCard>
-
-        {/* Memories */}
-        <WidgetCard title="Memories">
-          {memories.length === 0 ? (
-            <p className="text-sm text-gray-400">No memories yet.</p>
-          ) : (
-            <a href="/memories" className="hover:opacity-80 block">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {memoryCounts.map(c => `${c.category} ${c.count}`).join(' · ')}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{memories.length} total</p>
-            </a>
-          )}
-        </WidgetCard>
-
-        {/* Bucket List */}
-        <WidgetCard title="Bucket List">
-          {tripsLoading || experiencesLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : bucketTrips.length === 0 && bucketExperiences.length === 0 ? (
-            <p className="text-sm text-gray-400">Nothing on your bucket list yet.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
-                <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
-                  <span>Trips</span>
-                  <span className="text-xs text-gray-400">
-                    {bucketTrips.filter(t => t.done).length} / {bucketTrips.length} done
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{
-                      width: bucketTrips.length === 0
-                        ? '0%'
-                        : `${Math.round((bucketTrips.filter(t => t.done).length / bucketTrips.length) * 100)}%`
-                    }}
-                  />
-                </div>
-              </a>
-              <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
-                <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
-                  <span>Experiences</span>
-                  <span className="text-xs text-gray-400">
-                    {bucketExperiences.filter(e => e.done).length} / {bucketExperiences.length} done
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 rounded-full"
-                    style={{
-                      width: bucketExperiences.length === 0
-                        ? '0%'
-                        : `${Math.round((bucketExperiences.filter(e => e.done).length / bucketExperiences.length) * 100)}%`
-                    }}
-                  />
-                </div>
-              </a>
-            </div>
-          )}
-        </WidgetCard>
-
-        {/* Expiring Documents */}
-        <WidgetCard title="Expiring Documents">
-          {docsLoading ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : expiringDocs.length === 0 ? (
-            <p className="text-sm text-gray-400">No documents expiring soon.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {expiringDocs.map(d => {
-                const now = new Date()
-                now.setHours(0, 0, 0, 0)
-                const exp = new Date(d.expiryDate! + 'T00:00:00')
-                const days = Math.round((exp.getTime() - now.getTime()) / 86400000)
-                return (
-                  <a key={d.id} href="/documents" className="flex items-center justify-between gap-2 hover:opacity-80">
-                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{d.name}</span>
+        {show('appointments') && (
+          <WidgetCard title="Upcoming Appointments">
+            {apptLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : upcomingAppts.length === 0 ? (
+              <p className="text-sm text-gray-400">No upcoming appointments.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {upcomingAppts.map(a => (
+                  <div key={a.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{a.title}</span>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${DOC_CATEGORY_COLOR[d.category] ?? DOC_CATEGORY_COLOR.Other}`}>
-                        {d.category}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${APPT_CATEGORY_COLOR[a.category] ?? APPT_CATEGORY_COLOR.Other}`}>
+                        {a.category}
                       </span>
-                      <span className={`text-xs font-medium ${days < 0 ? 'text-red-500' : days <= 30 ? 'text-red-500' : 'text-orange-500'}`}>
-                        {days < 0 ? 'Expired' : `${days}d`}
-                      </span>
+                      <span className="text-xs text-gray-400">{a.date}</span>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* Overdue Tasks */}
+        {show('overdue-tasks') && (
+          <WidgetCard title="Overdue Tasks" borderStyle={overdueTasks.length > 0 ? { borderColor: '#f87171' } : {}}>
+            {overdueTasks.length === 0 ? (
+              <p className="text-sm text-green-600 dark:text-green-400">No overdue tasks ✓</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {overdueTasks.map(t => (
+                  <div key={t.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{t.title}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                        t.priority === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        t.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }`}>{t.priority}</span>
+                      <span className="text-xs text-red-500 font-medium">{t.dueDate!.slice(0, 10)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* On This Day */}
+        {show('on-this-day') && onThisDayMemories.length > 0 && (
+          <WidgetCard title="On This Day">
+            <div className="flex flex-col gap-2">
+              {onThisDayMemories.map(m => {
+                const yearsAgo = Number(today.slice(0, 4)) - Number(m.date.slice(0, 4))
+                return (
+                  <a key={m.id} href="/memories" className="flex items-start justify-between gap-2 hover:opacity-80">
+                    <div className="min-w-0">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 block truncate">{m.title}</span>
+                      <span className="text-xs text-gray-400">{m.category} · {m.date.slice(0, 4)}</span>
+                    </div>
+                    <span className="text-xs text-blue-500 shrink-0 font-medium">
+                      {yearsAgo}y ago
+                    </span>
                   </a>
                 )
               })}
             </div>
-          )}
-        </WidgetCard>
+          </WidgetCard>
+        )}
+
+        {/* Subscriptions Renewing Soon */}
+        {show('subscriptions') && renewingSoon.length > 0 && (
+          <WidgetCard title="Subscriptions Renewing" borderStyle={{ borderColor: '#fbbf24' }}>
+            <div className="flex flex-col gap-1">
+              {renewingSoon.map(s => {
+                const renewDate = s.renewalDate!.slice(0, 10)
+                const daysLeft = Math.round(
+                  (new Date(renewDate + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000
+                )
+                return (
+                  <div key={s.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{s.name}</span>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium block">
+                        {daysLeft === 0 ? 'today' : `${daysLeft}d`}
+                      </span>
+                      <span className="text-xs text-gray-400">€{s.cost.toFixed(2)}/{s.period}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </WidgetCard>
+        )}
+
+        {/* Travel */}
+        {show('travel') && (
+          <WidgetCard title="Travel">
+            {travelCountriesLoading || travelTripsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : travelCountries.length === 0 && travelTrips.length === 0 ? (
+              <p className="text-sm text-gray-400">No trips logged yet.</p>
+            ) : (
+              <a href="/travel" className="flex gap-6 hover:opacity-80">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelCountries.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">countries</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelTrips.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">trips</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    €{travelTrips.reduce((s, t) => s + (t.actualCost ?? 0), 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
+                </div>
+              </a>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* Memories */}
+        {show('memories') && (
+          <WidgetCard title="Memories">
+            {memories.length === 0 ? (
+              <p className="text-sm text-gray-400">No memories yet.</p>
+            ) : (
+              <a href="/memories" className="hover:opacity-80 block">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {memoryCounts.map(c => `${c.category} ${c.count}`).join(' · ')}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{memories.length} total</p>
+              </a>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* Bucket List */}
+        {show('bucket-list') && (
+          <WidgetCard title="Bucket List">
+            {tripsLoading || experiencesLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : bucketTrips.length === 0 && bucketExperiences.length === 0 ? (
+              <p className="text-sm text-gray-400">Nothing on your bucket list yet.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
+                  <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
+                    <span>Trips</span>
+                    <span className="text-xs text-gray-400">
+                      {bucketTrips.filter(t => t.done).length} / {bucketTrips.length} done
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: bucketTrips.length === 0 ? '0%' : `${Math.round((bucketTrips.filter(t => t.done).length / bucketTrips.length) * 100)}%` }} />
+                  </div>
+                </a>
+                <a href="/bucket-list" className="flex flex-col gap-1 hover:opacity-80">
+                  <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-0.5">
+                    <span>Experiences</span>
+                    <span className="text-xs text-gray-400">
+                      {bucketExperiences.filter(e => e.done).length} / {bucketExperiences.length} done
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 rounded-full" style={{ width: bucketExperiences.length === 0 ? '0%' : `${Math.round((bucketExperiences.filter(e => e.done).length / bucketExperiences.length) * 100)}%` }} />
+                  </div>
+                </a>
+              </div>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* Expiring Documents */}
+        {show('expiring-docs') && (
+          <WidgetCard title="Expiring Documents">
+            {docsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : expiringDocs.length === 0 ? (
+              <p className="text-sm text-gray-400">No documents expiring soon.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {expiringDocs.map(d => {
+                  const now = new Date(); now.setHours(0, 0, 0, 0)
+                  const exp = new Date(d.expiryDate! + 'T00:00:00')
+                  const days = Math.round((exp.getTime() - now.getTime()) / 86400000)
+                  return (
+                    <a key={d.id} href="/documents" className="flex items-center justify-between gap-2 hover:opacity-80">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{d.name}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${DOC_CATEGORY_COLOR[d.category] ?? DOC_CATEGORY_COLOR.Other}`}>
+                          {d.category}
+                        </span>
+                        <span className={`text-xs font-medium ${days < 0 ? 'text-red-500' : days <= 30 ? 'text-red-500' : 'text-orange-500'}`}>
+                          {days < 0 ? 'Expired' : `${days}d`}
+                        </span>
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+          </WidgetCard>
+        )}
 
       </div>
     </div>

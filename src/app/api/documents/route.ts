@@ -6,11 +6,19 @@ import { randomUUID } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads', 'documents')
+const UPLOADS_DIR = join(process.cwd(), 'assets', 'documents')
+
+function serializeDoc(d: { id: number; name: string; filename: string; originalName: string; mimeType: string; size: number; category: string; notes: string | null; expiryDate: string | null; tags: string; createdAt: Date }) {
+  return {
+    ...d,
+    createdAt: d.createdAt.toISOString(),
+    tags: d.tags ? d.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+  }
+}
 
 export async function GET() {
   const docs = await prisma.document.findMany({ orderBy: { createdAt: 'desc' } })
-  return NextResponse.json(docs)
+  return NextResponse.json(docs.map(serializeDoc))
 }
 
 export async function POST(req: Request) {
@@ -20,6 +28,7 @@ export async function POST(req: Request) {
   const category = form.get('category') as string | null
   const notes = (form.get('notes') as string | null) || null
   const expiryDate = (form.get('expiryDate') as string | null) || null
+  const tagsRaw = (form.get('tags') as string | null) || ''
 
   if (!file || !name || !category) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -42,8 +51,9 @@ export async function POST(req: Request) {
       category,
       notes,
       expiryDate,
+      tags: tagsRaw,
     },
   })
 
-  return NextResponse.json(doc, { status: 201 })
+  return NextResponse.json(serializeDoc(doc), { status: 201 })
 }

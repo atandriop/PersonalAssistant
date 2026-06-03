@@ -12,7 +12,7 @@ const PRESET_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#
 
 interface Habit { id: number; name: string; color: string }
 interface GoalHabitLink { id: number; habitId: number; habit: Habit }
-interface Milestone { id: number; goalId: number; title: string; completedAt: string | null }
+interface Milestone { id: number; goalId: number; title: string; completedAt: string | null; targetDate?: string | null }
 interface Goal {
   id: number
   lifeAreaId: number
@@ -23,6 +23,23 @@ interface Goal {
   habitLinks: GoalHabitLink[]
 }
 interface LifeArea { id: number; name: string; color: string; goals: Goal[] }
+
+function parseTimePeriod(tp: string): { start: Date; end: Date } | null {
+  const y = tp.match(/^(\d{4})$/)
+  if (y) return { start: new Date(`${y[1]}-01-01`), end: new Date(`${y[1]}-12-31`) }
+  const q = tp.match(/^Q([1-4])\s+(\d{4})$/i)
+  if (q) {
+    const qn = Number(q[1]); const yr = Number(q[2])
+    const sm = (qn - 1) * 3
+    return { start: new Date(yr, sm, 1), end: new Date(yr, sm + 3, 0) }
+  }
+  const h = tp.match(/^H([12])\s+(\d{4})$/i)
+  if (h) {
+    const hn = Number(h[1]); const yr = Number(h[2])
+    return { start: new Date(yr, hn === 1 ? 0 : 6, 1), end: new Date(yr, hn === 1 ? 5 : 11, hn === 1 ? 30 : 31) }
+  }
+  return null
+}
 
 function calcProgress(goal: Goal, habitLogs: Record<number, string[]>): number {
   const total = goal.milestones.length
@@ -59,7 +76,7 @@ function useHabitLogs(habitIds: number[]): Record<number, string[]> {
     if (habitIds.length === 0) return
     Promise.allSettled(
       habitIds.map(id =>
-        fetch(`/api/habits/${id}/logs`).then(r => r.json()).then((dates: string[]) => ({ id, dates }))
+        fetch(`/api/habits/${id}/logs`).then(r => r.json()).then((logs: { date: string }[]) => ({ id, dates: logs.map(l => l.date) }))
       )
     ).then(results => {
       const map: Record<number, string[]> = {}
@@ -272,11 +289,21 @@ Please analyse this snapshot. Identify which areas or goals are on track versus 
 function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabits: Habit[]; habitLogs: Record<number, string[]>; onMutate: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [newMilestone, setNewMilestone] = useState('')
+  const [newMilestoneDate, setNewMilestoneDate] = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [showLinkHabit, setShowLinkHabit] = useState(false)
   const [addToTask, setAddToTask] = useState<{ title: string; goalId: number } | null>(null)
 
   const pct = Math.round(calcProgress(goal, habitLogs) * 100)
+
+  const now = new Date()
+  const period = parseTimePeriod(goal.timePeriod)
+  const timeElapsedPct = period
+    ? Math.min(100, Math.max(0, Math.round(
+        ((now.getTime() - period.start.getTime()) / (period.end.getTime() - period.start.getTime())) * 100
+      )))
+    : null
+  const isOverdue = period ? now > period.end : false
 
   async function toggleMilestone(m: Milestone) {
     await fetch(`/api/milestones/${m.id}`, {
@@ -298,9 +325,10 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
     await fetch(`/api/goals/${goal.id}/milestones`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newMilestone.trim() }),
+      body: JSON.stringify({ title: newMilestone.trim(), targetDate: newMilestoneDate || null }),
     })
     setNewMilestone('')
+    setNewMilestoneDate('')
     setAddingMilestone(false)
     onMutate()
   }
@@ -332,6 +360,20 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-gray-900 dark:text-white">{goal.title}</span>
           <span className="ml-2 text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-400 px-1.5 py-0.5 rounded">{goal.timePeriod}</span>
+          {timeElapsedPct !== null && (
+            <div className="mt-1.5">
+              <div className="flex justify-between text-xs text-gray-400 mb-0.5">
+                <span>Time elapsed</span>
+                <span className={isOverdue ? 'text-red-500' : ''}>{timeElapsedPct}%</span>
+              </div>
+              <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${isOverdue ? 'bg-red-400' : timeElapsedPct > 75 ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-500'}`}
+                  style={{ width: `${timeElapsedPct}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{pct}%</span>
         <span className="text-gray-400 text-xs">{expanded ? '▾' : '▸'}</span>
@@ -343,36 +385,59 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: { goal: Goal; allHabi
           <div className="mb-3">
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Milestones</p>
             <div className="flex flex-col gap-1.5">
-              {goal.milestones.map(m => (
-                <div key={m.id} className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleMilestone(m)}
-                    className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${m.completedAt ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-500'}`}
-                  >
-                    {m.completedAt && <span className="text-white text-xs">✓</span>}
-                  </button>
-                  <span className={`text-sm flex-1 ${m.completedAt ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{m.title}</span>
-                  <button
-                    onClick={() => setAddToTask({ title: m.title, goalId: m.goalId })}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-2"
-                  >
-                    + Task
-                  </button>
-                  <button onClick={() => deleteMilestone(m.id)} className="text-xs text-gray-300 hover:text-red-400 dark:text-gray-600 dark:hover:text-red-400">×</button>
-                </div>
-              ))}
+              {goal.milestones.map(m => {
+                const today = new Date().toISOString().slice(0, 10)
+                const overdue = !m.completedAt && m.targetDate && m.targetDate < today
+                const daysLeft = m.targetDate && !m.completedAt
+                  ? Math.round((new Date(m.targetDate + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000)
+                  : null
+                return (
+                  <div key={m.id} className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleMilestone(m)}
+                      className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${m.completedAt ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-500'}`}
+                    >
+                      {m.completedAt && <span className="text-white text-xs">✓</span>}
+                    </button>
+                    <span className={`text-sm flex-1 ${m.completedAt ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{m.title}</span>
+                    {daysLeft !== null && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${overdue ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                        {overdue ? `${Math.abs(daysLeft)}d late` : daysLeft === 0 ? 'today' : `${daysLeft}d`}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setAddToTask({ title: m.title, goalId: m.goalId })}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline ml-2"
+                    >
+                      + Task
+                    </button>
+                    <button onClick={() => deleteMilestone(m.id)} className="text-xs text-gray-300 hover:text-red-400 dark:text-gray-600 dark:hover:text-red-400">×</button>
+                  </div>
+                )
+              })}
             </div>
             {addingMilestone ? (
-              <form onSubmit={addMilestone} className="flex gap-2 mt-2">
-                <input
-                  autoFocus
-                  value={newMilestone}
-                  onChange={e => setNewMilestone(e.target.value)}
-                  placeholder="Milestone title"
-                  className="flex-1 text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                />
-                <button type="submit" className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
-                <button type="button" onClick={() => setAddingMilestone(false)} className="text-xs px-2 py-1 border rounded dark:border-gray-600 dark:text-gray-300">Cancel</button>
+              <form onSubmit={addMilestone} className="flex flex-col gap-1.5 mt-2">
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={newMilestone}
+                    onChange={e => setNewMilestone(e.target.value)}
+                    placeholder="Milestone title"
+                    className="flex-1 text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                  />
+                  <input
+                    type="date"
+                    value={newMilestoneDate}
+                    onChange={e => setNewMilestoneDate(e.target.value)}
+                    className="text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    title="Target date (optional)"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <button type="submit" className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
+                  <button type="button" onClick={() => setAddingMilestone(false)} className="text-xs px-2 py-1 border rounded dark:border-gray-600 dark:text-gray-300">Cancel</button>
+                </div>
               </form>
             ) : (
               <button onClick={() => setAddingMilestone(true)} className="mt-2 text-xs text-blue-500 hover:text-blue-600">+ Add milestone</button>

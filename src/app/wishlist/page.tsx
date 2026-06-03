@@ -1,5 +1,2 @@
-import WishlistPage from '@/components/wishlist/WishlistPage'
-
-export default function Page() {
-  return <WishlistPage />
-}
+import ItemsPage from '@/components/items/ItemsPage'
+export default function Page() { return <ItemsPage /> }

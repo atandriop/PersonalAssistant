@@ -3,14 +3,22 @@ import { prisma } from '@/lib/prisma'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads', 'documents')
+const UPLOADS_DIR = join(process.cwd(), 'assets', 'documents')
+
+function serializeDoc(d: { id: number; name: string; filename: string; originalName: string; mimeType: string; size: number; category: string; notes: string | null; expiryDate: string | null; tags: string; createdAt: Date }) {
+  return {
+    ...d,
+    createdAt: d.createdAt.toISOString(),
+    tags: d.tags ? d.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+  }
+}
 
 export async function PUT(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   const id = Number(params.id)
-  const { name, category, notes, expiryDate } = await req.json()
+  const { name, category, notes, expiryDate, tags } = await req.json()
   const doc = await prisma.document.update({
     where: { id },
     data: {
@@ -18,9 +26,10 @@ export async function PUT(
       category,
       notes: notes ?? null,
       expiryDate: expiryDate ?? null,
+      tags: Array.isArray(tags) ? tags.filter(Boolean).join(',') : (tags ?? undefined),
     },
   })
-  return NextResponse.json(doc)
+  return NextResponse.json(serializeDoc(doc))
 }
 
 export async function DELETE(

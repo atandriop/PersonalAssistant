@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads', 'documents')
+const UPLOADS_DIR = join(process.cwd(), 'assets', 'documents')
 
 export async function GET(
   req: Request,
