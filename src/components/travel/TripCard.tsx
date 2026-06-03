@@ -67,6 +67,15 @@ export default function TripCard({ trip, onClick }: {
       {trip.notes && (
         <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{trip.notes}</p>
       )}
+      {trip.memories.length > 0 && (
+        <a
+          href={`/memories?tripId=${trip.id}`}
+          onClick={e => e.stopPropagation()}
+          className="inline-flex items-center mt-2 px-2 py-0.5 text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full hover:opacity-80"
+        >
+          {trip.memories.length} {trip.memories.length === 1 ? 'memory' : 'memories'}
+        </a>
+      )}
     </div>
   )
 }
