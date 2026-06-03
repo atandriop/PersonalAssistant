@@ -9,19 +9,33 @@ function serializeTrip(trip: {
   actualCost: number | null; rating: number | null
   notes: string | null; bucketTripId: number | null; createdAt: Date
   country: { name: string }
+  memories: { memory: { id: number; title: string; date: string } }[]
 }) {
-  const { country, cities, ...rest } = trip
+  const { country, cities, memories, ...rest } = trip
   return {
     ...rest,
     countryName: country.name,
     cities: cities ? JSON.parse(cities) as string[] : [],
+    memories: memories.map(mt => ({
+      id: mt.memory.id,
+      title: mt.memory.title,
+      date: mt.memory.date,
+    })),
+    createdAt: trip.createdAt.toISOString(),
   }
 }
 
 export async function GET() {
   const raw = await prisma.travelTrip.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { country: { select: { name: true } } },
+    include: {
+      country: { select: { name: true } },
+      memories: {
+        include: {
+          memory: { select: { id: true, title: true, date: true } },
+        },
+      },
+    },
   })
   // Drafts (no startDate) first, then most recent by startDate desc
   raw.sort((a, b) => {
@@ -58,7 +72,14 @@ export async function POST(req: Request) {
       notes: notes ?? null,
       bucketTripId: bucketTripId ?? null,
     },
-    include: { country: { select: { name: true } } },
+    include: {
+      country: { select: { name: true } },
+      memories: {
+        include: {
+          memory: { select: { id: true, title: true, date: true } },
+        },
+      },
+    },
   })
   return NextResponse.json(serializeTrip(trip), { status: 201 })
 }

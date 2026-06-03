@@ -7,14 +7,29 @@ function serializeTrip(trip: {
   actualCost: number | null; rating: number | null
   notes: string | null; bucketTripId: number | null; createdAt: Date
   country: { name: string }
+  memories: { memory: { id: number; title: string; date: string } }[]
 }) {
-  const { country, cities, ...rest } = trip
+  const { country, cities, memories, ...rest } = trip
   return {
     ...rest,
     countryName: country.name,
     cities: cities ? JSON.parse(cities) as string[] : [],
+    memories: memories.map(mt => ({
+      id: mt.memory.id,
+      title: mt.memory.title,
+      date: mt.memory.date,
+    })),
+    createdAt: trip.createdAt.toISOString(),
   }
 }
+
+const MEMORIES_INCLUDE = {
+  memories: {
+    include: {
+      memory: { select: { id: true, title: true, date: true } },
+    },
+  },
+} as const
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id)
@@ -41,7 +56,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       rating: rating != null ? Number(rating) : null,
       notes: notes ?? null,
     },
-    include: { country: { select: { name: true } } },
+    include: { country: { select: { name: true } }, ...MEMORIES_INCLUDE },
   })
   return NextResponse.json(serializeTrip(trip))
 }
