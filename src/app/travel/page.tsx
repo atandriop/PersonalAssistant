@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import TravelPage from '@/components/travel/TravelPage'
 
 export default function Page() {
-  return <TravelPage />
+  return (
+    <Suspense>
+      <TravelPage />
+    </Suspense>
+  )
 }

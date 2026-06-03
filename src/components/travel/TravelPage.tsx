@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import useSWR from 'swr'
 import type { TravelCountry, TravelTrip } from '@/types'
 import CountryCard from './CountryCard'
@@ -11,12 +12,18 @@ import TripForm from './TripForm'
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function TravelPage() {
+  const searchParams = useSearchParams()
+
   const { data: countries = [], mutate: mutateCountries } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
   const { data: trips = [], mutate: mutateTrips } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
 
-  const [tab, setTab] = useState<'countries' | 'trips'>('countries')
+  const [tab, setTab] = useState<'countries' | 'trips'>(() =>
+    searchParams.get('tab') === 'trips' ? 'trips' : 'countries'
+  )
   const [countriesFilter, setCountriesFilter] = useState('All')
-  const [countryFilter, setCountryFilter] = useState('All')
+  const [countryFilter, setCountryFilter] = useState(() =>
+    searchParams.get('country') ?? 'All'
+  )
   const [addingCountry, setAddingCountry] = useState(false)
   const [addingTrip, setAddingTrip] = useState(false)
   const [editCountry, setEditCountry] = useState<TravelCountry | null>(null)
