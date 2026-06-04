@@ -11,7 +11,7 @@ Add a Collectibles tab to the existing Items page so the user can track five col
 | Question | Decision |
 |---|---|
 | Location | Third tab in ItemsPage alongside Inventory and Wishlist |
-| Architecture | New `CollectibleItem` model with JSON `metadata` for type-specific fields |
+| Architecture | New `CollectibleItem` model with JSON `metadata` for type-specific fields. `collectionType` stored as display string ("Cards", "Funko Pop", "Lego", "Figures", "Books") |
 | Type-specific fields | Yes — each type shows its own form fields |
 | Value tracking | Both purchase price and current estimated market value |
 | Tab layout | Collapsible accordion sections per collection type |
@@ -44,7 +44,7 @@ Add a Collectibles tab to the existing Items page so the user can track five col
 model CollectibleItem {
   id             Int      @id @default(autoincrement())
   name           String
-  collectionType String   // "Cards" | "FunkoPop" | "Lego" | "Figures" | "Books"
+  collectionType String   // "Cards" | "Funko Pop" | "Lego" | "Figures" | "Books"
   quantity       Int      @default(1)
   purchasePrice  Float?
   currentValue   Float?
