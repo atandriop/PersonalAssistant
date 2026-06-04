@@ -18,8 +18,8 @@ export default function HoldingForm({ initial, onSave, onCancel }: Props) {
   const [type, setType] = useState(initial?.type ?? 'stock')
   const [name, setName] = useState(initial?.name ?? '')
   const [quantity, setQuantity] = useState(initial?.quantity?.toString() ?? '')
-  const [buyPrice, setBuyPrice] = useState(initial?.buyPrice?.toString() ?? '')
   const [currentPrice, setCurrentPrice] = useState(initial?.currentPrice?.toString() ?? '')
+  const [totalBuyPrice, setTotalBuyPrice] = useState(initial?.buyPrice?.toString() ?? '')
   const [balance, setBalance] = useState(initial?.balance?.toString() ?? '')
   const [interestRate, setInterestRate] = useState(initial?.interestRate?.toString() ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
@@ -31,7 +31,7 @@ export default function HoldingForm({ initial, onSave, onCancel }: Props) {
     const body = {
       name, type,
       quantity: isSavings ? null : Number(quantity),
-      buyPrice: isSavings ? null : Number(buyPrice),
+      buyPrice: totalBuyPrice ? Number(totalBuyPrice) : null,
       currentPrice: isSavings ? null : Number(currentPrice),
       balance: isSavings ? Number(balance) : null,
       interestRate: isSavings ? (interestRate ? Number(interestRate) : null) : null,
@@ -64,7 +64,7 @@ export default function HoldingForm({ initial, onSave, onCancel }: Props) {
       ) : (
         <>
           <input required type="number" min="0" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Quantity" className={field} />
-          <input required type="number" min="0" step="0.01" value={buyPrice} onChange={e => setBuyPrice(e.target.value)} placeholder="Buy price per unit" className={field} />
+          <input type="number" min="0" step="0.01" value={totalBuyPrice} onChange={e => setTotalBuyPrice(e.target.value)} placeholder="Total buy price (optional)" className={field} />
           <input required type="number" min="0" step="0.01" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder="Current price per unit" className={field} />
         </>
       )}

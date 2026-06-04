@@ -25,14 +25,14 @@ function holdingValue(h: Holding): number {
 
 function holdingPnl(h: Holding): number {
   if (h.type === 'savings') return 0
-  return ((h.currentPrice ?? 0) - (h.buyPrice ?? 0)) * (h.quantity ?? 0)
+  return (h.currentPrice ?? 0) * (h.quantity ?? 0) - (h.buyPrice ?? 0)
 }
 
 function pnlDisplay(h: Holding): { text: string; cls: string } {
   if (h.quantity == null || h.currentPrice == null || h.buyPrice == null) {
     return { text: '—', cls: 'text-gray-400' }
   }
-  const pnl = (h.currentPrice - h.buyPrice) * h.quantity
+  const pnl = h.currentPrice * h.quantity - h.buyPrice
   if (pnl === 0) return { text: '€0', cls: 'text-gray-400' }
   if (pnl > 0) return { text: `+€${pnl.toFixed(2)}`, cls: 'text-green-600 dark:text-green-400' }
   return { text: `−€${Math.abs(pnl).toFixed(2)}`, cls: 'text-red-500' }
@@ -55,7 +55,7 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
   const totalValue = holdings.reduce((s, h) => s + holdingValue(h), 0)
   const nonSavings = holdings.filter(h => h.type !== 'savings')
   const totalPnl = nonSavings.reduce((s, h) => s + holdingPnl(h), 0)
-  const totalCost = nonSavings.reduce((s, h) => s + (h.buyPrice ?? 0) * (h.quantity ?? 0), 0)
+  const totalCost = nonSavings.reduce((s, h) => s + (h.buyPrice ?? 0), 0)
 
   const byType = ['stock', 'crypto', 'savings', 'other']
     .map(t => ({ type: t, total: holdings.filter(h => h.type === t).reduce((s, h) => s + holdingValue(h), 0) }))
@@ -164,7 +164,7 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
                   <Badge color={TYPE_COLOR[h.type]}>{h.type}</Badge>
                 </div>
                 {!isSavings && h.quantity != null && (
-                  <p className="text-xs text-gray-400 mt-0.5">qty: {h.quantity} · buy: €{h.buyPrice?.toFixed(2)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">qty: {h.quantity} · cost: €{h.buyPrice?.toFixed(2)}</p>
                 )}
                 {isSavings && h.interestRate != null && h.interestRate > 0 && (
                   <p className="text-xs text-gray-400 mt-0.5">1yr projection: €{projected(h).toFixed(2)}</p>
