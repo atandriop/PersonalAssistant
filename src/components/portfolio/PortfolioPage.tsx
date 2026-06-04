@@ -34,8 +34,9 @@ function pnlDisplay(h: Holding): { text: string; cls: string } {
   }
   const pnl = h.currentPrice * h.quantity - h.buyPrice
   if (pnl === 0) return { text: '€0', cls: 'text-gray-400' }
-  if (pnl > 0) return { text: `+€${pnl.toFixed(2)}`, cls: 'text-green-600 dark:text-green-400' }
-  return { text: `−€${Math.abs(pnl).toFixed(2)}`, cls: 'text-red-500' }
+  const pct = h.buyPrice > 0 ? ` (${pnl > 0 ? '+' : ''}${((pnl / h.buyPrice) * 100).toFixed(1)}%)` : ''
+  if (pnl > 0) return { text: `+€${pnl.toFixed(2)}${pct}`, cls: 'text-green-600 dark:text-green-400' }
+  return { text: `−€${Math.abs(pnl).toFixed(2)}${pct}`, cls: 'text-red-500' }
 }
 
 function projected(h: Holding): number {
