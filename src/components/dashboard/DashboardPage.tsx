@@ -8,6 +8,8 @@ import type { LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExp
 import Modal from '@/components/ui/Modal'
 import AppointmentForm from '@/components/tasks/AppointmentForm'
 import TripForm from '@/components/travel/TripForm'
+import GiftPersonForm from '@/components/gifts/GiftPersonForm'
+import GiftIdeaForm from '@/components/gifts/GiftIdeaForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -141,6 +143,9 @@ export default function DashboardPage() {
   const [showAddAppt, setShowAddAppt] = useState(false)
   const [tripToEdit, setTripToEdit] = useState<TravelTrip | null>(null)
   const [showAddTrip, setShowAddTrip] = useState(false)
+  const [personToEdit, setPersonToEdit] = useState<GiftPerson | null>(null)
+  const [showAddPerson, setShowAddPerson] = useState(false)
+  const [addIdeaForPersonId, setAddIdeaForPersonId] = useState<number | null>(null)
 
   useEffect(() => { setHidden(loadHidden()) }, [])
 
@@ -158,7 +163,7 @@ export default function DashboardPage() {
   const { data: habits = [], isLoading: habitsLoading, mutate: mutateHabits } = useSWR<HabitWithToday[]>('/api/habits?includeToday=true', fetcher)
   const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: lifeAreas = [], isLoading: goalsLoading, mutate: mutateAreas } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
-  const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
+  const { data: giftPeople = [], isLoading: giftsLoading, mutate: mutateGifts } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
   const { data: appointments = [], isLoading: apptLoading, mutate: mutateAppts } = useSWR<Appointment[]>('/api/appointments', fetcher)
   const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
   const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
@@ -403,22 +408,26 @@ export default function DashboardPage() {
 
         {/* Gifts */}
         {show('gifts') && (
-          <WidgetCard title="Gifts">
+          <WidgetCard title="Gifts" action={
+            <button onClick={() => setShowAddPerson(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add person</button>
+          }>
             {giftsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
-            ) : peopleWithIdeas.length === 0 ? (
-              <p className="text-sm text-gray-400">No gift ideas yet.</p>
+            ) : giftPeople.length === 0 ? (
+              <p className="text-sm text-gray-400">No gift people yet.</p>
             ) : (
               <div className="flex flex-col gap-2">
-                {peopleWithIdeas.map(p => {
+                {giftPeople.map(p => {
                   const bought = p.ideas.filter(i => i.purchased).length
                   const total = p.ideas.length
                   const committed = p.ideas.filter(i => i.purchased).reduce((s, i) => s + (i.estimatedCost ?? 0), 0)
                   return (
                     <div key={p.id}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</span>
-                        <span className="text-xs text-gray-500">{bought} / {total} bought</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1 truncate">{p.name}</span>
+                        <span className="text-xs text-gray-500 shrink-0">{bought} / {total} bought</span>
+                        <button onClick={() => setPersonToEdit(p)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">Edit</button>
+                        <button onClick={() => setAddIdeaForPersonId(p.id)} className="text-xs text-blue-500 hover:text-blue-600 shrink-0">+ Idea</button>
                       </div>
                       {p.budget != null && p.budget > 0 && (
                         <div className="mt-1">
@@ -686,6 +695,9 @@ export default function DashboardPage() {
       {apptToEdit && <Modal title="Edit appointment" onClose={() => setApptToEdit(null)}><AppointmentForm initial={apptToEdit} onSave={() => { setApptToEdit(null); mutateAppts() }} onCancel={() => setApptToEdit(null)} /></Modal>}
       {showAddTrip && <TripForm onSave={() => { setShowAddTrip(false); mutateTravelTrips() }} onCancel={() => setShowAddTrip(false)} />}
       {tripToEdit && <TripForm initial={tripToEdit} onSave={() => { setTripToEdit(null); mutateTravelTrips() }} onCancel={() => setTripToEdit(null)} />}
+      {showAddPerson && <Modal title="Add person" onClose={() => setShowAddPerson(false)}><GiftPersonForm onSave={() => { setShowAddPerson(false); mutateGifts() }} onCancel={() => setShowAddPerson(false)} /></Modal>}
+      {personToEdit && <Modal title="Edit person" onClose={() => setPersonToEdit(null)}><GiftPersonForm initial={personToEdit} onSave={() => { setPersonToEdit(null); mutateGifts() }} onCancel={() => setPersonToEdit(null)} /></Modal>}
+      {addIdeaForPersonId != null && <Modal title="Add gift idea" onClose={() => setAddIdeaForPersonId(null)}><GiftIdeaForm personId={addIdeaForPersonId} onSave={() => { setAddIdeaForPersonId(null); mutateGifts() }} onCancel={() => setAddIdeaForPersonId(null)} /></Modal>}
     </div>
   )
 }
