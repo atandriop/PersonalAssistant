@@ -108,6 +108,7 @@ model Subscription {
   url         String?
   notes       String?
   active      Boolean   @default(true)
+  category    String    @default("Other")
   createdAt   DateTime  @default(now())
 }
 
