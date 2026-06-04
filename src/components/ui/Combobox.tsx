@@ -5,13 +5,14 @@ import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 interface ComboboxProps {
   value: string
   onChange: (value: string) => void
+  onSelect?: (value: string) => void
   options: string[]
   placeholder?: string
   className?: string
   required?: boolean
 }
 
-export default function Combobox({ value, onChange, options, placeholder, className = '', required }: ComboboxProps) {
+export default function Combobox({ value, onChange, onSelect, options, placeholder, className = '', required }: ComboboxProps) {
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -41,7 +42,12 @@ export default function Combobox({ value, onChange, options, placeholder, classN
 
   function select(item: string) {
     const val = item.startsWith('__add__:') ? item.slice(8) : item
-    onChange(val)
+    if (onSelect) {
+      onSelect(val)
+      onChange('')
+    } else {
+      onChange(val)
+    }
     setOpen(false)
   }
 

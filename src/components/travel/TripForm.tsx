@@ -28,6 +28,12 @@ export default function TripForm({ initial, onSave, onCancel }: {
 
   const citySuggestions = useCities(countryName)
 
+  function addCity(city: string) {
+    const trimmed = city.trim().replace(/,+$/, '')
+    if (trimmed && !cities.includes(trimmed)) setCities(prev => [...prev, trimmed])
+    setCityInput('')
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const pendingCity = cityInput.trim().replace(/,+$/, '')
@@ -87,7 +93,8 @@ export default function TripForm({ initial, onSave, onCancel }: {
               ))}
               <Combobox
                 value={cityInput}
-                onChange={v => { setCityInput(v) }}
+                onChange={setCityInput}
+                onSelect={addCity}
                 options={citySuggestions.filter(c => !cities.includes(c))}
                 placeholder={cities.length === 0 ? 'Type a city, press Enter' : ''}
                 className="flex-1 min-w-[8rem] !border-0 !rounded-none !px-0 !py-0 !bg-transparent"
