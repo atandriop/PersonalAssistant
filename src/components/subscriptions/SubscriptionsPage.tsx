@@ -25,7 +25,9 @@ interface Subscription {
 const field = 'border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-800 dark:border-gray-600 dark:text-white'
 
 function monthlyEquiv(cost: number, period: string): number {
-  return period === 'yearly' ? cost / 12 : cost
+  if (period === 'yearly') return cost / 12
+  if (period === 'quarterly') return cost / 3
+  return cost
 }
 
 function daysUntil(renewalDate: string | null | undefined): number | null {
@@ -63,6 +65,7 @@ function SubscriptionForm({ initial, onSave, onCancel }: FormProps) {
         <input required type="number" min="0" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="Cost" className={field} />
         <select value={period} onChange={e => setPeriod(e.target.value)} className={field}>
           <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
           <option value="yearly">Yearly</option>
         </select>
       </div>
@@ -97,7 +100,9 @@ export default function SubscriptionsPage() {
   const active = all.filter(s => s.active)
   const items = showActive ? active : all
   const monthlyTotal = active.reduce((sum, s) => sum + monthlyEquiv(s.cost, s.period), 0)
-  const annualTotal = active.reduce((sum, s) => sum + (s.period === 'yearly' ? s.cost : s.cost * 12), 0)
+  const annualTotal = active.reduce((sum, s) => sum + (
+    s.period === 'yearly' ? s.cost : s.period === 'quarterly' ? s.cost * 4 : s.cost * 12
+  ), 0)
   const soonCount = active.filter(s => { const d = daysUntil(s.renewalDate); return d !== null && d >= 0 && d <= 14 }).length
 
   function buildPrompt(): string {
@@ -120,6 +125,7 @@ export default function SubscriptionsPage() {
     { key: 'cost', label: 'Cost (€)', type: 'number', required: true },
     { key: 'period', label: 'Period', type: 'select', options: [
       { label: 'Monthly', value: 'monthly' },
+      { label: 'Quarterly', value: 'quarterly' },
       { label: 'Yearly', value: 'yearly' },
     ]},
     { key: 'category', label: 'Category', type: 'select', options: SUBSCRIPTION_CATEGORIES.map(c => ({ label: c, value: c })) },
@@ -213,8 +219,8 @@ export default function SubscriptionsPage() {
                         {s.renewalDate && <p className="text-xs text-gray-400">Renews {new Date(s.renewalDate).toLocaleDateString()}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white">€{s.cost.toFixed(2)}/{s.period === 'monthly' ? 'mo' : 'yr'}</p>
-                        {s.period === 'yearly' && <p className="text-xs text-gray-400">€{mo.toFixed(2)}/mo</p>}
+                        <p className="font-semibold text-sm text-gray-900 dark:text-white">€{s.cost.toFixed(2)}/{s.period === 'monthly' ? 'mo' : s.period === 'quarterly' ? 'qtr' : 'yr'}</p>
+                        {(s.period === 'yearly' || s.period === 'quarterly') && <p className="text-xs text-gray-400">€{mo.toFixed(2)}/mo</p>}
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <button onClick={() => setEditing(s)} className="text-xs px-2 py-1 border rounded-md dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
