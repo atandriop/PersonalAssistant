@@ -398,3 +398,16 @@ model TripCostLine {
   memory    Memory?    @relation(fields: [memoryId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
 }
+
+model CollectibleItem {
+  id             Int      @id @default(autoincrement())
+  name           String
+  collectionType String
+  quantity       Int      @default(1)
+  purchasePrice  Float?
+  currentValue   Float?
+  condition      String?
+  notes          String?
+  metadata       String?
+  createdAt      DateTime @default(now())
+}
