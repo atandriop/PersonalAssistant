@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
+import GiftPersonForm from './GiftPersonForm'
+import GiftIdeaForm from './GiftIdeaForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -26,74 +28,6 @@ interface GiftPerson {
 
 function fmt(n: number) {
   return `€${n % 1 === 0 ? n : n.toFixed(2)}`
-}
-
-// ─── Person form ──────────────────────────────────────────────────────────
-function PersonForm({ initial, onSave, onCancel }: { initial?: GiftPerson; onSave: () => void; onCancel: () => void }) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [budget, setBudget] = useState(initial?.budget?.toString() ?? '')
-  const [notes, setNotes] = useState(initial?.notes ?? '')
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    const body = { name, budget: budget ? Number(budget) : null, notes: notes || null }
-    if (initial?.id) {
-      await fetch(`/api/gifts/people/${initial.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    } else {
-      await fetch('/api/gifts/people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    }
-    onSave()
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <input required value={name} onChange={e => setName(e.target.value)} placeholder="Person name" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-      <input type="number" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Budget (optional, €)" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white resize-none" />
-      <div className="flex gap-2 pt-1">
-        <button type="submit" className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">{initial?.id ? 'Save changes' : 'Add person'}</button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm border rounded-lg dark:border-gray-600 dark:text-gray-300">Cancel</button>
-      </div>
-    </form>
-  )
-}
-
-// ─── Idea form ────────────────────────────────────────────────────────────
-function IdeaForm({ personId, initial, onSave, onCancel }: { personId: number; initial?: GiftIdea; onSave: () => void; onCancel: () => void }) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [occasion, setOccasion] = useState(initial?.occasion ?? '')
-  const [estimatedCost, setEstimatedCost] = useState(initial?.estimatedCost?.toString() ?? '')
-  const [notes, setNotes] = useState(initial?.notes ?? '')
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    const body = {
-      title,
-      occasion: occasion || null,
-      estimatedCost: estimatedCost ? Number(estimatedCost) : null,
-      purchased: initial ? initial.purchased : false,
-      notes: notes || null,
-    }
-    if (initial?.id) {
-      await fetch(`/api/gifts/ideas/${initial.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    } else {
-      await fetch(`/api/gifts/people/${personId}/ideas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    }
-    onSave()
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Gift idea" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-      <input value={occasion} onChange={e => setOccasion(e.target.value)} placeholder="Occasion (e.g. Birthday, Christmas)" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-      <input type="number" step="0.01" value={estimatedCost} onChange={e => setEstimatedCost(e.target.value)} placeholder="Estimated cost (optional, €)" className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white resize-none" />
-      <div className="flex gap-2 pt-1">
-        <button type="submit" className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">{initial?.id ? 'Save changes' : 'Add idea'}</button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm border rounded-lg dark:border-gray-600 dark:text-gray-300">Cancel</button>
-      </div>
-    </form>
-  )
 }
 
 // ─── Person detail (expanded) ─────────────────────────────────────────────
@@ -141,8 +75,8 @@ function PersonDetail({ person, onMutate }: { person: GiftPerson; onMutate: () =
       ))}
       <button onClick={() => setShowAdd(true)} className="mt-2 text-xs text-blue-500 hover:text-blue-600">+ Add idea</button>
 
-      {showAdd && <Modal title="Add gift idea" onClose={() => setShowAdd(false)}><IdeaForm personId={person.id} onSave={() => { setShowAdd(false); onMutate() }} onCancel={() => setShowAdd(false)} /></Modal>}
-      {editing && <Modal title="Edit gift idea" onClose={() => setEditing(null)}><IdeaForm personId={person.id} initial={editing} onSave={() => { setEditing(null); onMutate() }} onCancel={() => setEditing(null)} /></Modal>}
+      {showAdd && <Modal title="Add gift idea" onClose={() => setShowAdd(false)}><GiftIdeaForm personId={person.id} onSave={() => { setShowAdd(false); onMutate() }} onCancel={() => setShowAdd(false)} /></Modal>}
+      {editing && <Modal title="Edit gift idea" onClose={() => setEditing(null)}><GiftIdeaForm personId={person.id} initial={editing} onSave={() => { setEditing(null); onMutate() }} onCancel={() => setEditing(null)} /></Modal>}
     </div>
   )
 }
@@ -207,8 +141,8 @@ export default function GiftsPage() {
 
       {people.length === 0 && <p className="text-sm text-gray-400 text-center py-12">No people yet. Add one to start planning gifts.</p>}
 
-      {showAdd && <Modal title="Add person" onClose={() => setShowAdd(false)}><PersonForm onSave={() => { setShowAdd(false); mutate() }} onCancel={() => setShowAdd(false)} /></Modal>}
-      {editing && <Modal title="Edit person" onClose={() => setEditing(null)}><PersonForm initial={editing} onSave={() => { setEditing(null); mutate() }} onCancel={() => setEditing(null)} /></Modal>}
+      {showAdd && <Modal title="Add person" onClose={() => setShowAdd(false)}><GiftPersonForm onSave={() => { setShowAdd(false); mutate() }} onCancel={() => setShowAdd(false)} /></Modal>}
+      {editing && <Modal title="Edit person" onClose={() => setEditing(null)}><GiftPersonForm initial={editing} onSave={() => { setEditing(null); mutate() }} onCancel={() => setEditing(null)} /></Modal>}
     </div>
   )
 }
