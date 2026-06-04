@@ -129,7 +129,7 @@ function HabitRow({ habit, onEdit, onDelete, onArchive }: {
       )}
 
       {!showNoteInput && isDone && todayNote && (
-        <p className="text-xs text-gray-400 italic mb-2">"{todayNote}"</p>
+        <p className="text-xs text-gray-400 italic mb-2">&quot;{todayNote}&quot;</p>
       )}
 
       <div className="flex gap-1 overflow-x-auto">

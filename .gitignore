@@ -45,5 +45,4 @@ next-env.d.ts
 .superpowers/
 
 # runtime-generated directories
-/backups/
 /logs/

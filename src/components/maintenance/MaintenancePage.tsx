@@ -297,7 +297,6 @@ export default function MaintenancePage() {
   const [showPrompt, setShowPrompt] = useState(false)
 
   function buildMaintenancePrompt(): string {
-    const today = new Date().toISOString().slice(0, 10)
     const groups: Record<'overdue' | 'due-soon' | 'ok' | 'none', string[]> = {
       overdue: [], 'due-soon': [], ok: [], none: [],
     }
