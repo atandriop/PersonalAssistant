@@ -58,10 +58,38 @@ function metaSummary(item: CollectibleItem): string {
   }
 }
 
+function isOwned(item: CollectibleItem): boolean {
+  return (item.metadata?.owned as boolean) ?? true
+}
+
+function CollectibleRow({ item, onEdit, onDelete }: { item: CollectibleItem; onEdit: () => void; onDelete: () => void }) {
+  const summary = metaSummary(item)
+  const owned = isOwned(item)
+  const displayValue = owned ? (item.currentValue ?? item.purchasePrice) : item.purchasePrice
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5">
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">{item.name}</span>
+        {summary && <span className="text-xs text-gray-400 truncate block">{summary}</span>}
+      </div>
+      {item.quantity > 1 && <span className="text-xs text-gray-400 shrink-0">×{item.quantity}</span>}
+      {displayValue != null && (
+        <span className={`text-sm font-semibold shrink-0 ${owned ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+          €{(displayValue * item.quantity).toFixed(2)}
+        </span>
+      )}
+      <div className="flex gap-1 shrink-0">
+        <button onClick={onEdit} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
+        <button onClick={onDelete} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
+      </div>
+    </div>
+  )
+}
+
 export default function CollectiblesTab() {
   const { data: items = [], mutate } = useSWR<CollectibleItem[]>('/api/collectibles', fetcher)
   const [expanded, setExpanded] = useState<Set<string>>(
-    new Set(COLLECTION_TYPES.map(t => t.key))
+    new Set(COLLECTION_TYPES.flatMap(t => [`Owned:${t.key}`, `Wishlist:${t.key}`]))
   )
   const [editItem, setEditItem] = useState<CollectibleItem | null>(null)
   const [addingType, setAddingType] = useState<string | null>(null)
@@ -80,99 +108,85 @@ export default function CollectiblesTab() {
     mutate()
   }
 
-  const totalItems = items.reduce((s, i) => s + i.quantity, 0)
-  const totalPaid = items.reduce((s, i) => s + (i.purchasePrice ?? 0) * i.quantity, 0)
-  const totalValue = items.reduce((s, i) => s + ((i.currentValue ?? i.purchasePrice ?? 0)) * i.quantity, 0)
+  const ownedItems = items.filter(isOwned)
+  const wantedItems = items.filter(i => !isOwned(i))
+
+  const totalOwned = ownedItems.reduce((s, i) => s + i.quantity, 0)
+  const totalValue = ownedItems.reduce((s, i) => s + ((i.currentValue ?? i.purchasePrice ?? 0)) * i.quantity, 0)
+  const totalWanted = wantedItems.reduce((s, i) => s + i.quantity, 0)
+  const totalWantedCost = wantedItems.reduce((s, i) => s + (i.purchasePrice ?? 0) * i.quantity, 0)
+
+  function renderSection(label: string, sectionItems: CollectibleItem[], color: string) {
+    const hasAny = COLLECTION_TYPES.some(({ key }) => sectionItems.some(i => i.collectionType === key))
+    if (!hasAny && sectionItems.length === 0) return null
+
+    return (
+      <div>
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${color}`}>{label}</p>
+        <div className="flex flex-col gap-3">
+          {COLLECTION_TYPES.map(({ key, emoji }) => {
+            const typeItems = sectionItems.filter(i => i.collectionType === key)
+            if (typeItems.length === 0 && label === 'Wishlist') return null
+            const expandKey = `${label}:${key}`
+            const isExp = expanded.has(expandKey)
+
+            return (
+              <div key={key} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  onClick={() => toggleExpanded(expandKey)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{emoji}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{key}</span>
+                    <span className="text-xs text-gray-400">({typeItems.length})</span>
+                  </div>
+                  <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setAddingType(key)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add</button>
+                    <span className="text-gray-400 text-sm">{isExp ? '▾' : '▸'}</span>
+                  </div>
+                </div>
+
+                {isExp && (
+                  <div className="border-t border-gray-100 dark:border-gray-700">
+                    {typeItems.length === 0 ? (
+                      <p className="px-4 py-3 text-sm text-gray-400 italic">No {key.toLowerCase()} added yet.</p>
+                    ) : (
+                      <div className="divide-y divide-gray-50 dark:divide-gray-800">
+                        {typeItems.map(item => (
+                          <CollectibleRow
+                            key={item.id}
+                            item={item}
+                            onEdit={() => setEditItem(item)}
+                            onDelete={() => deleteItem(item.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
+      {/* Summary */}
       {items.length > 0 && (
-        <div className="flex flex-wrap gap-3 text-sm mb-4 text-gray-500 dark:text-gray-400">
-          <span><span className="font-semibold text-gray-800 dark:text-gray-200">{totalItems}</span> items</span>
-          <span className="text-gray-300 dark:text-gray-600">·</span>
-          <span>Paid <span className="font-semibold text-gray-800 dark:text-gray-200">€{totalPaid.toFixed(2)}</span></span>
-          <span className="text-gray-300 dark:text-gray-600">·</span>
-          <span>Value <span className="font-semibold text-green-600 dark:text-green-400">€{totalValue.toFixed(2)}</span></span>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <span>Owned: <span className="font-semibold text-gray-800 dark:text-gray-200">{totalOwned}</span> · Value <span className="font-semibold text-green-600 dark:text-green-400">€{totalValue.toFixed(2)}</span></span>
+          {totalWanted > 0 && (
+            <span>Wishlist: <span className="font-semibold text-gray-800 dark:text-gray-200">{totalWanted}</span> · Target <span className="font-semibold text-gray-700 dark:text-gray-300">€{totalWantedCost.toFixed(2)}</span></span>
+          )}
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        {COLLECTION_TYPES.map(({ key, emoji }) => {
-          const typeItems = items.filter(i => i.collectionType === key)
-          const isExpanded = expanded.has(key)
-
-          return (
-            <div key={key} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-              <div
-                className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                onClick={() => toggleExpanded(key)}
-              >
-                <div className="flex items-center gap-2">
-                  <span>{emoji}</span>
-                  <span className="font-semibold text-gray-900 dark:text-white text-sm">{key}</span>
-                  <span className="text-xs text-gray-400">({typeItems.length})</span>
-                </div>
-                <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-                  <button
-                    onClick={() => setAddingType(key)}
-                    className="text-xs text-blue-500 hover:text-blue-600 font-medium"
-                  >
-                    + Add
-                  </button>
-                  <span className="text-gray-400 text-sm">{isExpanded ? '▾' : '▸'}</span>
-                </div>
-              </div>
-
-              {isExpanded && (
-                <div className="border-t border-gray-100 dark:border-gray-700">
-                  {typeItems.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-gray-400 italic">No {key.toLowerCase()} added yet.</p>
-                  ) : (
-                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                      {typeItems.map(item => {
-                        const summary = metaSummary(item)
-                        const displayValue = item.currentValue ?? item.purchasePrice
-                        return (
-                          <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">{item.name}</span>
-                              {summary && (
-                                <span className="text-xs text-gray-400 truncate block">{summary}</span>
-                              )}
-                            </div>
-                            {item.quantity > 1 && (
-                              <span className="text-xs text-gray-400 shrink-0">×{item.quantity}</span>
-                            )}
-                            {displayValue != null && (
-                              <span className="text-sm font-semibold text-green-600 dark:text-green-400 shrink-0">
-                                €{(displayValue * item.quantity).toFixed(2)}
-                              </span>
-                            )}
-                            <div className="flex gap-1 shrink-0">
-                              <button
-                                onClick={() => setEditItem(item)}
-                                className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteItem(item.id)}
-                                className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30"
-                              >
-                                Del
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      {renderSection('Owned', ownedItems, 'text-gray-500 dark:text-gray-400')}
+      {wantedItems.length > 0 && renderSection('Wishlist', wantedItems, 'text-blue-500 dark:text-blue-400')}
 
       {addingType && (
         <Modal title={`Add ${addingType}`} onClose={() => setAddingType(null)}>

@@ -31,6 +31,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
   const [notes, setNotes] = useState(initial?.notes ?? '')
 
   const m = (initial?.metadata ?? {}) as Record<string, unknown>
+  const [owned, setOwned] = useState<boolean>((m.owned as boolean) ?? true)
 
   // Cards
   const [cardSet, setCardSet] = useState((m.set as string) ?? '')
@@ -71,6 +72,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
     switch (collectionType) {
       case 'Cards':
         return {
+          owned,
           set: cardSet || null,
           rarity: cardRarity || null,
           grade: cardGrade || null,
@@ -79,6 +81,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
         }
       case 'Funko Pop':
         return {
+          owned,
           number: funkoNumber || null,
           series: funkoSeries || null,
           exclusive: funkoExclusive !== 'None' ? funkoExclusive : null,
@@ -87,6 +90,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
         }
       case 'Lego':
         return {
+          owned,
           setNumber: legoSetNumber || null,
           theme: legoTheme || null,
           year: legoYear ? Number(legoYear) : null,
@@ -96,6 +100,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
         }
       case 'Figures':
         return {
+          owned,
           franchise: figFranchise || null,
           brand: figBrand || null,
           scale: figScale || null,
@@ -103,6 +108,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
         }
       case 'Books':
         return {
+          owned,
           series: bookSeries || null,
           volumeNumber: bookVolume || null,
           author: bookAuthor || null,
@@ -110,7 +116,7 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
           language: bookLanguage || null,
         }
       default:
-        return {}
+        return { owned }
     }
   }
 
@@ -152,6 +158,20 @@ export default function CollectibleForm({ initial, defaultType, onSave, onCancel
         <select disabled={!!initial?.id} value={collectionType} onChange={e => setCollectionType(e.target.value)} className={inp}>
           {COLLECTION_TYPES.map(t => <option key={t}>{t}</option>)}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+        <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden text-sm">
+          <button type="button" onClick={() => setOwned(true)}
+            className={`flex-1 py-1.5 font-medium transition-colors ${owned ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+            Owned
+          </button>
+          <button type="button" onClick={() => setOwned(false)}
+            className={`flex-1 py-1.5 font-medium transition-colors ${!owned ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+            Wishlist
+          </button>
+        </div>
       </div>
 
       <input required value={name} onChange={e => setName(e.target.value)} placeholder="Name" className={inp} />

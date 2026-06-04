@@ -209,9 +209,9 @@ export default function ItemsPage() {
 
       {/* Summary strip */}
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
-        <span className="text-gray-500 dark:text-gray-400">Inventory: <span className="font-semibold text-gray-800 dark:text-gray-200">€{invTotal.toFixed(2)}</span></span>
+        <span className="text-gray-500 dark:text-gray-400">Wishlist to spend: <span className="font-semibold text-gray-800 dark:text-gray-200">€{wishTotal.toFixed(2)}</span></span>
         <span className="text-gray-300 dark:text-gray-600">·</span>
-        <span className="text-gray-500 dark:text-gray-400">Wishlist: <span className="font-semibold text-gray-800 dark:text-gray-200">€{wishTotal.toFixed(2)}</span></span>
+        <span className="text-gray-500 dark:text-gray-400">Owned value: <span className="font-semibold text-gray-800 dark:text-gray-200">€{invTotal.toFixed(2)}</span></span>
         {withUpgrades > 0 && (
           <>
             <span className="text-gray-300 dark:text-gray-600">·</span>
