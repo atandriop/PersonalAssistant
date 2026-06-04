@@ -11,13 +11,14 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, cost, period, renewalDate, url, notes, active } = await req.json()
+  const { name, cost, period, renewalDate, url, notes, active, category } = await req.json()
   const subscription = await prisma.subscription.create({
     data: {
       name, cost: Number(cost), period,
       renewalDate: renewalDate ? new Date(renewalDate) : null,
       url: url ?? null, notes: notes ?? null,
       active: active ?? true,
+      category: category ?? 'Other',
     },
   })
   return NextResponse.json(subscription, { status: 201 })

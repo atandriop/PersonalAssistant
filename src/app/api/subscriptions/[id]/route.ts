@@ -9,6 +9,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       name: data.name, cost: Number(data.cost), period: data.period,
       renewalDate: data.renewalDate ? new Date(data.renewalDate) : null,
       url: data.url ?? null, notes: data.notes ?? null, active: data.active,
+      category: data.category ?? 'Other',
     },
   })
   return NextResponse.json(subscription)
