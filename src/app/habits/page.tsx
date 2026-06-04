@@ -1,2 +1,2 @@
-import LifePage from '@/components/life/LifePage'
-export default function Page() { return <LifePage defaultTab="habits" /> }
+import HabitsPage from '@/components/habits/HabitsPage'
+export default function Page() { return <HabitsPage /> }
