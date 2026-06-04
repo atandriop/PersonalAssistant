@@ -33,7 +33,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { name, color } = await req.json()
-  const habit = await prisma.habit.create({ data: { name, color } })
+  const { name, color, lifeAreaId } = await req.json()
+  const habit = await prisma.habit.create({
+    data: { name, color, lifeAreaId: lifeAreaId != null ? Number(lifeAreaId) : null },
+  })
   return NextResponse.json(habit, { status: 201 })
 }

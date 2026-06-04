@@ -1,6 +1,6 @@
 export interface GoalRef { id: number; title: string; timePeriod: string }
 export interface GoalLink { id: number; goalId: number; goal: GoalRef }
-export interface Habit { id: number; name: string; color: string; goalLinks: GoalLink[]; doneToday?: boolean }
+export interface Habit { id: number; lifeAreaId: number | null; name: string; color: string; goalLinks: GoalLink[]; doneToday?: boolean }
 export interface Milestone { id: number; completedAt: string | null; targetDate?: string | null; title?: string }
 export interface Goal { id: number; title: string; milestones: Milestone[] }
 export interface LifeArea { id: number; name: string; goals: Goal[] }
