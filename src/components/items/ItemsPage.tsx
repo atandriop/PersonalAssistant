@@ -9,6 +9,7 @@ import InventoryForm from '@/components/inventory/InventoryForm'
 import CategoryManager from '@/components/categories/CategoryManager'
 import TaskForm from '@/components/tasks/TaskForm'
 import PromptModal from '@/components/ui/PromptModal'
+import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -44,6 +45,8 @@ export default function ItemsPage() {
   const [showPrompt, setShowPrompt] = useState(false)
   const [addToTask, setAddToTask] = useState<{ title: string; sourceId: number } | null>(null)
   const [toInventory, setToInventory] = useState<WishlistItem | null>(null)
+  const [bulkWish, setBulkWish] = useState(false)
+  const [bulkInv, setBulkInv] = useState(false)
 
   const q = search.toLowerCase()
   const activeWish = wishItems.filter(i => !i.purchased)
@@ -90,6 +93,70 @@ export default function ItemsPage() {
     mutateInv()
   }
 
+  const WISHLIST_COLUMNS: ColumnDef[] = [
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'cost', label: 'Cost (€)', type: 'number', required: true },
+    { key: 'priority', label: 'Priority', type: 'select', options: [
+      { label: 'High', value: 'High' },
+      { label: 'Medium', value: 'Medium' },
+      { label: 'Low', value: 'Low' },
+    ]},
+    { key: 'categoryId', label: 'Category', type: 'select', options: categories.map(c => ({ label: c.name, value: String(c.id) })) },
+    { key: 'url', label: 'URL', type: 'text' },
+    { key: 'notes', label: 'Notes', type: 'text' },
+  ]
+
+  const INVENTORY_COLUMNS: ColumnDef[] = [
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'cost', label: 'Cost (€)', type: 'number', required: true },
+    { key: 'quantity', label: 'Quantity', type: 'number' },
+    { key: 'purchaseDate', label: 'Purchase Date', type: 'date' },
+    { key: 'categoryId', label: 'Category', type: 'select', options: categories.map(c => ({ label: c.name, value: String(c.id) })) },
+    { key: 'notes', label: 'Notes', type: 'text' },
+  ]
+
+  async function handleWishlistBulkSave({ upserted, deletedIds }: BulkChanges) {
+    await Promise.all([
+      ...upserted.map(row =>
+        typeof row.id === 'number'
+          ? fetch(`/api/wishlist/${row.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+          : fetch('/api/wishlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+      ),
+      ...deletedIds.map(id => fetch(`/api/wishlist/${id}`, { method: 'DELETE' })),
+    ])
+    mutateWish()
+    setBulkWish(false)
+  }
+
+  async function handleInventoryBulkSave({ upserted, deletedIds }: BulkChanges) {
+    await Promise.all([
+      ...upserted.map(row =>
+        typeof row.id === 'number'
+          ? fetch(`/api/inventory/${row.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+          : fetch('/api/inventory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+      ),
+      ...deletedIds.map(id => fetch(`/api/inventory/${id}`, { method: 'DELETE' })),
+    ])
+    mutateInv()
+    setBulkInv(false)
+  }
+
   function buildPrompt(): string {
     const byPriority: Record<string, typeof activeWish> = { High: [], Medium: [], Low: [] }
     activeWish.forEach(i => { byPriority[i.priority]?.push(i) })
@@ -114,6 +181,12 @@ export default function ItemsPage() {
             className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
             AI Prompt
           </button>
+          <button onClick={() => setBulkInv(true)} className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+            Edit Inventory
+          </button>
+          <button onClick={() => setBulkWish(true)} className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+            Edit Wishlist
+          </button>
           <button onClick={() => setShowAddInv(true)} className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             + Inventory
           </button>
@@ -135,6 +208,8 @@ export default function ItemsPage() {
           </>
         )}
       </div>
+
+      <div className={bulkWish || bulkInv ? 'hidden' : ''}>
 
       {/* Shared filters */}
       <div className="flex gap-2 mb-6">
@@ -274,6 +349,44 @@ export default function ItemsPage() {
             ))}
           </div>
         </div>
+      )}
+
+      </div>{/* end hidden wrapper */}
+
+      {bulkWish && (
+        <BulkEditor
+          columns={WISHLIST_COLUMNS}
+          rows={wishItems.filter(i => !i.purchased).map(w => ({
+            id: w.id,
+            name: w.name,
+            cost: w.cost,
+            priority: w.priority,
+            categoryId: String(w.categoryId),
+            url: w.url ?? '',
+            notes: w.notes ?? '',
+          }))}
+          csvHint="name,cost,priority,categoryId,url,notes"
+          onSave={handleWishlistBulkSave}
+          onCancel={() => setBulkWish(false)}
+        />
+      )}
+
+      {bulkInv && (
+        <BulkEditor
+          columns={INVENTORY_COLUMNS}
+          rows={invItems.map(i => ({
+            id: i.id,
+            name: i.name,
+            cost: i.cost,
+            quantity: i.quantity,
+            purchaseDate: i.purchaseDate ? i.purchaseDate.slice(0, 10) : '',
+            categoryId: String(i.categoryId),
+            notes: i.notes ?? '',
+          }))}
+          csvHint="name,cost,quantity,purchaseDate,categoryId,notes"
+          onSave={handleInventoryBulkSave}
+          onCancel={() => setBulkInv(false)}
+        />
       )}
 
       {/* Modals */}
