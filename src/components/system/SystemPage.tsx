@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
+import { exportPdf } from '@/lib/exportPdf'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -82,112 +83,10 @@ export default function SystemPage() {
     downloadUrl('/api/export?format=csv', `homebase-tasks-${new Date().toISOString().slice(0, 10)}.csv`)
   }
 
-  async function exportPdf() {
+  async function handleExportPdf() {
     setExportingPdf(true)
     try {
-      const [tasks, memories, lifeAreas, habits] = await Promise.all([
-        fetch('/api/tasks').then(r => r.json()),
-        fetch('/api/memories').then(r => r.json()),
-        fetch('/api/life-areas').then(r => r.json()),
-        fetch('/api/habits').then(r => r.json()),
-      ])
-
-      const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-      const openTasks = tasks.filter((t: { done: boolean }) => !t.done)
-      const taskRows = tasks
-        .map((t: { done: boolean; title: string; priority: string; dueDate: string | null; category: string | null }) =>
-          `<tr class="${t.done ? 'done' : ''}">
-            <td>${t.title}</td>
-            <td>${t.priority}</td>
-            <td>${t.dueDate ? t.dueDate.slice(0, 10) : '—'}</td>
-            <td>${t.category ?? '—'}</td>
-          </tr>`
-        )
-        .join('')
-
-      const memoryRows = memories
-        .map((m: { title: string; date: string; category: string; location: string | null }) =>
-          `<tr>
-            <td>${m.title}</td>
-            <td>${m.date}</td>
-            <td>${m.category}</td>
-            <td>${m.location ?? '—'}</td>
-          </tr>`
-        )
-        .join('')
-
-      const goalRows = lifeAreas
-        .flatMap((a: { name: string; color: string; goals: { title: string; timePeriod: string; milestones: { completedAt: string | null }[] }[] }) =>
-          a.goals.map((g: { title: string; timePeriod: string; milestones: { completedAt: string | null }[] }) => {
-            const done = g.milestones.filter((m: { completedAt: string | null }) => m.completedAt).length
-            return `<tr>
-              <td>${a.name}</td>
-              <td>${g.title}</td>
-              <td>${g.timePeriod}</td>
-              <td>${done}/${g.milestones.length}</td>
-            </tr>`
-          })
-        )
-        .join('')
-
-      const habitRows = habits
-        .map((h: { name: string; color: string }) =>
-          `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${h.color};margin-right:6px"></span>${h.name}</td></tr>`
-        )
-        .join('')
-
-      const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Homebase Export — ${today}</title>
-<style>
-  body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; color: #111; }
-  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 8px; }
-  h2 { font-size: 16px; margin-top: 28px; color: #444; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
-  th { text-align: left; padding: 6px 8px; background: #f0f0f0; border-bottom: 2px solid #ccc; }
-  td { padding: 5px 8px; border-bottom: 1px solid #eee; }
-  .done td { text-decoration: line-through; color: #999; }
-  @media print { @page { margin: 1.5cm; } h2 { page-break-before: auto; } }
-</style>
-</head>
-<body>
-<h1>Homebase Export — ${today}</h1>
-
-<h2>Tasks (${openTasks.length} open / ${tasks.length} total)</h2>
-<table>
-  <thead><tr><th>Title</th><th>Priority</th><th>Due Date</th><th>Category</th></tr></thead>
-  <tbody>${taskRows}</tbody>
-</table>
-
-<h2>Memories (${memories.length})</h2>
-<table>
-  <thead><tr><th>Title</th><th>Date</th><th>Category</th><th>Location</th></tr></thead>
-  <tbody>${memoryRows}</tbody>
-</table>
-
-<h2>Goals</h2>
-<table>
-  <thead><tr><th>Area</th><th>Goal</th><th>Period</th><th>Milestones</th></tr></thead>
-  <tbody>${goalRows}</tbody>
-</table>
-
-<h2>Habits (${habits.length})</h2>
-<table>
-  <thead><tr><th>Habit</th></tr></thead>
-  <tbody>${habitRows}</tbody>
-</table>
-</body>
-</html>`
-
-      const win = window.open('', '_blank')
-      if (win) {
-        win.document.write(html)
-        win.document.close()
-        win.focus()
-        setTimeout(() => win.print(), 500)
-      }
+      await exportPdf()
     } finally {
       setExportingPdf(false)
     }
@@ -365,7 +264,7 @@ export default function SystemPage() {
             Export CSV (tasks)
           </button>
           <button
-            onClick={exportPdf}
+            onClick={handleExportPdf}
             disabled={exportingPdf}
             className="px-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50"
           >
