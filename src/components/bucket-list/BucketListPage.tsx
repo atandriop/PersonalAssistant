@@ -20,7 +20,6 @@ export default function BucketListPage() {
   const { data: trips = [], mutate: mutateTrips } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
   const { data: experiences = [], mutate: mutateExperiences } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
 
-  const [tab, setTab] = useState<'trips' | 'experiences'>('trips')
   const [tripFilter, setTripFilter] = useState('All')
   const [expFilter, setExpFilter] = useState('All')
   const [addingTrip, setAddingTrip] = useState(false)
@@ -42,16 +41,8 @@ export default function BucketListPage() {
     await Promise.all([
       ...upserted.map(row =>
         typeof row.id === 'number'
-          ? fetch(`/api/bucket-list/trips/${row.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(row),
-            })
-          : fetch('/api/bucket-list/trips', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(row),
-            })
+          ? fetch(`/api/bucket-list/trips/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) })
+          : fetch('/api/bucket-list/trips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) })
       ),
       ...deletedIds.map(id => fetch(`/api/bucket-list/trips/${id}`, { method: 'DELETE' })),
     ])
@@ -68,30 +59,14 @@ export default function BucketListPage() {
       const cities = t.cities.length > 0 ? ` — ${t.cities.join(', ')}` : ''
       return `  - ${t.destination}${cities}${year}${budget}`
     }).join('\n')
-
     const pendingExp = experiences.filter(e => !e.done)
     const doneExp = experiences.filter(e => e.done)
     const expByCategory: Record<string, BucketExperience[]> = {}
-    pendingExp.forEach(e => {
-      if (!expByCategory[e.category]) expByCategory[e.category] = []
-      expByCategory[e.category].push(e)
-    })
+    pendingExp.forEach(e => { if (!expByCategory[e.category]) expByCategory[e.category] = []; expByCategory[e.category].push(e) })
     const expLines = Object.entries(expByCategory).map(([cat, items]) =>
-      `  ${cat}:\n` + items.map(e => {
-        const year = e.targetYear ? ` (target: ${e.targetYear})` : ''
-        return `    - ${e.title}${year}`
-      }).join('\n')
+      `  ${cat}:\n` + items.map(e => `    - ${e.title}${e.targetYear ? ` (target: ${e.targetYear})` : ''}`).join('\n')
     ).join('\n')
-
-    return `Here is my bucket list as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:
-
-Trips — ${pendingTrips.length} pending, ${doneTrips.length} completed:
-${tripLines || '  None'}
-
-Experiences — ${pendingExp.length} pending, ${doneExp.length} completed:
-${expLines || '  None'}
-
-Please reflect on this bucket list. Identify any themes or patterns across the trips and experiences. Suggest which 2–3 items look most achievable in the next 12 months based on what's listed. Flag any categories that seem underrepresented based on a balanced life.`
+    return `Here is my bucket list as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:\n\nTrips — ${pendingTrips.length} pending, ${doneTrips.length} completed:\n${tripLines || '  None'}\n\nExperiences — ${pendingExp.length} pending, ${doneExp.length} completed:\n${expLines || '  None'}\n\nPlease reflect on this bucket list. Identify any themes or patterns. Suggest which 2–3 items look most achievable in the next 12 months. Flag any categories that seem underrepresented.`
   }
 
   const filteredTrips = trips.filter(t => {
@@ -109,203 +84,113 @@ Please reflect on this bucket list. Identify any themes or patterns across the t
 
   async function toggleTripDone(trip: BucketTrip) {
     await fetch(`/api/bucket-list/trips/${trip.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        destination: trip.destination,
-        cities: trip.cities,
-        budget: trip.budget,
-        targetYear: trip.targetYear,
-        notes: trip.notes,
-        done: !trip.done,
-      }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ destination: trip.destination, cities: trip.cities, budget: trip.budget, targetYear: trip.targetYear, notes: trip.notes, done: !trip.done }),
     })
     mutateTrips()
   }
 
   async function toggleExperienceDone(experience: BucketExperience) {
     await fetch(`/api/bucket-list/experiences/${experience.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: experience.title,
-        category: experience.category,
-        notes: experience.notes,
-        targetYear: experience.targetYear,
-        done: !experience.done,
-      }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: experience.title, category: experience.category, notes: experience.notes, targetYear: experience.targetYear, done: !experience.done }),
     })
     mutateExperiences()
   }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bucket List</h1>
-        <div className="flex gap-2">
-          {(trips.length > 0 || experiences.length > 0) && (
-            <button onClick={() => setShowPrompt(true)} className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700">
-              Generate AI Prompt
-            </button>
-          )}
-          {tab === 'trips' && (
-            <button
-              onClick={() => setBulkTrips(true)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
+        {(trips.length > 0 || experiences.length > 0) && (
+          <button onClick={() => setShowPrompt(true)} className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700">
+            Generate AI Prompt
+          </button>
+        )}
+      </div>
+
+      {/* Trips section */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            Trips <span className="text-sm font-normal text-gray-400 ml-1">({trips.length})</span>
+          </h2>
+          <div className="flex gap-2">
+            <button onClick={() => setBulkTrips(true)} className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
               Edit All
             </button>
-          )}
-          <button
-            onClick={() => tab === 'trips' ? setAddingTrip(true) : setAddingExperience(true)}
-            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-          >
-            {tab === 'trips' ? '+ Add Trip' : '+ Add Experience'}
-          </button>
+            <button onClick={() => setAddingTrip(true)} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+              + Add Trip
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
-        {(['trips', 'experiences'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            {t === 'trips' ? `Trips (${trips.length})` : `Experiences (${experiences.length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Trips tab */}
-      {tab === 'trips' && (
-        <>
-          {!bulkTrips && (
-            <div className="flex gap-2 flex-wrap mb-6">
-              {TRIP_FILTERS.map(f => (
-                <button
-                  key={f}
-                  onClick={() => setTripFilter(f)}
-                  className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
-                    tripFilter === f
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          )}
-          {bulkTrips ? (
-            <BulkEditor
-              columns={BUCKET_TRIP_COLUMNS}
-              rows={trips.map(t => ({
-                id: t.id,
-                destination: t.destination,
-                budget: t.budget,
-                targetYear: t.targetYear,
-                notes: t.notes ?? '',
-                done: t.done,
-              }))}
-              csvHint="destination,budget,targetYear,notes,done"
-              onSave={handleBucketTripsBulkSave}
-              onCancel={() => setBulkTrips(false)}
-            />
-          ) : filteredTrips.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
-              {tripFilter === 'All'
-                ? 'No trips yet. Click "+ Add Trip" to add your first.'
-                : `No ${tripFilter.toLowerCase()} trips.`}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTrips.map(t => (
-                <TripCard
-                  key={t.id}
-                  trip={t}
-                  onToggleDone={() => toggleTripDone(t)}
-                  onClick={() => setEditTrip(t)}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Experiences tab */}
-      {tab === 'experiences' && (
-        <>
-          <div className="flex gap-2 flex-wrap mb-6">
-            {[...EXP_STATUS_FILTERS, ...EXP_CATEGORY_FILTERS].map(f => (
-              <button
-                key={f}
-                onClick={() => setExpFilter(f)}
+        {!bulkTrips && (
+          <div className="flex gap-2 flex-wrap mb-4">
+            {TRIP_FILTERS.map(f => (
+              <button key={f} onClick={() => setTripFilter(f)}
                 className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
-                  expFilter === f
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {f}
-              </button>
+                  tripFilter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}>{f}</button>
             ))}
           </div>
-          {filteredExperiences.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
-              {expFilter === 'All'
-                ? 'No experiences yet. Click "+ Add Experience" to add your first.'
-                : `No ${expFilter} experiences.`}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredExperiences.map(e => (
-                <ExperienceCard
-                  key={e.id}
-                  experience={e}
-                  onToggleDone={() => toggleExperienceDone(e)}
-                  onClick={() => setEditExperience(e)}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+        )}
 
-      {addingTrip && (
-        <TripForm
-          onSave={() => { mutateTrips(); setAddingTrip(false) }}
-          onCancel={() => setAddingTrip(false)}
-        />
-      )}
-      {addingExperience && (
-        <ExperienceForm
-          onSave={() => { mutateExperiences(); setAddingExperience(false) }}
-          onCancel={() => setAddingExperience(false)}
-        />
-      )}
-      {editTrip && (
-        <TripForm
-          initial={editTrip}
-          onSave={() => { mutateTrips(); setEditTrip(null) }}
-          onCancel={() => setEditTrip(null)}
-        />
-      )}
-      {editExperience && (
-        <ExperienceForm
-          initial={editExperience}
-          onSave={() => { mutateExperiences(); setEditExperience(null) }}
-          onCancel={() => setEditExperience(null)}
-        />
-      )}
-      {showPrompt && (
-        <PromptModal title="Bucket List AI Prompt" prompt={buildBucketListPrompt()} onClose={() => setShowPrompt(false)} />
-      )}
+        {bulkTrips ? (
+          <BulkEditor
+            columns={BUCKET_TRIP_COLUMNS}
+            rows={trips.map(t => ({ id: t.id, destination: t.destination, budget: t.budget, targetYear: t.targetYear, notes: t.notes ?? '', done: t.done }))}
+            csvHint="destination,budget,targetYear,notes,done"
+            onSave={handleBucketTripsBulkSave}
+            onCancel={() => setBulkTrips(false)}
+          />
+        ) : filteredTrips.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 dark:text-gray-600 text-sm">
+            {tripFilter === 'All' ? 'No trips yet. Click "+ Add Trip" to add your first.' : `No ${tripFilter.toLowerCase()} trips.`}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTrips.map(t => <TripCard key={t.id} trip={t} onToggleDone={() => toggleTripDone(t)} onClick={() => setEditTrip(t)} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Experiences section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            Experiences <span className="text-sm font-normal text-gray-400 ml-1">({experiences.length})</span>
+          </h2>
+          <button onClick={() => setAddingExperience(true)} className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+            + Add Experience
+          </button>
+        </div>
+
+        <div className="flex gap-2 flex-wrap mb-4">
+          {[...EXP_STATUS_FILTERS, ...EXP_CATEGORY_FILTERS].map(f => (
+            <button key={f} onClick={() => setExpFilter(f)}
+              className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
+                expFilter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}>{f}</button>
+          ))}
+        </div>
+
+        {filteredExperiences.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 dark:text-gray-600 text-sm">
+            {expFilter === 'All' ? 'No experiences yet. Click "+ Add Experience" to add your first.' : `No ${expFilter} experiences.`}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredExperiences.map(e => <ExperienceCard key={e.id} experience={e} onToggleDone={() => toggleExperienceDone(e)} onClick={() => setEditExperience(e)} />)}
+          </div>
+        )}
+      </div>
+
+      {addingTrip && <TripForm onSave={() => { mutateTrips(); setAddingTrip(false) }} onCancel={() => setAddingTrip(false)} />}
+      {addingExperience && <ExperienceForm onSave={() => { mutateExperiences(); setAddingExperience(false) }} onCancel={() => setAddingExperience(false)} />}
+      {editTrip && <TripForm initial={editTrip} onSave={() => { mutateTrips(); setEditTrip(null) }} onCancel={() => setEditTrip(null)} />}
+      {editExperience && <ExperienceForm initial={editExperience} onSave={() => { mutateExperiences(); setEditExperience(null) }} onCancel={() => setEditExperience(null)} />}
+      {showPrompt && <PromptModal title="Bucket List AI Prompt" prompt={buildBucketListPrompt()} onClose={() => setShowPrompt(false)} />}
     </div>
   )
 }
