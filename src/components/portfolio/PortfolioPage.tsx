@@ -51,6 +51,8 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
   const [priceInput, setPriceInput] = useState('')
   const [filterType, setFilterType] = useState('')
   const [showPrompt, setShowPrompt] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshResult, setRefreshResult] = useState<string | null>(null)
 
   const filtered = holdings.filter(h => !filterType || h.type === filterType)
   const totalValue = holdings.reduce((s, h) => s + holdingValue(h), 0)
@@ -80,6 +82,23 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
     if (!confirm('Delete this holding?')) return
     await fetch(`/api/portfolio/${id}`, { method: 'DELETE' })
     mutate()
+  }
+
+  async function refreshPrices() {
+    setRefreshing(true)
+    setRefreshResult(null)
+    try {
+      const res = await fetch('/api/portfolio/refresh-prices', { method: 'POST' })
+      const data = await res.json() as { updated: string[]; failed: string[] }
+      mutate()
+      const parts: string[] = []
+      if (data.updated.length > 0) parts.push(`Refreshed ${data.updated.length} price${data.updated.length !== 1 ? 's' : ''}`)
+      if (data.failed.length > 0) parts.push(`${data.failed.length} failed (${data.failed.join(', ')})`)
+      setRefreshResult(parts.join(' · ') || 'No holdings to refresh')
+      setTimeout(() => setRefreshResult(null), 6000)
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   function buildPortfolioPrompt(): string {
@@ -121,11 +140,22 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
           >
             AI Prompt
           </button>
+          <button
+            onClick={refreshPrices}
+            disabled={refreshing}
+            className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh prices'}
+          </button>
           <button onClick={() => setShowAdd(true)} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             + Add holding
           </button>
         </div>
       </div>
+
+      {refreshResult && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{refreshResult}</p>
+      )}
 
       {/* Summary strip */}
       <div className="mb-4 flex flex-wrap gap-2 items-center">
