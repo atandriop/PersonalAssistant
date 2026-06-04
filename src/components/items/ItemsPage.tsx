@@ -10,8 +10,6 @@ import CategoryManager from '@/components/categories/CategoryManager'
 import TaskForm from '@/components/tasks/TaskForm'
 import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
-import CollectiblesTab from './CollectiblesTab'
-
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface Category { id: number; name: string; color: string }
@@ -344,12 +342,6 @@ export default function ItemsPage() {
           </div>
         )
       })}
-
-      {/* Collectibles */}
-      <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Collectibles</h2>
-        <CollectiblesTab />
-      </div>
 
       {/* Purchased — not yet in inventory */}
       {purchasedNeedingInventory.length > 0 && (
