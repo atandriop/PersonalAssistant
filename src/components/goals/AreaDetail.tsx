@@ -131,8 +131,7 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: {
   goal: Goal; allHabits: HabitRef[]; habitLogs: Record<number, string[]>; onMutate: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [newMilestone, setNewMilestone] = useState('')
-  const [newMilestoneDate, setNewMilestoneDate] = useState('')
+  const [bulkText, setBulkText] = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [showLinkHabit, setShowLinkHabit] = useState(false)
   const [addToTask, setAddToTask] = useState<{ title: string; goalId: number } | null>(null)
@@ -155,11 +154,23 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: {
     onMutate()
   }
 
-  async function addMilestone(e: React.FormEvent) {
+  async function addMilestones(e: React.FormEvent) {
     e.preventDefault()
-    if (!newMilestone.trim()) return
-    await fetch(`/api/goals/${goal.id}/milestones`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newMilestone.trim(), targetDate: newMilestoneDate || null }) })
-    setNewMilestone(''); setNewMilestoneDate(''); setAddingMilestone(false); onMutate()
+    const lines = bulkText.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lines.length === 0) return
+    await Promise.all(lines.map(line => {
+      const parts = line.split(' | ')
+      const title = parts[0].trim()
+      const targetDate = parts[1]?.trim() || null
+      return fetch(`/api/goals/${goal.id}/milestones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, targetDate }),
+      })
+    }))
+    setBulkText('')
+    setAddingMilestone(false)
+    onMutate()
   }
 
   async function linkHabit(habitId: number) {
@@ -226,14 +237,18 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: {
               })}
             </div>
             {addingMilestone ? (
-              <form onSubmit={addMilestone} className="flex flex-col gap-1.5 mt-2">
-                <div className="flex gap-2">
-                  <input autoFocus value={newMilestone} onChange={e => setNewMilestone(e.target.value)} placeholder="Milestone title" className="flex-1 text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-                  <input type="date" value={newMilestoneDate} onChange={e => setNewMilestoneDate(e.target.value)} className="text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white" title="Target date (optional)" />
-                </div>
+              <form onSubmit={addMilestones} className="flex flex-col gap-1.5 mt-2">
+                <textarea
+                  autoFocus
+                  value={bulkText}
+                  onChange={e => setBulkText(e.target.value)}
+                  placeholder={"One milestone per line\n90kg\n85kg | 2026-09-01"}
+                  rows={4}
+                  className="text-sm border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white resize-none w-full"
+                />
                 <div className="flex gap-1">
                   <button type="submit" className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
-                  <button type="button" onClick={() => setAddingMilestone(false)} className="text-xs px-2 py-1 border rounded dark:border-gray-600 dark:text-gray-300">Cancel</button>
+                  <button type="button" onClick={() => { setAddingMilestone(false); setBulkText('') }} className="text-xs px-2 py-1 border rounded dark:border-gray-600 dark:text-gray-300">Cancel</button>
                 </div>
               </form>
             ) : (
