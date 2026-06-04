@@ -55,7 +55,7 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const [showPrompt, setShowPrompt] = useState(false)
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
-  const assetTotal = portfolioTotal + entries.filter(e => e.type === 'asset').reduce((s, e) => s + e.value, 0)
+  const assetTotal = portfolioTotal
   const subAnnual = subscriptions.filter(s => s.active).reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
   const liabilityTotal = entries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0) + subAnnual
   const netWorth = assetTotal - liabilityTotal

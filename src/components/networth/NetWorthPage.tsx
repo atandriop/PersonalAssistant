@@ -7,7 +7,7 @@ import PortfolioPage from '@/components/portfolio/PortfolioPage'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const CATEGORIES = ['property', 'vehicle', 'cash', 'loan', 'mortgage', 'other'] as const
+const CATEGORIES = ['property', 'vehicle', 'cash', 'credit_card', 'loan', 'mortgage', 'other'] as const
 type Category = typeof CATEGORIES[number]
 
 interface NetWorthEntry {
@@ -50,6 +50,11 @@ function holdingValue(h: PortfolioHolding): number {
 
 function fmt(n: number): string {
   return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+}
+
+function formatCategory(cat: string): string {
+  if (cat === 'credit_card') return 'Credit Card'
+  return formatCategory(cat)
 }
 
 // ─── Line chart ───────────────────────────────────────────────────────────
@@ -146,7 +151,7 @@ function EntryForm({ initial, defaultType, onSave, onCancel }: {
           <option value="liability">Liability</option>
         </select>
         <select value={category} onChange={e => setCategory(e.target.value as Category)} className="flex-1 border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white">
-          {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+          {CATEGORIES.map(c => <option key={c} value={c}>{formatCategory(c)}</option>)}
         </select>
       </div>
       <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white resize-none" />
@@ -193,9 +198,8 @@ export default function NetWorthPage() {
   }, [mutateSnapshots2])
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
-  const assetEntries = entries.filter(e => e.type === 'asset')
   const liabilityEntries = entries.filter(e => e.type === 'liability')
-  const totalAssets = portfolioTotal + assetEntries.reduce((s, e) => s + e.value, 0)
+  const totalAssets = portfolioTotal
   const subscriptionAnnualTotal = subscriptions
     .filter(s => s.active)
     .reduce((sum, s) => sum + (s.period === 'yearly' ? s.cost : s.cost * 12), 0)
@@ -262,51 +266,29 @@ export default function NetWorthPage() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Assets <span className="text-green-600 dark:text-green-400 font-bold ml-1">{fmt(totalAssets)}</span></h2>
-            <button onClick={() => { setAddType('asset'); setShowAdd(true) }} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add</button>
+            <button
+              onClick={() => setShowPortfolio(true)}
+              className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            >
+              Manage portfolio →
+            </button>
           </div>
 
-          {holdings.length > 0 && (
-            <div className="mb-3">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Portfolio</p>
+          {holdings.length === 0 ? (
+            <p className="text-sm text-gray-400">No portfolio holdings yet.</p>
+          ) : (
+            <div>
               {holdings.map(h => (
                 <div key={h.id} className="flex justify-between items-center py-1 border-b border-gray-50 dark:border-gray-800 last:border-0">
                   <span className="text-sm text-gray-700 dark:text-gray-300">{h.name}</span>
                   <span className="text-sm text-gray-900 dark:text-white">{fmt(holdingValue(h))}</span>
                 </div>
               ))}
-              <div className="flex justify-between items-center pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Portfolio subtotal</span>
-                  <button
-                    onClick={() => setShowPortfolio(true)}
-                    className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                  >
-                    Manage →
-                  </button>
-                </div>
+              <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-xs text-gray-400">Portfolio total</span>
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{fmt(portfolioTotal)}</span>
               </div>
             </div>
-          )}
-
-          {Object.entries(groupByCategory(assetEntries)).map(([cat, items]) => (
-            <div key={cat} className="mb-3">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{cat.charAt(0).toUpperCase() + cat.slice(1)}</p>
-              {items.map(e => (
-                <div key={e.id} className="flex justify-between items-center py-1 group">
-                  <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{e.name}</span>
-                  <span className="text-sm text-gray-900 dark:text-white mr-3">{fmt(e.value)}</span>
-                  <div className="hidden group-hover:flex gap-1">
-                    <button onClick={() => setEditing(e)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
-                    <button onClick={() => deleteEntry(e.id)} className="text-xs px-1.5 py-0.5 text-red-400 border border-red-200 rounded hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">Del</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-
-          {assetEntries.length === 0 && holdings.length === 0 && (
-            <p className="text-sm text-gray-400">No assets yet.</p>
           )}
         </div>
 
@@ -318,7 +300,7 @@ export default function NetWorthPage() {
 
           {Object.entries(groupByCategory(liabilityEntries)).map(([cat, items]) => (
             <div key={cat} className="mb-3">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{cat.charAt(0).toUpperCase() + cat.slice(1)}</p>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{formatCategory(cat)}</p>
               {items.map(e => (
                 <div key={e.id} className="flex justify-between items-center py-1 group">
                   <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{e.name}</span>
