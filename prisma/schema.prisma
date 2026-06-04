@@ -114,6 +114,8 @@ model Subscription {
 
 model Habit {
   id         Int             @id @default(autoincrement())
+  lifeAreaId Int?
+  lifeArea   LifeArea?       @relation(fields: [lifeAreaId], references: [id], onDelete: SetNull)
   name       String
   color      String
   logs       HabitLog[]
@@ -147,6 +149,7 @@ model LifeArea {
   name      String
   color     String
   goals     Goal[]
+  habits    Habit[]
   createdAt DateTime @default(now())
 }
 
