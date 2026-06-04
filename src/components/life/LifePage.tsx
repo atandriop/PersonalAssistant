@@ -47,7 +47,7 @@ export default function LifePage() {
   const { data: allHabits = [], mutate: mutateHabits } = useSWR<Habit[]>('/api/habits', fetcher)
   const { data: archivedHabits = [], mutate: mutateArchived } = useSWR<Habit[]>('/api/habits?archived=true', fetcher)
 
-  const [expandedAreaId, setExpandedAreaId] = useState<number | null>(null)
+  const [collapsedAreaIds, setCollapsedAreaIds] = useState<Set<number>>(new Set())
   const [showAddArea, setShowAddArea] = useState(false)
   const [editingArea, setEditingArea] = useState<LifeArea | null>(null)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
@@ -146,12 +146,12 @@ export default function LifePage() {
         {areas.map(area => {
           const progress = calcAreaProgress(area, habitLogs)
           const pct = Math.round(progress * 100)
-          const isExpanded = expandedAreaId === area.id
+          const isExpanded = !collapsedAreaIds.has(area.id)
           const areaHabits = habitsByArea.get(area.id) ?? []
 
           return (
             <div key={area.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-4 cursor-pointer flex items-center gap-3" onClick={() => setExpandedAreaId(isExpanded ? null : area.id)}>
+              <div className="px-4 py-4 cursor-pointer flex items-center gap-3" onClick={() => setCollapsedAreaIds(prev => { const next = new Set(prev); next.has(area.id) ? next.delete(area.id) : next.add(area.id); return next })}>
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: area.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
