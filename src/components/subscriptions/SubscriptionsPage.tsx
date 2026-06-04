@@ -104,6 +104,13 @@ export default function SubscriptionsPage() {
     s.period === 'yearly' ? s.cost : s.period === 'quarterly' ? s.cost * 4 : s.cost * 12
   ), 0)
   const soonCount = active.filter(s => { const d = daysUntil(s.renewalDate); return d !== null && d >= 0 && d <= 14 }).length
+  const categoryBreakdown = SUBSCRIPTION_CATEGORIES
+    .map(cat => ({
+      cat,
+      monthly: active.filter(s => s.category === cat).reduce((sum, s) => sum + monthlyEquiv(s.cost, s.period), 0),
+    }))
+    .filter(x => x.monthly > 0)
+    .sort((a, b) => b.monthly - a.monthly)
 
   function buildPrompt(): string {
     const lines = active.map(s => {
@@ -186,6 +193,16 @@ export default function SubscriptionsPage() {
         <Badge color="#6b7280">{active.length} active</Badge>
         {soonCount > 0 && <Badge color="#f59e0b">{soonCount} renewing soon</Badge>}
       </div>
+
+      {categoryBreakdown.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1">
+          {categoryBreakdown.map(({ cat, monthly }) => (
+            <span key={cat} className="text-xs text-gray-500 dark:text-gray-400">
+              {cat} <span className="font-medium text-gray-700 dark:text-gray-300">€{monthly.toFixed(2)}/mo</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         {[true, false].map(v => (
