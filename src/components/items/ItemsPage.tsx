@@ -48,7 +48,15 @@ export default function ItemsPage() {
   const [toInventory, setToInventory] = useState<WishlistItem | null>(null)
   const [bulkWish, setBulkWish] = useState(false)
   const [bulkInv, setBulkInv] = useState(false)
-  const [activeView, setActiveView] = useState<'items' | 'collectibles'>('items')
+  const [collapsedCats, setCollapsedCats] = useState<Set<number>>(new Set())
+
+  function toggleCat(id: number) {
+    setCollapsedCats(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   const q = search.toLowerCase()
   const activeWish = wishItems.filter(i => !i.purchased)
@@ -198,33 +206,6 @@ export default function ItemsPage() {
         </div>
       </div>
 
-      {/* View tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
-        <button
-          onClick={() => setActiveView('items')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeView === 'items'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-          }`}
-        >
-          Inventory &amp; Wishlist
-        </button>
-        <button
-          onClick={() => setActiveView('collectibles')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeView === 'collectibles'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-          }`}
-        >
-          Collectibles
-        </button>
-      </div>
-
-      {activeView === 'collectibles' && <CollectiblesTab />}
-
-      {activeView === 'items' && <>
 
       {/* Summary strip */}
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
@@ -255,12 +236,12 @@ export default function ItemsPage() {
       {/* Column headers */}
       <div className="grid grid-cols-2 gap-4 mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Inventory</span>
-          <span className="text-xs text-gray-400">{filteredInv.length} items</span>
-        </div>
-        <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wishlist</span>
           <span className="text-xs text-gray-400">{filteredWish.length} items</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Inventory</span>
+          <span className="text-xs text-gray-400">{filteredInv.length} items</span>
         </div>
       </div>
 
@@ -274,88 +255,101 @@ export default function ItemsPage() {
         const catWish = filteredWish
           .filter(i => i.categoryId === cat.id)
           .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+        const isCatCollapsed = collapsedCats.has(cat.id)
 
         return (
           <div key={cat.id} className="mb-8">
-            <div className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100 dark:border-gray-800">
+            <div
+              className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100 dark:border-gray-800 cursor-pointer select-none"
+              onClick={() => toggleCat(cat.id)}
+            >
+              <span className="text-gray-400 text-xs">{isCatCollapsed ? '▸' : '▾'}</span>
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cat.color }} />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{cat.name}</span>
               <span className="text-xs text-gray-400">{catInv.length} owned · {catWish.length} wanted</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Inventory column */}
-              <div className="flex flex-col gap-2">
-                {catInv.length === 0 ? (
-                  <p className="text-xs text-gray-300 dark:text-gray-600 italic py-1">Nothing owned</p>
-                ) : catInv.map(item => (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</span>
-                          {item.quantity > 1 && <Badge color="#6b7280">×{item.quantity}</Badge>}
-                        </div>
-                        {item.upgradeTarget && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className="text-xs text-amber-500">→ upgrade:</span>
-                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{item.upgradeTarget.name}</span>
-                            <span className="text-xs text-gray-400">€{item.upgradeTarget.cost.toFixed(2)}</span>
+            {!isCatCollapsed && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Wishlist column — LEFT */}
+                <div className="flex flex-col gap-2">
+                  {catWish.length === 0 ? (
+                    <p className="text-xs text-gray-300 dark:text-gray-600 italic py-1">Nothing on wishlist</p>
+                  ) : catWish.map(item => (
+                    <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</span>
+                            <Badge color={PRIORITY_COLOR[item.priority]}>{item.priority}</Badge>
+                            {item.inventoryUpgrades.map(u => (
+                              <Badge key={u.id} color="#8b5cf6">Upgrades: {u.name}</Badge>
+                            ))}
                           </div>
-                        )}
-                        {item.purchaseDate && (
-                          <p className="text-xs text-gray-400 mt-0.5">Bought {new Date(item.purchaseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                        )}
-                        {item.notes && <p className="text-xs text-gray-400">{item.notes}</p>}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.cost * item.quantity).toFixed(2)}</span>
-                        <div className="flex gap-1 mt-1 justify-end">
-                          <button onClick={() => setEditInv(item)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
-                          <button onClick={() => delInv(item.id)} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
+                          {item.url && (
+                            <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate block mt-0.5">{item.url}</a>
+                          )}
+                          {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">€{item.cost.toFixed(2)}</span>
+                          <div className="flex gap-1 mt-1 justify-end flex-wrap">
+                            <button onClick={() => markGotIt(item)} className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400">Got it</button>
+                            <button onClick={() => setEditWish(item)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
+                            <button onClick={() => setAddToTask({ title: item.name, sourceId: item.id })} className="text-xs text-indigo-500 hover:underline">+Task</button>
+                            <button onClick={() => delWish(item.id)} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              {/* Wishlist column */}
-              <div className="flex flex-col gap-2">
-                {catWish.length === 0 ? (
-                  <p className="text-xs text-gray-300 dark:text-gray-600 italic py-1">Nothing on wishlist</p>
-                ) : catWish.map(item => (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</span>
-                          <Badge color={PRIORITY_COLOR[item.priority]}>{item.priority}</Badge>
-                          {item.inventoryUpgrades.map(u => (
-                            <Badge key={u.id} color="#8b5cf6">Upgrades: {u.name}</Badge>
-                          ))}
+                {/* Inventory column — RIGHT */}
+                <div className="flex flex-col gap-2">
+                  {catInv.length === 0 ? (
+                    <p className="text-xs text-gray-300 dark:text-gray-600 italic py-1">Nothing owned</p>
+                  ) : catInv.map(item => (
+                    <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</span>
+                            {item.quantity > 1 && <Badge color="#6b7280">×{item.quantity}</Badge>}
+                          </div>
+                          {item.upgradeTarget && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-xs text-amber-500">→ upgrade:</span>
+                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{item.upgradeTarget.name}</span>
+                              <span className="text-xs text-gray-400">€{item.upgradeTarget.cost.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {item.purchaseDate && (
+                            <p className="text-xs text-gray-400 mt-0.5">Bought {new Date(item.purchaseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                          )}
+                          {item.notes && <p className="text-xs text-gray-400">{item.notes}</p>}
                         </div>
-                        {item.url && (
-                          <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate block mt-0.5">{item.url}</a>
-                        )}
-                        {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">€{item.cost.toFixed(2)}</span>
-                        <div className="flex gap-1 mt-1 justify-end flex-wrap">
-                          <button onClick={() => markGotIt(item)} className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400">Got it</button>
-                          <button onClick={() => setEditWish(item)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
-                          <button onClick={() => setAddToTask({ title: item.name, sourceId: item.id })} className="text-xs text-indigo-500 hover:underline">+Task</button>
-                          <button onClick={() => delWish(item.id)} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.cost * item.quantity).toFixed(2)}</span>
+                          <div className="flex gap-1 mt-1 justify-end">
+                            <button onClick={() => setEditInv(item)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
+                            <button onClick={() => delInv(item.id)} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )
       })}
+
+      {/* Collectibles */}
+      <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Collectibles</h2>
+        <CollectiblesTab />
+      </div>
 
       {/* Purchased — not yet in inventory */}
       {purchasedNeedingInventory.length > 0 && (
@@ -418,8 +412,6 @@ export default function ItemsPage() {
           onCancel={() => setBulkInv(false)}
         />
       )}
-
-      </>}{/* end activeView items */}
 
       {/* Modals */}
       {showAddWish && (
