@@ -7,6 +7,7 @@ import { HomeItem, getTaskStatus, TaskStatus } from '@/lib/maintenance'
 import type { LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory, Task, Subscription } from '@/types'
 import Modal from '@/components/ui/Modal'
 import AppointmentForm from '@/components/tasks/AppointmentForm'
+import TripForm from '@/components/travel/TripForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -53,6 +54,24 @@ const DOC_CATEGORY_COLOR: Record<string, string> = {
   Health: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   Insurance: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+}
+
+function formatTripDateRange(startDate: string | null, endDate: string | null): string {
+  if (!startDate) return 'Date TBD'
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const s = new Date(startDate + 'T00:00:00')
+  if (!endDate) return `${MONTHS[s.getMonth()]} ${s.getDate()}`
+  const e = new Date(endDate + 'T00:00:00')
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${MONTHS[s.getMonth()]} ${s.getDate()}–${e.getDate()}`
+  }
+  return `${MONTHS[s.getMonth()]} ${s.getDate()} – ${MONTHS[e.getMonth()]} ${e.getDate()}`
+}
+
+function daysUntilTrip(startDate: string): number {
+  const target = new Date(startDate + 'T00:00:00')
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  return Math.round((target.getTime() - now.getTime()) / 86400000)
 }
 
 const APPT_CATEGORY_COLOR: Record<string, string> = {
@@ -120,6 +139,8 @@ export default function DashboardPage() {
   const [configuring, setConfiguring] = useState(false)
   const [apptToEdit, setApptToEdit] = useState<Appointment | null>(null)
   const [showAddAppt, setShowAddAppt] = useState(false)
+  const [tripToEdit, setTripToEdit] = useState<TravelTrip | null>(null)
+  const [showAddTrip, setShowAddTrip] = useState(false)
 
   useEffect(() => { setHidden(loadHidden()) }, [])
 
@@ -143,7 +164,7 @@ export default function DashboardPage() {
   const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
   const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
   const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
-  const { data: travelTrips = [], isLoading: travelTripsLoading } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
+  const { data: travelTrips = [], isLoading: travelTripsLoading, mutate: mutateTravelTrips } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
   const { data: memories = [] } = useSWR<Memory[]>('/api/memories', fetcher)
   const { data: tasks = [] } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
@@ -222,6 +243,12 @@ export default function DashboardPage() {
     .filter(a => !a.done && a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)
+
+  // ── Travel upcoming trips ──
+  const upcomingTrips = travelTrips
+    .filter(t => t.startDate != null && t.startDate >= today)
+    .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))
+    .slice(0, 3)
 
   async function markApptDone(id: number) {
     await fetch(`/api/appointments/${id}`, {
@@ -514,28 +541,57 @@ export default function DashboardPage() {
 
         {/* Travel */}
         {show('travel') && (
-          <WidgetCard title="Travel">
+          <WidgetCard title="Travel" action={
+            <button onClick={() => setShowAddTrip(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add trip</button>
+          }>
             {travelCountriesLoading || travelTripsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : travelCountries.length === 0 && travelTrips.length === 0 ? (
               <p className="text-sm text-gray-400">No trips logged yet.</p>
             ) : (
-              <a href="/travel" className="flex gap-6 hover:opacity-80">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelCountries.length}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">countries</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-6">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelCountries.length}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">countries</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelTrips.length}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">trips</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      €{travelTrips.reduce((s, t) => s + (t.actualCost ?? 0), 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{travelTrips.length}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">trips</p>
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Next up</p>
+                  {upcomingTrips.length === 0 ? (
+                    <p className="text-xs text-gray-400">No upcoming trips.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {upcomingTrips.map(t => (
+                        <div key={t.id} className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200 block truncate">{t.countryName}</span>
+                            {t.cities.length > 0 && (
+                              <span className="text-xs text-gray-400 block truncate">{t.cities.join(', ')}</span>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 block">{formatTripDateRange(t.startDate, t.endDate)}</span>
+                            <span className="text-xs text-blue-500 block">{daysUntilTrip(t.startDate!)} days away</span>
+                          </div>
+                          <button onClick={() => setTripToEdit(t)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0" title="Edit trip">✏️</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    €{travelTrips.reduce((s, t) => s + (t.actualCost ?? 0), 0).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">total spent</p>
-                </div>
-              </a>
+                <a href="/travel" className="text-xs text-blue-500 hover:text-blue-600">View all →</a>
+              </div>
             )}
           </WidgetCard>
         )}
@@ -628,6 +684,8 @@ export default function DashboardPage() {
 
       {showAddAppt && <Modal title="Add appointment" onClose={() => setShowAddAppt(false)}><AppointmentForm onSave={() => { setShowAddAppt(false); mutateAppts() }} onCancel={() => setShowAddAppt(false)} /></Modal>}
       {apptToEdit && <Modal title="Edit appointment" onClose={() => setApptToEdit(null)}><AppointmentForm initial={apptToEdit} onSave={() => { setApptToEdit(null); mutateAppts() }} onCancel={() => setApptToEdit(null)} /></Modal>}
+      {showAddTrip && <TripForm onSave={() => { setShowAddTrip(false); mutateTravelTrips() }} onCancel={() => setShowAddTrip(false)} />}
+      {tripToEdit && <TripForm initial={tripToEdit} onSave={() => { setTripToEdit(null); mutateTravelTrips() }} onCancel={() => setTripToEdit(null)} />}
     </div>
   )
 }
