@@ -8,6 +8,7 @@ import TripCard from './TripCard'
 import TripForm from './TripForm'
 import ExperienceCard from './ExperienceCard'
 import ExperienceForm from './ExperienceForm'
+import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -27,6 +28,36 @@ export default function BucketListPage() {
   const [editTrip, setEditTrip] = useState<BucketTrip | null>(null)
   const [editExperience, setEditExperience] = useState<BucketExperience | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
+  const [bulkTrips, setBulkTrips] = useState(false)
+
+  const BUCKET_TRIP_COLUMNS: ColumnDef[] = [
+    { key: 'destination', label: 'Destination', type: 'text', required: true },
+    { key: 'budget', label: 'Budget (€)', type: 'number' },
+    { key: 'targetYear', label: 'Target Year', type: 'number' },
+    { key: 'notes', label: 'Notes', type: 'text' },
+    { key: 'done', label: 'Done', type: 'boolean' },
+  ]
+
+  async function handleBucketTripsBulkSave({ upserted, deletedIds }: BulkChanges) {
+    await Promise.all([
+      ...upserted.map(row =>
+        typeof row.id === 'number'
+          ? fetch(`/api/bucket-list/trips/${row.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+          : fetch('/api/bucket-list/trips', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row),
+            })
+      ),
+      ...deletedIds.map(id => fetch(`/api/bucket-list/trips/${id}`, { method: 'DELETE' })),
+    ])
+    mutateTrips()
+    setBulkTrips(false)
+  }
 
   function buildBucketListPrompt(): string {
     const pendingTrips = trips.filter(t => !t.done)
@@ -117,6 +148,14 @@ Please reflect on this bucket list. Identify any themes or patterns across the t
               Generate AI Prompt
             </button>
           )}
+          {tab === 'trips' && (
+            <button
+              onClick={() => setBulkTrips(true)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              Edit All
+            </button>
+          )}
           <button
             onClick={() => tab === 'trips' ? setAddingTrip(true) : setAddingExperience(true)}
             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -146,22 +185,39 @@ Please reflect on this bucket list. Identify any themes or patterns across the t
       {/* Trips tab */}
       {tab === 'trips' && (
         <>
-          <div className="flex gap-2 flex-wrap mb-6">
-            {TRIP_FILTERS.map(f => (
-              <button
-                key={f}
-                onClick={() => setTripFilter(f)}
-                className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
-                  tripFilter === f
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-          {filteredTrips.length === 0 ? (
+          {!bulkTrips && (
+            <div className="flex gap-2 flex-wrap mb-6">
+              {TRIP_FILTERS.map(f => (
+                <button
+                  key={f}
+                  onClick={() => setTripFilter(f)}
+                  className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
+                    tripFilter === f
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
+          {bulkTrips ? (
+            <BulkEditor
+              columns={BUCKET_TRIP_COLUMNS}
+              rows={trips.map(t => ({
+                id: t.id,
+                destination: t.destination,
+                budget: t.budget,
+                targetYear: t.targetYear,
+                notes: t.notes ?? '',
+                done: t.done,
+              }))}
+              csvHint="destination,budget,targetYear,notes,done"
+              onSave={handleBucketTripsBulkSave}
+              onCancel={() => setBulkTrips(false)}
+            />
+          ) : filteredTrips.length === 0 ? (
             <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
               {tripFilter === 'All'
                 ? 'No trips yet. Click "+ Add Trip" to add your first.'
