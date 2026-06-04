@@ -6,6 +6,7 @@ import type { Subscription } from '@/types'
 import PromptModal from '@/components/ui/PromptModal'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
+import CostsTab from '@/components/finance/CostsTab'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -38,12 +39,13 @@ const TYPE_COLOR: Record<string, string> = {
 const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const
 const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
-type FinanceSection = 'overview' | 'net-worth' | 'subscriptions'
+type FinanceSection = 'overview' | 'net-worth' | 'subscriptions' | 'costs'
 
 const SECTIONS: { id: FinanceSection; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'net-worth', label: 'Net Worth' },
   { id: 'subscriptions', label: 'Subscriptions' },
+  { id: 'costs', label: 'Costs' },
 ]
 
 export default function FinancePage({ defaultSection = 'overview' }: { defaultSection?: FinanceSection }) {
@@ -147,6 +149,7 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
 
       {section === 'net-worth' && <NetWorthPage />}
       {section === 'subscriptions' && <SubscriptionsPage />}
+      {section === 'costs' && <CostsTab />}
       {section === 'overview' && <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
@@ -242,10 +245,10 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
                   )
                 })}
               </div>
-              <div className="flex justify-between text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2">
+              <div className="flex justify-between text-sm text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2">
                 <span>Monthly total</span><span className="font-medium">{fmtDecimal(monthlySubCost)}</span>
               </div>
-              <div className="flex justify-between text-xs text-gray-500 pt-1">
+              <div className="flex justify-between text-sm text-gray-500 pt-1">
                 <span>Annual total</span><span className="font-medium">{fmt(annualSubCost)}</span>
               </div>
             </>
