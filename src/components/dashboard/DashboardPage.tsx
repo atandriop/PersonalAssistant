@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import { HomeItem, getTaskStatus, TaskStatus } from '@/lib/maintenance'
 import type { LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory, Task, Subscription } from '@/types'
+import Modal from '@/components/ui/Modal'
+import AppointmentForm from '@/components/tasks/AppointmentForm'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -116,6 +118,8 @@ function WidgetCard({ title, borderStyle, action, children }: {
 export default function DashboardPage() {
   const [hidden, setHidden] = useState<Set<WidgetId>>(new Set())
   const [configuring, setConfiguring] = useState(false)
+  const [apptToEdit, setApptToEdit] = useState<Appointment | null>(null)
+  const [showAddAppt, setShowAddAppt] = useState(false)
 
   useEffect(() => { setHidden(loadHidden()) }, [])
 
@@ -134,7 +138,7 @@ export default function DashboardPage() {
   const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: lifeAreas = [], isLoading: goalsLoading, mutate: mutateAreas } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
-  const { data: appointments = [], isLoading: apptLoading } = useSWR<Appointment[]>('/api/appointments', fetcher)
+  const { data: appointments = [], isLoading: apptLoading, mutate: mutateAppts } = useSWR<Appointment[]>('/api/appointments', fetcher)
   const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
   const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
   const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
@@ -218,6 +222,15 @@ export default function DashboardPage() {
     .filter(a => !a.done && a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)
+
+  async function markApptDone(id: number) {
+    await fetch(`/api/appointments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: true }),
+    })
+    mutateAppts()
+  }
 
   async function toggleMilestone(milestone: { id: number; completedAt: string | null }) {
     await fetch(`/api/milestones/${milestone.id}`, {
@@ -400,7 +413,9 @@ export default function DashboardPage() {
 
         {/* Upcoming Appointments */}
         {show('appointments') && (
-          <WidgetCard title="Upcoming Appointments">
+          <WidgetCard title="Upcoming Appointments" action={
+            <button onClick={() => setShowAddAppt(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add</button>
+          }>
             {apptLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : upcomingAppts.length === 0 ? (
@@ -408,13 +423,15 @@ export default function DashboardPage() {
             ) : (
               <div className="flex flex-col gap-2">
                 {upcomingAppts.map(a => (
-                  <div key={a.id} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{a.title}</span>
-                    <div className="flex items-center gap-2 shrink-0">
+                  <div key={a.id} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">{a.title}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${APPT_CATEGORY_COLOR[a.category] ?? APPT_CATEGORY_COLOR.Other}`}>
                         {a.category}
                       </span>
                       <span className="text-xs text-gray-400">{a.date}</span>
+                      <button onClick={() => markApptDone(a.id)} title="Mark done" className="text-xs text-green-600 hover:text-green-700 font-medium">✓</button>
+                      <button onClick={() => setApptToEdit(a)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Edit</button>
                     </div>
                   </div>
                 ))}
@@ -608,6 +625,9 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {showAddAppt && <Modal title="Add appointment" onClose={() => setShowAddAppt(false)}><AppointmentForm onSave={() => { setShowAddAppt(false); mutateAppts() }} onCancel={() => setShowAddAppt(false)} /></Modal>}
+      {apptToEdit && <Modal title="Edit appointment" onClose={() => setApptToEdit(null)}><AppointmentForm initial={apptToEdit} onSave={() => { setApptToEdit(null); mutateAppts() }} onCancel={() => setApptToEdit(null)} /></Modal>}
     </div>
   )
 }
