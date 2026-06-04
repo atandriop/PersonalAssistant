@@ -4,12 +4,15 @@ import { useState } from 'react'
 import TravelPage from '@/components/travel/TravelPage'
 import BucketListPage from '@/components/bucket-list/BucketListPage'
 import MemoriesPage from '@/components/memories/MemoriesPage'
-type ExperiencesTab = 'travel' | 'bucket-list' | 'memories'
+import TimelinePage from '@/components/timeline/TimelinePage'
+
+type ExperiencesTab = 'travel' | 'bucket-list' | 'memories' | 'timeline'
 
 const TABS: { id: ExperiencesTab; label: string }[] = [
   { id: 'travel', label: 'Travel' },
   { id: 'bucket-list', label: 'Bucket List' },
   { id: 'memories', label: 'Memories' },
+  { id: 'timeline', label: 'Timeline' },
 ]
 
 export default function ExperiencesPage({ defaultTab = 'travel' }: { defaultTab?: ExperiencesTab }) {
@@ -36,6 +39,7 @@ export default function ExperiencesPage({ defaultTab = 'travel' }: { defaultTab?
       {tab === 'travel' && <TravelPage />}
       {tab === 'bucket-list' && <BucketListPage />}
       {tab === 'memories' && <MemoriesPage />}
+      {tab === 'timeline' && <TimelinePage />}
     </div>
   )
 }
