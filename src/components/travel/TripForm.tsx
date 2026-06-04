@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import type { TravelTrip, TravelCountry } from '@/types'
 import Combobox from '@/components/ui/Combobox'
 import { useCountries, useCities } from '@/lib/useGeoData'
+import CostBreakdown, { type CostLinePayload } from './CostBreakdown'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -21,7 +22,7 @@ export default function TripForm({ initial, onSave, onCancel }: {
   const [cityInput, setCityInput] = useState('')
   const [startDate, setStartDate] = useState(initial?.startDate ?? '')
   const [endDate, setEndDate] = useState(initial?.endDate ?? '')
-  const [actualCost, setActualCost] = useState(initial?.actualCost != null ? String(initial.actualCost) : '')
+  const [costLines, setCostLines] = useState<CostLinePayload[]>([])
   const [rating, setRating] = useState<number | null>(initial?.rating ?? null)
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [saving, setSaving] = useState(false)
@@ -49,7 +50,9 @@ export default function TripForm({ initial, onSave, onCancel }: {
       cities: finalCities,
       startDate: startDate || null,
       endDate: endDate || null,
-      actualCost: actualCost !== '' ? Number(actualCost) : null,
+      ...(costLines.length > 0
+        ? { costLines }
+        : { actualCost: initial?.actualCost ?? null }),
       rating,
       notes: notes.trim() || null,
     }
@@ -116,11 +119,10 @@ export default function TripForm({ initial, onSave, onCancel }: {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Actual Cost (€)</label>
-            <input type="number" min="0" value={actualCost} onChange={e => setActualCost(e.target.value)} placeholder="0"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
-          </div>
+          <CostBreakdown
+            initialLines={initial?.costLines ?? []}
+            onChange={setCostLines}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating</label>
