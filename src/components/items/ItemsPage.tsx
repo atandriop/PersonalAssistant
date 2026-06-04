@@ -10,6 +10,7 @@ import CategoryManager from '@/components/categories/CategoryManager'
 import TaskForm from '@/components/tasks/TaskForm'
 import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
+import CollectiblesTab from './CollectiblesTab'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -47,6 +48,7 @@ export default function ItemsPage() {
   const [toInventory, setToInventory] = useState<WishlistItem | null>(null)
   const [bulkWish, setBulkWish] = useState(false)
   const [bulkInv, setBulkInv] = useState(false)
+  const [activeView, setActiveView] = useState<'items' | 'collectibles'>('items')
 
   const q = search.toLowerCase()
   const activeWish = wishItems.filter(i => !i.purchased)
@@ -195,6 +197,34 @@ export default function ItemsPage() {
           </button>
         </div>
       </div>
+
+      {/* View tabs */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+        <button
+          onClick={() => setActiveView('items')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            activeView === 'items'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          Inventory &amp; Wishlist
+        </button>
+        <button
+          onClick={() => setActiveView('collectibles')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            activeView === 'collectibles'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          Collectibles
+        </button>
+      </div>
+
+      {activeView === 'collectibles' && <CollectiblesTab />}
+
+      {activeView === 'items' && <>
 
       {/* Summary strip */}
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
@@ -388,6 +418,8 @@ export default function ItemsPage() {
           onCancel={() => setBulkInv(false)}
         />
       )}
+
+      </>}{/* end activeView items */}
 
       {/* Modals */}
       {showAddWish && (
