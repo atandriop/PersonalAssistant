@@ -18,6 +18,14 @@ export default function TripCard({ trip, onClick }: {
 }) {
   const isDraft = !trip.startDate
 
+  const COST_ICONS: Record<string, string> = { airfare: '✈', hotel: '🏨', food: '🍔', entertainment: '🎭' }
+  const COST_ORDER = ['airfare', 'hotel', 'food', 'entertainment']
+  const categoryTotals = trip.costLines.reduce((acc, l) => {
+    acc[l.category] = (acc[l.category] ?? 0) + l.amount
+    return acc
+  }, {} as Record<string, number>)
+  const breakdownParts = COST_ORDER.filter(c => (categoryTotals[c] ?? 0) > 0)
+
   return (
     <div
       className={`bg-white dark:bg-gray-900 rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow ${
@@ -52,6 +60,13 @@ export default function TripCard({ trip, onClick }: {
         )}
         {trip.actualCost != null && <span>€{trip.actualCost.toLocaleString()}</span>}
       </div>
+      {breakdownParts.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-xs text-gray-400 dark:text-gray-500 mb-1">
+          {breakdownParts.map(c => (
+            <span key={c}>{COST_ICONS[c]} €{categoryTotals[c].toLocaleString()}</span>
+          ))}
+        </div>
+      )}
       {trip.rating != null && (
         <div className="flex gap-0.5 mb-1">
           {[1, 2, 3, 4, 5].map(n => (
