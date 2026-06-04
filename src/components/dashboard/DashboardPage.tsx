@@ -94,16 +94,20 @@ function HabitTodayRow({ habit, onToggle }: { habit: HabitWithToday; onToggle: (
   )
 }
 
-function WidgetCard({ title, borderStyle, children }: {
+function WidgetCard({ title, borderStyle, action, children }: {
   title: string
   borderStyle?: React.CSSProperties
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div className="bg-white dark:bg-gray-900 border rounded-xl p-4" style={borderStyle ?? {}}>
-      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-        {title}
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {title}
+        </h3>
+        {action}
+      </div>
       {children}
     </div>
   )
@@ -128,7 +132,7 @@ export default function DashboardPage() {
 
   const { data: habits = [], isLoading: habitsLoading, mutate: mutateHabits } = useSWR<HabitWithToday[]>('/api/habits?includeToday=true', fetcher)
   const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
-  const { data: lifeAreas = [], isLoading: goalsLoading } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
+  const { data: lifeAreas = [], isLoading: goalsLoading, mutate: mutateAreas } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: giftPeople = [], isLoading: giftsLoading } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
   const { data: appointments = [], isLoading: apptLoading } = useSWR<Appointment[]>('/api/appointments', fetcher)
   const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
@@ -214,6 +218,15 @@ export default function DashboardPage() {
     .filter(a => !a.done && a.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5)
+
+  async function toggleMilestone(milestone: { id: number; completedAt: string | null }) {
+    await fetch(`/api/milestones/${milestone.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completedAt: milestone.completedAt ? null : new Date().toISOString() }),
+    })
+    mutateAreas()
+  }
 
   // ── Memory counts ──
   const MEMORY_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
@@ -307,7 +320,7 @@ export default function DashboardPage() {
             ) : lowestGoals.length === 0 ? (
               <p className="text-sm text-gray-400">No goals set up yet.</p>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {lowestGoals.map(g => (
                   <div key={g.id}>
                     <div className="flex items-center justify-between mb-0.5">
@@ -315,9 +328,32 @@ export default function DashboardPage() {
                       <span className="text-xs text-gray-400 shrink-0 ml-2">{Math.round(g.pct * 100)}%</span>
                     </div>
                     <span className="text-xs text-gray-400">{g.areaName}</span>
-                    <div className="mt-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="mt-1 mb-2 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round(g.pct * 100)}%` }} />
                     </div>
+                    {g.milestones.length > 0 && (
+                      <div className="flex flex-col gap-1 pl-1">
+                        {[...g.milestones]
+                          .sort((a, b) => {
+                            if (a.completedAt === null && b.completedAt !== null) return -1
+                            if (a.completedAt !== null && b.completedAt === null) return 1
+                            return 0
+                          })
+                          .map(m => (
+                            <label key={m.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={m.completedAt !== null}
+                                onChange={() => toggleMilestone(m)}
+                                className="accent-blue-500 w-3.5 h-3.5 shrink-0"
+                              />
+                              <span className={`text-xs ${m.completedAt !== null ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {m.title ?? ''}
+                              </span>
+                            </label>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
