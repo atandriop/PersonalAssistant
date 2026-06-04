@@ -103,6 +103,14 @@ export interface TravelCountry {
   firstVisit: string | null
 }
 
+export interface TripCostLine {
+  id: number
+  category: 'hotel' | 'airfare' | 'food' | 'entertainment'
+  amount: number
+  label: string | null
+  memoryId: number | null
+}
+
 export interface TravelTrip {
   id: number
   countryId: number
@@ -115,6 +123,7 @@ export interface TravelTrip {
   notes: string | null
   bucketTripId: number | null
   memories: { id: number; title: string; date: string }[]
+  costLines: TripCostLine[]
   createdAt: string
 }
 
