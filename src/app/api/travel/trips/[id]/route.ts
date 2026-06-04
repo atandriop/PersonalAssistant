@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-function serializeTrip(trip: {
+type RawCostLine = { id: number; category: string; amount: number; label: string | null; memoryId: number | null }
+type RawMemoryTrip = { memory: { id: number; title: string; date: string } }
+type RawTrip = {
   id: number; countryId: number; cities: string | null
   startDate: string | null; endDate: string | null
   actualCost: number | null; rating: number | null
   notes: string | null; bucketTripId: number | null; createdAt: Date
   country: { name: string }
-  memories: { memory: { id: number; title: string; date: string } }[]
-}) {
-  const { country, cities, memories, ...rest } = trip
+  memories: RawMemoryTrip[]
+  costLines: RawCostLine[]
+}
+
+function serializeTrip(trip: RawTrip) {
+  const { country, cities, memories, costLines, actualCost, ...rest } = trip
+  const linesTotal = costLines.length > 0
+    ? costLines.reduce((s, l) => s + l.amount, 0)
+    : null
   return {
     ...rest,
     countryName: country.name,
@@ -19,21 +27,42 @@ function serializeTrip(trip: {
       title: mt.memory.title,
       date: mt.memory.date,
     })),
+    costLines: costLines.map(l => ({
+      id: l.id,
+      category: l.category as 'hotel' | 'airfare' | 'food' | 'entertainment',
+      amount: l.amount,
+      label: l.label,
+      memoryId: l.memoryId,
+    })),
+    actualCost: linesTotal ?? actualCost,
     createdAt: trip.createdAt.toISOString(),
   }
 }
 
-const MEMORIES_INCLUDE = {
+const TRIP_INCLUDE = {
+  country: { select: { name: true } },
   memories: {
     include: {
       memory: { select: { id: true, title: true, date: true } },
     },
   },
+  costLines: {
+    select: { id: true, category: true, amount: true, label: true, memoryId: true },
+    orderBy: { createdAt: 'asc' } as const,
+  },
 } as const
+
+interface CostLineInput {
+  category: string
+  amount: number
+  label?: string
+  memoryId?: number | null
+  newMemory?: { title: string; date: string; category: string; location?: string | null }
+}
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id)
-  const { countryId, countryName, cities, startDate, endDate, actualCost, rating, notes } = await req.json()
+  const { countryId, countryName, cities, startDate, endDate, actualCost, rating, notes, costLines } = await req.json()
 
   let resolvedCountryId: number | undefined = countryId ? Number(countryId) : undefined
   if (!resolvedCountryId && countryName?.trim()) {
@@ -45,6 +74,40 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     resolvedCountryId = country.id
   }
 
+  let computedCost: number | null = actualCost != null ? Number(actualCost) : null
+
+  if (Array.isArray(costLines)) {
+    const resolvedLines = await Promise.all((costLines as CostLineInput[]).map(async (line) => {
+      let memId = line.memoryId ?? null
+      if (line.newMemory && !memId) {
+        const mem = await prisma.memory.create({
+          data: {
+            title: line.newMemory.title,
+            date: line.newMemory.date,
+            endDate: null,
+            category: line.newMemory.category,
+            location: line.newMemory.location ?? null,
+            notes: null,
+            tags: '',
+          },
+        })
+        memId = mem.id
+      }
+      return { category: line.category, amount: line.amount, label: line.label ?? null, memoryId: memId }
+    }))
+
+    await prisma.tripCostLine.deleteMany({ where: { tripId: id } })
+    if (resolvedLines.length > 0) {
+      await prisma.tripCostLine.createMany({
+        data: resolvedLines.map(l => ({ tripId: id, ...l })),
+      })
+    }
+
+    computedCost = resolvedLines.length > 0
+      ? resolvedLines.reduce((s, l) => s + l.amount, 0)
+      : null
+  }
+
   const trip = await prisma.travelTrip.update({
     where: { id },
     data: {
@@ -52,11 +115,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       cities: cities && cities.length > 0 ? JSON.stringify(cities) : null,
       startDate: startDate ?? null,
       endDate: endDate ?? null,
-      actualCost: actualCost != null ? Number(actualCost) : null,
+      actualCost: computedCost,
       rating: rating != null ? Number(rating) : null,
       notes: notes ?? null,
     },
-    include: { country: { select: { name: true } }, ...MEMORIES_INCLUDE },
+    include: TRIP_INCLUDE,
   })
   return NextResponse.json(serializeTrip(trip))
 }
