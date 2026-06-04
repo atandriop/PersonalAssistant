@@ -39,6 +39,8 @@ export default function TodayPage() {
   const { data: habits = [], mutate: mutateHabits } = useSWR<HabitWithToday[]>('/api/habits?includeToday=true', fetcher)
   const { data: tasks = [], mutate: mutateTasks } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
   const { data: appointments = [] } = useSWR<Appointment[]>('/api/appointments', fetcher)
+  const { data: subscriptions = [] } = useSWR<{ id: number; name: string; cost: number; period: string; active: boolean; renewalDate?: string | null }[]>('/api/subscriptions', fetcher)
+  const { data: giftPeople = [] } = useSWR<{ id: number; name: string; ideas: { id: number; purchased: boolean }[] }[]>('/api/gifts/people', fetcher)
 
   const overdueTasks = tasks
     .filter(t => t.dueDate && t.dueDate.slice(0, 10) < today)
@@ -56,6 +58,21 @@ export default function TodayPage() {
     .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))
 
   const doneCount = habits.filter(h => h.doneToday).length
+
+  function daysUntilRenewal(dateStr: string | null | undefined): number | null {
+    if (!dateStr) return null
+    return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000)
+  }
+
+  const upcomingRenewals = subscriptions
+    .filter(s => {
+      if (!s.active || !s.renewalDate) return false
+      const d = daysUntilRenewal(s.renewalDate)
+      return d !== null && d >= 0 && d <= 30
+    })
+    .sort((a, b) => (a.renewalDate ?? '').localeCompare(b.renewalDate ?? ''))
+
+  const pendingGiftPeople = giftPeople.filter(p => p.ideas.some(i => !i.purchased))
 
   async function toggleHabit(id: number) {
     await fetch(`/api/habits/${id}/logs`, {
@@ -121,6 +138,52 @@ export default function TodayPage() {
           </div>
         )}
       </div>
+
+      {/* Upcoming Renewals */}
+      {upcomingRenewals.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
+          <SectionHeader title="Upcoming Renewals" count={upcomingRenewals.length} />
+          <div className="flex flex-col gap-1.5">
+            {upcomingRenewals.map(s => {
+              const days = daysUntilRenewal(s.renewalDate)!
+              const suffix = s.period === 'monthly' ? 'mo' : s.period === 'quarterly' ? 'qtr' : 'yr'
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{s.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">€{s.cost.toFixed(2)}/{suffix}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                      days <= 7
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                    }`}>
+                      {days === 0 ? 'today' : `in ${days}d`}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Gifts */}
+      {pendingGiftPeople.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
+          <SectionHeader title="Pending Gifts" count={pendingGiftPeople.length} />
+          <div className="flex flex-col gap-1">
+            {pendingGiftPeople.map(p => {
+              const count = p.ideas.filter(i => !i.purchased).length
+              return (
+                <div key={p.id} className="flex items-center justify-between py-0.5">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{p.name}</span>
+                  <span className="text-xs text-gray-400">{count} idea{count !== 1 ? 's' : ''}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Today's appointments */}
       {todayAppts.length > 0 && (
