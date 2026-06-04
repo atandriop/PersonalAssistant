@@ -54,7 +54,7 @@ function fmt(n: number): string {
 
 function formatCategory(cat: string): string {
   if (cat === 'credit_card') return 'Credit Card'
-  return formatCategory(cat)
+  return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 // ─── Line chart ───────────────────────────────────────────────────────────
