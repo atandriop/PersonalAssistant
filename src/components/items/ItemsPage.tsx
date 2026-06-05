@@ -27,6 +27,7 @@ interface InventoryItem {
 }
 
 const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
+const PRIORITY_BORDER: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 const PRIORITY_ORDER: Record<string, number> = { High: 0, Medium: 1, Low: 2 }
 
 export default function ItemsPage() {
@@ -273,7 +274,8 @@ export default function ItemsPage() {
                   {catWish.length === 0 ? (
                     <p className="text-xs text-gray-300 dark:text-gray-600 italic py-1">Nothing on wishlist</p>
                   ) : catWish.map(item => (
-                    <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                    <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5"
+                      style={{ borderLeft: `3px solid ${PRIORITY_BORDER[item.priority] ?? '#6b7280'}` }}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
