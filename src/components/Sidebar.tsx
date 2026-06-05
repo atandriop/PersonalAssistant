@@ -3,37 +3,42 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import {
+  LayoutDashboard, Sun, CalendarCheck, CheckSquare, GitFork, FileText,
+  TrendingUp, ShoppingBag, Heart, Wrench, Compass, Search, Target, Settings,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-type NavLink = { type: 'link'; href: string; label: string }
+type NavLink = { type: 'link'; href: string; label: string; icon: LucideIcon }
 type NavSection = { type: 'section'; label: string }
 type NavItem = NavLink | NavSection
 
 const NAV: NavItem[] = [
   { type: 'section', label: 'Planning' },
-  { type: 'link', href: '/', label: 'Dashboard' },
-  { type: 'link', href: '/today', label: 'Today' },
-  { type: 'link', href: '/weekly-review', label: 'Weekly Review' },
+  { type: 'link', href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { type: 'link', href: '/today', label: 'Today', icon: Sun },
+  { type: 'link', href: '/weekly-review', label: 'Weekly Review', icon: CalendarCheck },
 
   { type: 'section', label: 'Productivity' },
-  { type: 'link', href: '/tasks', label: 'Tasks & Gifts' },
-  { type: 'link', href: '/decisions', label: 'Decisions' },
-  { type: 'link', href: '/documents', label: 'Documents' },
+  { type: 'link', href: '/tasks', label: 'Tasks & Gifts', icon: CheckSquare },
+  { type: 'link', href: '/decisions', label: 'Decisions', icon: GitFork },
+  { type: 'link', href: '/documents', label: 'Documents', icon: FileText },
 
   { type: 'section', label: 'Money' },
-  { type: 'link', href: '/finance', label: 'Finance' },
-  { type: 'link', href: '/wishlist', label: 'Items' },
+  { type: 'link', href: '/finance', label: 'Finance', icon: TrendingUp },
+  { type: 'link', href: '/wishlist', label: 'Items', icon: ShoppingBag },
 
   { type: 'section', label: 'Life' },
-  { type: 'link', href: '/life', label: 'Life' },
-  { type: 'link', href: '/maintenance', label: 'Maintenance' },
+  { type: 'link', href: '/life', label: 'Life', icon: Heart },
+  { type: 'link', href: '/maintenance', label: 'Maintenance', icon: Wrench },
 
   { type: 'section', label: 'Explore' },
-  { type: 'link', href: '/experiences', label: 'Experiences' },
+  { type: 'link', href: '/experiences', label: 'Experiences', icon: Compass },
 
   { type: 'section', label: 'Tools' },
-  { type: 'link', href: '/search', label: 'Search' },
-  { type: 'link', href: '/tech-radar', label: 'Tech Radar' },
-  { type: 'link', href: '/system', label: 'System' },
+  { type: 'link', href: '/search', label: 'Search', icon: Search },
+  { type: 'link', href: '/tech-radar', label: 'Tech Radar', icon: Target },
+  { type: 'link', href: '/system', label: 'System', icon: Settings },
 ]
 
 function isActive(pathname: string, href: string): boolean {
@@ -75,16 +80,22 @@ export default function Sidebar() {
             )
           }
           const active = isActive(pathname, item.href)
+          const Icon = item.icon
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              style={active ? { borderLeft: '3px solid #60a5fa', paddingLeft: '9px' } : undefined}
+              className={`py-2 pr-3 rounded-md text-sm font-medium transition-colors flex items-center gap-2.5 ${
                 active
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                  ? 'bg-blue-700 dark:bg-blue-700 text-white'
+                  : 'pl-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
               }`}
             >
+              <Icon
+                size={15}
+                className={active ? 'text-white shrink-0' : 'text-gray-500 dark:text-gray-500 shrink-0'}
+              />
               {item.label}
             </Link>
           )
