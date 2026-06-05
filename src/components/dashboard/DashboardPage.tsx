@@ -10,6 +10,10 @@ import AppointmentForm from '@/components/tasks/AppointmentForm'
 import TripForm from '@/components/travel/TripForm'
 import GiftPersonForm from '@/components/gifts/GiftPersonForm'
 import GiftIdeaForm from '@/components/gifts/GiftIdeaForm'
+import {
+  Activity, Wrench, Target, Gift, Calendar, AlertCircle,
+  Clock, RefreshCw, Compass, Heart, Map, FileWarning,
+} from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -117,8 +121,10 @@ function HabitTodayRow({ habit, onToggle }: { habit: HabitWithToday; onToggle: (
   )
 }
 
-function WidgetCard({ title, borderStyle, action, children }: {
+function WidgetCard({ title, icon, accentColor, borderStyle, action, children }: {
   title: string
+  icon?: React.ReactNode
+  accentColor?: string
   borderStyle?: React.CSSProperties
   action?: React.ReactNode
   children: React.ReactNode
@@ -126,9 +132,15 @@ function WidgetCard({ title, borderStyle, action, children }: {
   return (
     <div className="bg-white dark:bg-gray-900 border rounded-xl p-4" style={borderStyle ?? {}}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          {title}
-        </h3>
+        <div className="flex items-center gap-1.5">
+          {icon}
+          <h3
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: accentColor ?? undefined }}
+          >
+            {title}
+          </h3>
+        </div>
         {action}
       </div>
       {children}
@@ -211,6 +223,10 @@ export default function DashboardPage() {
     worstMaintenance === 'overdue' ? { borderColor: '#f87171' }
     : worstMaintenance === 'due-soon' ? { borderColor: '#fbbf24' }
     : { borderColor: '#34d399' }
+  const maintenanceAccentColor =
+    worstMaintenance === 'overdue' ? '#f87171'
+    : worstMaintenance === 'due-soon' ? '#fbbf24'
+    : '#34d399'
 
   // ── Goals widget ──
   const allGoals = lifeAreas.flatMap(area =>
@@ -316,7 +332,7 @@ export default function DashboardPage() {
 
         {/* Habits Today — single request, no N+1 */}
         {show('habits') && (
-          <WidgetCard title="Habits Today">
+          <WidgetCard title="Habits Today" icon={<Activity size={13} strokeWidth={2.5} color="#f59e0b" />} accentColor="#f59e0b">
             {habitsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : habits.length === 0 ? (
@@ -334,7 +350,7 @@ export default function DashboardPage() {
 
         {/* Maintenance */}
         {show('maintenance') && (
-          <WidgetCard title="Maintenance" borderStyle={maintenanceBorder}>
+          <WidgetCard title="Maintenance" icon={<Wrench size={13} strokeWidth={2.5} color={maintenanceAccentColor} />} accentColor={maintenanceAccentColor} borderStyle={maintenanceBorder}>
             {maintenanceLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : alertItems.length === 0 ? (
@@ -359,7 +375,7 @@ export default function DashboardPage() {
 
         {/* Goals */}
         {show('goals') && (
-          <WidgetCard title="Goals">
+          <WidgetCard title="Goals" icon={<Target size={13} strokeWidth={2.5} color="#10b981" />} accentColor="#10b981">
             {goalsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : lowestGoals.length === 0 ? (
@@ -408,7 +424,7 @@ export default function DashboardPage() {
 
         {/* Gifts */}
         {show('gifts') && (
-          <WidgetCard title="Gifts" action={
+          <WidgetCard title="Gifts" icon={<Gift size={13} strokeWidth={2.5} color="#a855f7" />} accentColor="#a855f7" action={
             <button onClick={() => setShowAddPerson(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add person</button>
           }>
             {giftsLoading ? (
@@ -449,7 +465,7 @@ export default function DashboardPage() {
 
         {/* Upcoming Appointments */}
         {show('appointments') && (
-          <WidgetCard title="Upcoming Appointments" action={
+          <WidgetCard title="Upcoming Appointments" icon={<Calendar size={13} strokeWidth={2.5} color="#3b82f6" />} accentColor="#3b82f6" action={
             <button onClick={() => setShowAddAppt(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add</button>
           }>
             {apptLoading ? (
@@ -478,7 +494,7 @@ export default function DashboardPage() {
 
         {/* Overdue Tasks */}
         {show('overdue-tasks') && (
-          <WidgetCard title="Overdue Tasks" borderStyle={overdueTasks.length > 0 ? { borderColor: '#f87171' } : {}}>
+          <WidgetCard title="Overdue Tasks" icon={<AlertCircle size={13} strokeWidth={2.5} color="#ef4444" />} accentColor="#ef4444" borderStyle={overdueTasks.length > 0 ? { borderColor: '#f87171' } : {}}>
             {overdueTasks.length === 0 ? (
               <p className="text-sm text-green-600 dark:text-green-400">No overdue tasks ✓</p>
             ) : (
@@ -503,7 +519,7 @@ export default function DashboardPage() {
 
         {/* On This Day */}
         {show('on-this-day') && onThisDayMemories.length > 0 && (
-          <WidgetCard title="On This Day">
+          <WidgetCard title="On This Day" icon={<Clock size={13} strokeWidth={2.5} color="#f43f5e" />} accentColor="#f43f5e">
             <div className="flex flex-col gap-2">
               {onThisDayMemories.map(m => {
                 const yearsAgo = Number(today.slice(0, 4)) - Number(m.date.slice(0, 4))
@@ -525,7 +541,7 @@ export default function DashboardPage() {
 
         {/* Subscriptions Renewing Soon */}
         {show('subscriptions') && renewingSoon.length > 0 && (
-          <WidgetCard title="Subscriptions Renewing" borderStyle={{ borderColor: '#fbbf24' }}>
+          <WidgetCard title="Subscriptions Renewing" icon={<RefreshCw size={13} strokeWidth={2.5} color="#f97316" />} accentColor="#f97316" borderStyle={{ borderColor: '#fbbf24' }}>
             <div className="flex flex-col gap-1">
               {renewingSoon.map(s => {
                 const renewDate = s.renewalDate!.slice(0, 10)
@@ -550,7 +566,7 @@ export default function DashboardPage() {
 
         {/* Travel */}
         {show('travel') && (
-          <WidgetCard title="Travel" action={
+          <WidgetCard title="Travel" icon={<Compass size={13} strokeWidth={2.5} color="#14b8a6" />} accentColor="#14b8a6" action={
             <button onClick={() => setShowAddTrip(true)} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ Add trip</button>
           }>
             {travelCountriesLoading || travelTripsLoading ? (
@@ -607,7 +623,7 @@ export default function DashboardPage() {
 
         {/* Memories */}
         {show('memories') && (
-          <WidgetCard title="Memories">
+          <WidgetCard title="Memories" icon={<Heart size={13} strokeWidth={2.5} color="#8b5cf6" />} accentColor="#8b5cf6">
             {memories.length === 0 ? (
               <p className="text-sm text-gray-400">No memories yet.</p>
             ) : (
@@ -623,7 +639,7 @@ export default function DashboardPage() {
 
         {/* Bucket List */}
         {show('bucket-list') && (
-          <WidgetCard title="Bucket List">
+          <WidgetCard title="Bucket List" icon={<Map size={13} strokeWidth={2.5} color="#0ea5e9" />} accentColor="#0ea5e9">
             {tripsLoading || experiencesLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : bucketTrips.length === 0 && bucketExperiences.length === 0 ? (
@@ -659,7 +675,7 @@ export default function DashboardPage() {
 
         {/* Expiring Documents */}
         {show('expiring-docs') && (
-          <WidgetCard title="Expiring Documents">
+          <WidgetCard title="Expiring Documents" icon={<FileWarning size={13} strokeWidth={2.5} color="#eab308" />} accentColor="#eab308">
             {docsLoading ? (
               <p className="text-sm text-gray-400">Loading…</p>
             ) : expiringDocs.length === 0 ? (
