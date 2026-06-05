@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { Subscription } from '@/types'
+import { LayoutDashboard, PieChart, RefreshCw, Receipt, TrendingUp, Activity } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import PromptModal from '@/components/ui/PromptModal'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
@@ -41,11 +43,11 @@ const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e
 
 type FinanceSection = 'overview' | 'net-worth' | 'subscriptions' | 'costs'
 
-const SECTIONS: { id: FinanceSection; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'net-worth', label: 'Net Worth' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'costs', label: 'Costs' },
+const SECTIONS: { id: FinanceSection; label: string; icon: LucideIcon }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'net-worth', label: 'Net Worth', icon: PieChart },
+  { id: 'subscriptions', label: 'Subscriptions', icon: RefreshCw },
+  { id: 'costs', label: 'Costs', icon: Receipt },
 ]
 
 export default function FinancePage({ defaultSection = 'overview' }: { defaultSection?: FinanceSection }) {
@@ -132,19 +134,23 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
   return (
     <div>
       <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
-        {SECTIONS.map(s => (
-          <button
-            key={s.id}
-            onClick={() => setSection(s.id)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              section === s.id
-                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+        {SECTIONS.map(s => {
+          const Icon = s.icon
+          return (
+            <button
+              key={s.id}
+              onClick={() => setSection(s.id)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                section === s.id
+                  ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Icon size={13} strokeWidth={2.5} />
+              {s.label}
+            </button>
+          )
+        })}
       </div>
 
       {section === 'net-worth' && <NetWorthPage />}
