@@ -1,7 +1,9 @@
 'use client'
 
+import { type ReactNode } from 'react'
 import useSWR from 'swr'
 import type { Task, Appointment } from '@/types'
+import { Activity, AlertCircle, Calendar, RefreshCw, Gift, CheckSquare } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -22,11 +24,19 @@ const APPT_CATEGORY_COLOR: Record<string, string> = {
   Other: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
 }
 
-function SectionHeader({ title, count, color }: { title: string; count?: number; color?: string }) {
+function ColoredSectionHeader({ icon, color, title, count }: {
+  icon: ReactNode
+  color: string
+  title: string
+  count?: number
+}) {
   return (
-    <h2 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${color ?? 'text-gray-500 dark:text-gray-400'}`}>
-      {title}{count !== undefined ? ` (${count})` : ''}
-    </h2>
+    <div className="flex items-center gap-1.5 mb-3">
+      {icon}
+      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color }}>
+        {title}{count !== undefined ? ` — ${count}` : ''}
+      </span>
+    </div>
   )
 }
 
@@ -107,8 +117,14 @@ export default function TodayPage() {
       </div>
 
       {/* Habits */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
-        <SectionHeader title="Habits" count={habits.length > 0 ? doneCount : undefined} />
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+        style={{ borderLeft: '3px solid #f59e0b' }}>
+        <ColoredSectionHeader
+          icon={<Activity size={13} strokeWidth={2.5} color="#f59e0b" />}
+          color="#f59e0b"
+          title="Habits"
+          count={habits.length > 0 ? doneCount : undefined}
+        />
         {habits.length === 0 ? (
           <p className="text-sm text-gray-400">No habits configured.</p>
         ) : (
@@ -141,8 +157,14 @@ export default function TodayPage() {
 
       {/* Upcoming Renewals */}
       {upcomingRenewals.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
-          <SectionHeader title="Upcoming Renewals" count={upcomingRenewals.length} />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+          style={{ borderLeft: '3px solid #f97316' }}>
+          <ColoredSectionHeader
+            icon={<RefreshCw size={13} strokeWidth={2.5} color="#f97316" />}
+            color="#f97316"
+            title="Upcoming Renewals"
+            count={upcomingRenewals.length}
+          />
           <div className="flex flex-col gap-1.5">
             {upcomingRenewals.map(s => {
               const days = daysUntilRenewal(s.renewalDate)!
@@ -169,8 +191,14 @@ export default function TodayPage() {
 
       {/* Pending Gifts */}
       {pendingGiftPeople.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
-          <SectionHeader title="Pending Gifts" count={pendingGiftPeople.length} />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+          style={{ borderLeft: '3px solid #a855f7' }}>
+          <ColoredSectionHeader
+            icon={<Gift size={13} strokeWidth={2.5} color="#a855f7" />}
+            color="#a855f7"
+            title="Pending Gifts"
+            count={pendingGiftPeople.length}
+          />
           <div className="flex flex-col gap-1">
             {pendingGiftPeople.map(p => {
               const count = p.ideas.filter(i => !i.purchased).length
@@ -187,8 +215,14 @@ export default function TodayPage() {
 
       {/* Today's appointments */}
       {todayAppts.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
-          <SectionHeader title="Today's Appointments" count={todayAppts.length} color="text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+          style={{ borderLeft: '3px solid #3b82f6' }}>
+          <ColoredSectionHeader
+            icon={<Calendar size={13} strokeWidth={2.5} color="#3b82f6" />}
+            color="#3b82f6"
+            title="Today's Appointments"
+            count={todayAppts.length}
+          />
           <div className="flex flex-col gap-2">
             {todayAppts.map(a => (
               <div key={a.id} className="flex items-center justify-between gap-2">
@@ -210,8 +244,14 @@ export default function TodayPage() {
 
       {/* Overdue tasks */}
       {overdueTasks.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4">
-          <SectionHeader title="Overdue" count={overdueTasks.length} color="text-red-500" />
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+          style={{ borderLeft: '3px solid #ef4444' }}>
+          <ColoredSectionHeader
+            icon={<AlertCircle size={13} strokeWidth={2.5} color="#ef4444" />}
+            color="#ef4444"
+            title="Overdue"
+            count={overdueTasks.length}
+          />
           <div className="flex flex-col gap-1.5">
             {overdueTasks.map(t => (
               <div key={t.id} className="flex items-center justify-between gap-2 group">
@@ -236,8 +276,14 @@ export default function TodayPage() {
       )}
 
       {/* Due today */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
-        <SectionHeader title="Due Today" count={todayTasks.length} />
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4"
+        style={{ borderLeft: '3px solid #6366f1' }}>
+        <ColoredSectionHeader
+          icon={<CheckSquare size={13} strokeWidth={2.5} color="#6366f1" />}
+          color="#6366f1"
+          title="Due Today"
+          count={todayTasks.length}
+        />
         {todayTasks.length === 0 ? (
           <p className="text-sm text-gray-400">Nothing due today.</p>
         ) : (
