@@ -315,6 +315,7 @@ export default function ItemsPage() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</span>
                             {item.quantity > 1 && <Badge color="#6b7280">×{item.quantity}</Badge>}
+                            {item.upgradeTarget && <Badge color="#10b981">↑ Upgraded</Badge>}
                           </div>
                           {item.upgradeTarget && (
                             <div className="flex items-center gap-1 mt-1">
