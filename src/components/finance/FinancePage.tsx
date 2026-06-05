@@ -168,15 +168,24 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Net Worth</p>
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <TrendingUp size={13} strokeWidth={2.5} style={{ color: netWorth >= 0 ? '#10b981' : '#ef4444' }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: netWorth >= 0 ? '#10b981' : '#ef4444' }}>Net Worth</span>
+          </div>
           <p className={`text-2xl font-bold ${netWorth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>{fmt(netWorth)}</p>
         </div>
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Monthly Subscriptions</p>
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <RefreshCw size={13} strokeWidth={2.5} color="#f97316" />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#f97316' }}>Monthly Subscriptions</span>
+          </div>
           <p className="text-xl font-semibold text-gray-900 dark:text-white">{fmtDecimal(monthlySubCost)}</p>
         </div>
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Portfolio P&amp;L</p>
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <Activity size={13} strokeWidth={2.5} style={{ color: portfolioPnl >= 0 ? '#10b981' : '#ef4444' }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: portfolioPnl >= 0 ? '#10b981' : '#ef4444' }}>Portfolio P&amp;L</span>
+          </div>
           <p className={`text-xl font-semibold ${portfolioPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
             {portfolioPnl >= 0 ? '+' : ''}{fmtDecimal(portfolioPnl)}
           </p>
