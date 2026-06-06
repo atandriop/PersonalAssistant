@@ -47,6 +47,7 @@ export default function NotificationScheduler() {
       }
 
       // Appointment reminders — 15 min before each timed appointment today
+      timers.current = []
       const appointments: Appointment[] = await fetch('/api/appointments')
         .then(r => r.json())
         .catch(() => [])
