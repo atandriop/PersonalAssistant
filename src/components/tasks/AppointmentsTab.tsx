@@ -24,9 +24,19 @@ const INTERVAL_LABEL: Record<string, string> = {
 
 function advanceDate(dateStr: string, interval: string): string {
   const d = new Date(dateStr + 'T12:00:00')
-  if (interval === 'monthly') d.setMonth(d.getMonth() + 1)
-  else if (interval === 'quarterly') d.setMonth(d.getMonth() + 3)
-  else if (interval === '6months') d.setMonth(d.getMonth() + 6)
+  if (interval === 'monthly') {
+    const targetMonth = (d.getMonth() + 1) % 12
+    d.setMonth(d.getMonth() + 1)
+    if (d.getMonth() !== targetMonth) d.setDate(0)
+  } else if (interval === 'quarterly') {
+    const targetMonth = (d.getMonth() + 3) % 12
+    d.setMonth(d.getMonth() + 3)
+    if (d.getMonth() !== targetMonth) d.setDate(0)
+  } else if (interval === '6months') {
+    const targetMonth = (d.getMonth() + 6) % 12
+    d.setMonth(d.getMonth() + 6)
+    if (d.getMonth() !== targetMonth) d.setDate(0)
+  }
   else if (interval === 'yearly') d.setFullYear(d.getFullYear() + 1)
   return d.toISOString().slice(0, 10)
 }
