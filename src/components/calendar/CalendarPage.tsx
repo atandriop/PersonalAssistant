@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -207,6 +207,29 @@ export default function CalendarPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Calendar</h1>
+
+      {/* Source filter chips */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {ALL_TYPES.map(type => {
+          const active = activeTypes.has(type)
+          const color = SOURCE_COLOR[type]
+          return (
+            <button
+              key={type}
+              onClick={() => toggleType(type)}
+              className="px-3 py-1 rounded-full text-xs font-semibold border-2 transition-all"
+              style={{
+                borderColor: color,
+                background: active ? color + '22' : 'transparent',
+                color: active ? color : '#9ca3af',
+                opacity: active ? 1 : 0.55,
+              }}
+            >
+              {SOURCE_LABEL[type]}
+            </button>
+          )
+        })}
+      </div>
 
       <div className="flex gap-6 items-start">
         {/* Left: Grid */}
