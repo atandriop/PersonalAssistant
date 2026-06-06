@@ -181,7 +181,7 @@ export async function GET(req: Request) {
     inventoryItems,
     travelTrips: travelTrips.map(t => ({
       id: t.id,
-      countryName: t.country.name,
+      countryName: t.country?.name ?? null,
       cities: t.cities,
       startDate: t.startDate,
       endDate: t.endDate,
