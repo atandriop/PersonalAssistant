@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PortfolioPage from '@/components/portfolio/PortfolioPage'
+import { holdingValue } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -40,12 +41,6 @@ interface Snapshot {
 
 interface Subscription {
   id: number; name: string; cost: number; period: string; active: boolean
-}
-
-function holdingValue(h: PortfolioHolding): number {
-  if (h.quantity != null && h.currentPrice != null) return h.quantity * h.currentPrice
-  if (h.balance != null) return h.balance
-  return 0
 }
 
 function fmt(n: number): string {

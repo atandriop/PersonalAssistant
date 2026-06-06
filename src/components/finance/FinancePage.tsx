@@ -9,6 +9,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 import CostsTab from '@/components/finance/CostsTab'
+import { holdingValue } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -28,10 +29,6 @@ function fmt(n: number): string {
 
 function fmtDecimal(n: number): string {
   return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
-}
-
-function holdingValue(h: Holding): number {
-  return h.type === 'savings' ? (h.balance ?? 0) : (h.currentPrice ?? 0) * (h.quantity ?? 0)
 }
 
 const TYPE_COLOR: Record<string, string> = {
