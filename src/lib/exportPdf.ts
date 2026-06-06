@@ -15,7 +15,7 @@ function holdingValue(h: { type: string; quantity: number | null; currentPrice: 
 
 export async function exportPdf(): Promise<void> {
   const [
-    tasks, memories, lifeAreas, habits,
+    tasks, memories, lifeAreas, activeHabits, archivedHabits,
     appointments, wishlist, inventory, collectibles, giftPeople,
     travelCountries, travelTrips, bucketTrips, bucketExperiences,
     subscriptions, maintenanceItems, documents, netWorthEntries, portfolio,
@@ -24,6 +24,7 @@ export async function exportPdf(): Promise<void> {
     fetch('/api/memories').then(r => r.json()),
     fetch('/api/life-areas').then(r => r.json()),
     fetch('/api/habits').then(r => r.json()),
+    fetch('/api/habits?archived=true').then(r => r.json()),
     fetch('/api/appointments').then(r => r.json()),
     fetch('/api/wishlist').then(r => r.json()),
     fetch('/api/inventory').then(r => r.json()),
@@ -39,6 +40,8 @@ export async function exportPdf(): Promise<void> {
     fetch('/api/net-worth/entries').then(r => r.json()),
     fetch('/api/portfolio').then(r => r.json()),
   ])
+
+  const habits = [...activeHabits, ...archivedHabits]
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
