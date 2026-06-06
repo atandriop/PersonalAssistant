@@ -76,8 +76,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   let computedCost: number | null = actualCost != null ? Number(actualCost) : null
 
+  // Step 1: resolve lines + create any new memories (outside tx — trip is unchanged if this fails)
+  let resolvedLines: { category: string; amount: number; label: string | null; memoryId: number | null }[] = []
   if (Array.isArray(costLines)) {
-    const resolvedLines = await Promise.all((costLines as CostLineInput[]).map(async (line) => {
+    resolvedLines = await Promise.all((costLines as CostLineInput[]).map(async (line) => {
       let memId = line.memoryId ?? null
       if (line.newMemory && !memId) {
         const mem = await prisma.memory.create({
@@ -96,30 +98,34 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return { category: line.category, amount: line.amount, label: line.label ?? null, memoryId: memId }
     }))
 
-    await prisma.tripCostLine.deleteMany({ where: { tripId: id } })
-    if (resolvedLines.length > 0) {
-      await prisma.tripCostLine.createMany({
-        data: resolvedLines.map(l => ({ tripId: id, ...l })),
-      })
-    }
-
     computedCost = resolvedLines.length > 0
       ? resolvedLines.reduce((s, l) => s + l.amount, 0)
       : null
   }
 
-  const trip = await prisma.travelTrip.update({
-    where: { id },
-    data: {
-      ...(resolvedCountryId !== undefined ? { countryId: resolvedCountryId } : {}),
-      cities: cities && cities.length > 0 ? JSON.stringify(cities) : null,
-      startDate: startDate ?? null,
-      endDate: endDate ?? null,
-      actualCost: computedCost,
-      rating: rating != null ? Number(rating) : null,
-      notes: notes ?? null,
-    },
-    include: TRIP_INCLUDE,
+  // Steps 2-4: atomic — deleteMany + createMany + update must all succeed or all roll back
+  const trip = await prisma.$transaction(async (tx) => {
+    if (Array.isArray(costLines)) {
+      await tx.tripCostLine.deleteMany({ where: { tripId: id } })
+      if (resolvedLines.length > 0) {
+        await tx.tripCostLine.createMany({
+          data: resolvedLines.map(l => ({ tripId: id, ...l })),
+        })
+      }
+    }
+    return tx.travelTrip.update({
+      where: { id },
+      data: {
+        ...(resolvedCountryId !== undefined ? { countryId: resolvedCountryId } : {}),
+        cities: cities && cities.length > 0 ? JSON.stringify(cities) : null,
+        startDate: startDate ?? null,
+        endDate: endDate ?? null,
+        actualCost: computedCost,
+        rating: rating != null ? Number(rating) : null,
+        notes: notes ?? null,
+      },
+      include: TRIP_INCLUDE,
+    })
   })
   return NextResponse.json(serializeTrip(trip))
 }
