@@ -85,7 +85,6 @@ async function resolveCostLines(costLines: CostLineInput[]) {
 
 export async function GET() {
   const raw = await prisma.travelTrip.findMany({
-    orderBy: { createdAt: 'desc' },
     include: TRIP_INCLUDE,
   })
   raw.sort((a, b) => {
@@ -131,15 +130,12 @@ export async function POST(req: Request) {
       rating: rating != null ? Number(rating) : null,
       notes: notes ?? null,
       bucketTripId: bucketTripId ?? null,
+      ...(resolvedLines.length > 0 && {
+        costLines: { createMany: { data: resolvedLines } },
+      }),
     },
+    include: TRIP_INCLUDE,
   })
 
-  if (resolvedLines.length > 0) {
-    await prisma.tripCostLine.createMany({
-      data: resolvedLines.map(l => ({ tripId: trip.id, ...l })),
-    })
-  }
-
-  const full = await prisma.travelTrip.findUniqueOrThrow({ where: { id: trip.id }, include: TRIP_INCLUDE })
-  return NextResponse.json(serializeTrip(full), { status: 201 })
+  return NextResponse.json(serializeTrip(trip), { status: 201 })
 }
