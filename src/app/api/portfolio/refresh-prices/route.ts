@@ -28,13 +28,26 @@ async function fetchCryptoPrice(name: string): Promise<number | null> {
 
 async function fetchStockPrice(symbol: string): Promise<number | null> {
   try {
-    const res = await fetch(
-      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`,
-      { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
-    )
-    if (!res.ok) return null
-    const data = await res.json() as { quoteResponse?: { result?: { regularMarketPrice?: number }[] } }
-    return data.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
+    const [quoteRes, fxRes] = await Promise.all([
+      fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`,
+        { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+      ),
+      fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=EURUSD%3DX`,
+        { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+      ),
+    ])
+    if (!quoteRes.ok || !fxRes.ok) return null
+    const quoteData = await quoteRes.json() as { quoteResponse?: { result?: { regularMarketPrice?: number; currency?: string }[] } }
+    const fxData = await fxRes.json() as { quoteResponse?: { result?: { regularMarketPrice?: number }[] } }
+    const price = quoteData.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
+    const currency = quoteData.quoteResponse?.result?.[0]?.currency ?? 'USD'
+    if (price === null) return null
+    if (currency === 'EUR') return price
+    const eurUsd = fxData.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
+    if (eurUsd === null) return null
+    return price / eurUsd
   } catch {
     return null
   }
