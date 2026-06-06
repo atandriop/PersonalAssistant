@@ -12,15 +12,16 @@ import GiftPersonForm from '@/components/gifts/GiftPersonForm'
 import GiftIdeaForm from '@/components/gifts/GiftIdeaForm'
 import {
   Activity, Wrench, Target, Gift, Calendar, AlertCircle,
-  Clock, RefreshCw, Compass, Heart, Map, FileWarning,
+  Clock, RefreshCw, Compass, Heart, Map, FileWarning, TrendingUp,
 } from 'lucide-react'
+import { holdingValue, snapshotNear, fmtEur, type NetWorthSnapshot, type PortfolioHolding } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const ALL_WIDGETS = [
   'habits', 'maintenance', 'goals', 'gifts',
   'appointments', 'overdue-tasks', 'on-this-day', 'subscriptions',
-  'travel', 'memories', 'bucket-list', 'expiring-docs',
+  'travel', 'memories', 'bucket-list', 'expiring-docs', 'net-worth',
 ] as const
 type WidgetId = typeof ALL_WIDGETS[number]
 
@@ -37,6 +38,7 @@ const WIDGET_LABELS: Record<WidgetId, string> = {
   'memories': 'Memories',
   'bucket-list': 'Bucket List',
   'expiring-docs': 'Expiring Documents',
+  'net-worth': 'Net Worth',
 }
 
 const LS_KEY = 'dashboard-hidden-widgets'
@@ -186,6 +188,18 @@ export default function DashboardPage() {
   const { data: tasks = [] } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
 
+  const isNWVisible = !hidden.has('net-worth')
+  const { data: nwSnapshots = [] } = useSWR<NetWorthSnapshot[]>(
+    isNWVisible ? '/api/net-worth/snapshots' : null, fetcher)
+  const { data: nwEntries = [] } = useSWR<{ value: number; type: string }[]>(
+    isNWVisible ? '/api/net-worth/entries' : null, fetcher)
+  const { data: nwHoldings = [] } = useSWR<PortfolioHolding[]>(
+    isNWVisible ? '/api/portfolio' : null, fetcher)
+  const { data: nwSubs = [] } = useSWR<{ cost: number; period: string; active: boolean }[]>(
+    isNWVisible ? '/api/subscriptions' : null, fetcher)
+  const { data: nwWishlist = [] } = useSWR<{ cost: number; purchased: boolean }[]>(
+    isNWVisible ? '/api/wishlist' : null, fetcher)
+
   const today = new Date().toISOString().slice(0, 10)
 
   // ── Habits ──
@@ -288,6 +302,40 @@ export default function DashboardPage() {
     })
     mutateAreas()
   }
+
+  // ── Net Worth widget ──
+  const nwPortfolioTotal = nwHoldings.reduce((s, h) => s + holdingValue(h), 0)
+  const nwEntryTotal     = nwEntries.reduce((s, e) => s + (e.type === 'asset' ? e.value : -e.value), 0)
+  const currentNetWorth  = nwPortfolioTotal + nwEntryTotal
+
+  const sortedSnaps = [...nwSnapshots].sort((a, b) => a.date.localeCompare(b.date))
+  const now = new Date()
+  const latestSnap = sortedSnaps[sortedSnaps.length - 1] ?? null
+  const snap30 = snapshotNear(sortedSnaps, new Date(now.getTime() - 30 * 86_400_000))
+  const snap90 = snapshotNear(sortedSnaps, new Date(now.getTime() - 90 * 86_400_000))
+  const nwDelta30 = latestSnap && snap30 ? latestSnap.total - snap30.total : null
+  const nwDelta90 = latestSnap && snap90 ? latestSnap.total - snap90.total : null
+
+  const nwMonthlySubs = nwSubs
+    .filter(s => s.active)
+    .reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost / 12 : sub.cost), 0)
+  const nwWishlistTotal = nwWishlist
+    .filter(i => !i.purchased)
+    .reduce((s, i) => s + i.cost, 0)
+
+  function buildSparkPath(snaps: NetWorthSnapshot[]): string {
+    if (snaps.length < 2) return ''
+    const vals = snaps.map(s => s.total)
+    const min = Math.min(...vals), max = Math.max(...vals)
+    const range = max - min || 1
+    const W = 260, H = 40
+    return snaps.map((s, i) => {
+      const x = (i / (snaps.length - 1)) * W
+      const y = H - ((s.total - min) / range) * (H - 4)
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+  }
+  const sparkPath = buildSparkPath(sortedSnaps.slice(-6))
 
   // ── Memory counts ──
   const MEMORY_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
@@ -671,6 +719,59 @@ export default function DashboardPage() {
               </div>
             )}
           </WidgetCard>
+        )}
+
+        {/* Net Worth */}
+        {!hidden.has('net-worth') && (
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingUp size={13} strokeWidth={2.5} color="#10b981" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">
+                Net Worth
+              </span>
+            </div>
+
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {fmtEur(currentNetWorth)}
+            </p>
+
+            {(nwDelta30 !== null || nwDelta90 !== null) && (
+              <p className="text-xs mt-1 space-x-1">
+                {nwDelta30 !== null && (
+                  <span className={nwDelta30 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>
+                    {nwDelta30 >= 0 ? '▲' : '▼'} {fmtEur(Math.abs(nwDelta30))} this month
+                  </span>
+                )}
+                {nwDelta30 !== null && nwDelta90 !== null && (
+                  <span className="text-gray-400">·</span>
+                )}
+                {nwDelta90 !== null && (
+                  <span className={nwDelta90 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>
+                    {nwDelta90 >= 0 ? '+' : ''}{fmtEur(nwDelta90)} vs 3 mo ago
+                  </span>
+                )}
+              </p>
+            )}
+
+            {sparkPath && (
+              <div className="mt-3 mb-1">
+                <svg width="100%" height="40" viewBox="0 0 260 40" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="nw-spark-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={sparkPath + ' L260,40 L0,40 Z'} fill="url(#nw-spark-grad)" />
+                  <path d={sparkPath} stroke="#10b981" strokeWidth="1.5" fill="none" />
+                </svg>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
+              Portfolio {fmtEur(nwPortfolioTotal)} · Subs {fmtEur(nwMonthlySubs)}/mo · Wishlist {fmtEur(nwWishlistTotal)} outstanding
+            </p>
+          </div>
         )}
 
         {/* Expiring Documents */}
