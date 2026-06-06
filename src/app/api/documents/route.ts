@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, unlink } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 
@@ -41,19 +41,25 @@ export async function POST(req: Request) {
   const bytes = await file.arrayBuffer()
   await writeFile(join(UPLOADS_DIR, filename), Buffer.from(bytes))
 
-  const doc = await prisma.document.create({
-    data: {
-      name,
-      filename,
-      originalName: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      size: file.size,
-      category,
-      notes,
-      expiryDate,
-      tags: tagsRaw,
-    },
-  })
+  let doc
+  try {
+    doc = await prisma.document.create({
+      data: {
+        name,
+        filename,
+        originalName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+        category,
+        notes,
+        expiryDate,
+        tags: tagsRaw,
+      },
+    })
+  } catch (e) {
+    await unlink(join(UPLOADS_DIR, filename)).catch(() => {})
+    return NextResponse.json({ error: 'Failed to save document' }, { status: 500 })
+  }
 
   return NextResponse.json(serializeDoc(doc), { status: 201 })
 }
