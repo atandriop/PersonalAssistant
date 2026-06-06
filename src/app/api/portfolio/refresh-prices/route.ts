@@ -3,26 +3,31 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-async function fetchCryptoPrice(name: string): Promise<number | null> {
+async function searchCoinId(name: string): Promise<string | null> {
   try {
-    const searchRes = await fetch(
+    const res = await fetch(
       `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(name)}`,
       { headers: { Accept: 'application/json' } }
     )
-    if (!searchRes.ok) return null
-    const searchData = await searchRes.json() as { coins?: { id: string }[] }
-    const coinId = searchData.coins?.[0]?.id
-    if (!coinId) return null
-
-    const priceRes = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=eur`,
-      { headers: { Accept: 'application/json' } }
-    )
-    if (!priceRes.ok) return null
-    const priceData = await priceRes.json() as Record<string, { eur?: number }>
-    return priceData[coinId]?.eur ?? null
+    if (!res.ok) return null
+    const data = await res.json() as { coins?: { id: string }[] }
+    return data.coins?.[0]?.id ?? null
   } catch {
     return null
+  }
+}
+
+async function fetchCryptoPrices(coinIds: string[]): Promise<Record<string, { eur?: number }>> {
+  if (coinIds.length === 0) return {}
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=eur`,
+      { headers: { Accept: 'application/json' } }
+    )
+    if (!res.ok) return {}
+    return await res.json() as Record<string, { eur?: number }>
+  } catch {
+    return {}
   }
 }
 
@@ -61,17 +66,37 @@ export async function POST() {
   const updated: string[] = []
   const failed: string[] = []
 
-  await Promise.all(
-    holdings.map(async h => {
-      const price = h.type === 'crypto'
-        ? await fetchCryptoPrice(h.name)
-        : await fetchStockPrice(h.name)
+  const cryptoHoldings = holdings.filter(h => h.type === 'crypto')
+  const stockHoldings = holdings.filter(h => h.type !== 'crypto')
 
+  // Batch crypto: resolve IDs in parallel, then one price call
+  const coinIds = await Promise.all(cryptoHoldings.map(h => searchCoinId(h.name)))
+  const validCryptoMap = new Map<number, string>() // holdingId → coinId
+  cryptoHoldings.forEach((h, i) => {
+    if (coinIds[i]) validCryptoMap.set(h.id, coinIds[i]!)
+  })
+
+  const batchPriceData = await fetchCryptoPrices(Array.from(validCryptoMap.values()))
+
+  await Promise.all(
+    cryptoHoldings.map(async h => {
+      const coinId = validCryptoMap.get(h.id)
+      const price = coinId ? batchPriceData[coinId]?.eur ?? null : null
       if (price !== null) {
-        await prisma.portfolioHolding.update({
-          where: { id: h.id },
-          data: { currentPrice: price },
-        })
+        await prisma.portfolioHolding.update({ where: { id: h.id }, data: { currentPrice: price } })
+        updated.push(h.name)
+      } else {
+        failed.push(h.name)
+      }
+    })
+  )
+
+  // Stocks: individual fetches (already EUR-converted)
+  await Promise.all(
+    stockHoldings.map(async h => {
+      const price = await fetchStockPrice(h.name)
+      if (price !== null) {
+        await prisma.portfolioHolding.update({ where: { id: h.id }, data: { currentPrice: price } })
         updated.push(h.name)
       } else {
         failed.push(h.name)
