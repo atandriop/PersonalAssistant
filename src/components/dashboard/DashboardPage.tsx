@@ -150,6 +150,19 @@ function WidgetCard({ title, icon, accentColor, borderStyle, action, children }:
   )
 }
 
+function buildSparkPath(snaps: NetWorthSnapshot[]): string {
+  if (snaps.length < 2) return ''
+  const vals = snaps.map(s => s.total)
+  const min = Math.min(...vals), max = Math.max(...vals)
+  const range = max - min || 1
+  const W = 260, H = 40
+  return snaps.map((s, i) => {
+    const x = (i / (snaps.length - 1)) * W
+    const y = H - ((s.total - min) / range) * (H - 4)
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+}
+
 export default function DashboardPage() {
   const [hidden, setHidden] = useState<Set<WidgetId>>(new Set())
   const [configuring, setConfiguring] = useState(false)
@@ -195,8 +208,6 @@ export default function DashboardPage() {
     isNWVisible ? '/api/net-worth/entries' : null, fetcher)
   const { data: nwHoldings = [] } = useSWR<PortfolioHolding[]>(
     isNWVisible ? '/api/portfolio' : null, fetcher)
-  const { data: nwSubs = [] } = useSWR<{ cost: number; period: string; active: boolean }[]>(
-    isNWVisible ? '/api/subscriptions' : null, fetcher)
   const { data: nwWishlist = [] } = useSWR<{ cost: number; purchased: boolean }[]>(
     isNWVisible ? '/api/wishlist' : null, fetcher)
 
@@ -316,25 +327,13 @@ export default function DashboardPage() {
   const nwDelta30 = latestSnap && snap30 ? latestSnap.total - snap30.total : null
   const nwDelta90 = latestSnap && snap90 ? latestSnap.total - snap90.total : null
 
-  const nwMonthlySubs = nwSubs
+  const nwMonthlySubs = subscriptions
     .filter(s => s.active)
     .reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost / 12 : sub.cost), 0)
   const nwWishlistTotal = nwWishlist
     .filter(i => !i.purchased)
     .reduce((s, i) => s + i.cost, 0)
 
-  function buildSparkPath(snaps: NetWorthSnapshot[]): string {
-    if (snaps.length < 2) return ''
-    const vals = snaps.map(s => s.total)
-    const min = Math.min(...vals), max = Math.max(...vals)
-    const range = max - min || 1
-    const W = 260, H = 40
-    return snaps.map((s, i) => {
-      const x = (i / (snaps.length - 1)) * W
-      const y = H - ((s.total - min) / range) * (H - 4)
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-    }).join(' ')
-  }
   const sparkPath = buildSparkPath(sortedSnaps.slice(-6))
 
   // ── Memory counts ──
@@ -747,7 +746,7 @@ export default function DashboardPage() {
                 )}
                 {nwDelta90 !== null && (
                   <span className={nwDelta90 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>
-                    {nwDelta90 >= 0 ? '+' : ''}{fmtEur(nwDelta90)} vs 3 mo ago
+                    {nwDelta90 >= 0 ? '▲' : '▼'} {fmtEur(Math.abs(nwDelta90))} vs 3 mo ago
                   </span>
                 )}
               </p>
