@@ -9,7 +9,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 import CostsTab from '@/components/finance/CostsTab'
-import { holdingValue } from '@/lib/netWorthUtils'
+import { holdingValue, snapshotNear, type NetWorthSnapshot } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -53,6 +53,11 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const { data: entries = [] } = useSWR<NetWorthEntry[]>('/api/net-worth/entries', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
   const { data: wishlist = [] } = useSWR<WishlistItem[]>('/api/wishlist', fetcher)
+  const { data: snapshots = [] }    = useSWR<NetWorthSnapshot[]>('/api/net-worth/snapshots', fetcher)
+  const { data: appointments = [] } = useSWR<{ cost: number | null; date: string }[]>(
+    section === 'overview' ? '/api/appointments' : null, fetcher)
+  const { data: maintItems = [] }   = useSWR<{ logs: { cost: number | null; date: string }[] }[]>(
+    section === 'overview' ? '/api/maintenance/items' : null, fetcher)
   const [showPrompt, setShowPrompt] = useState(false)
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
@@ -79,6 +84,39 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
     .map(s => ({ ...s, monthly: s.period === 'yearly' ? s.cost / 12 : s.cost }))
     .sort((a, b) => b.monthly - a.monthly)
   const annualSubCost = activeSubs.reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
+
+  // Net worth deltas
+  const sortedSnaps = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
+  const latestSnap  = sortedSnaps[sortedSnaps.length - 1] ?? null
+  const nowDate     = new Date()
+  const snap30fin   = snapshotNear(sortedSnaps, new Date(nowDate.getTime() - 30 * 86_400_000))
+  const snap90fin   = snapshotNear(sortedSnaps, new Date(nowDate.getTime() - 90 * 86_400_000))
+  const finDelta30  = latestSnap && snap30fin ? latestSnap.total - snap30fin.total : null
+  const finDelta90  = latestSnap && snap90fin ? latestSnap.total - snap90fin.total : null
+
+  // Portfolio % gain
+  const costBasis = holdings
+    .filter(h => h.quantity != null && h.buyPrice != null)
+    .reduce((s, h) => s + (h.buyPrice! * h.quantity!), 0)
+  const portfolioPctGain = costBasis > 0
+    ? ((portfolioTotal - costBasis) / costBasis) * 100
+    : null
+
+  // Monthly burn rate (12-month trailing average)
+  const oneYearAgo = new Date(nowDate.getFullYear() - 1, nowDate.getMonth(), nowDate.getDate())
+    .toISOString().slice(0, 10)
+  const todayStr = nowDate.toISOString().slice(0, 10)
+
+  const apptMonthly = appointments
+    .filter(a => a.date >= oneYearAgo && a.date <= todayStr && a.cost != null)
+    .reduce((s, a) => s + (a.cost ?? 0), 0) / 12
+
+  const maintMonthly = maintItems
+    .flatMap(item => item.logs)
+    .filter(l => l.date >= oneYearAgo && l.date <= todayStr && l.cost != null)
+    .reduce((s, l) => s + (l.cost ?? 0), 0) / 12
+
+  const totalMonthlyBurn = monthlySubCost + apptMonthly + maintMonthly
 
   const activeWishlist = wishlist.filter(i => !i.purchased)
   const byPriority = PRIORITY_ORDER.map(p => ({
@@ -170,6 +208,16 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: netWorth >= 0 ? '#10b981' : '#ef4444' }}>Net Worth</span>
           </div>
           <p className={`text-2xl font-bold ${netWorth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>{fmt(netWorth)}</p>
+          {finDelta30 !== null && (
+            <p className={`text-xs mt-1 font-semibold ${finDelta30 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+              {finDelta30 >= 0 ? '▲' : '▼'} {fmt(Math.abs(finDelta30))} this month
+            </p>
+          )}
+          {finDelta90 !== null && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {finDelta90 >= 0 ? '+' : ''}{fmt(finDelta90)} vs 3 months ago
+            </p>
+          )}
         </div>
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center">
           <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -186,6 +234,40 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
           <p className={`text-xl font-semibold ${portfolioPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
             {portfolioPnl >= 0 ? '+' : ''}{fmtDecimal(portfolioPnl)}
           </p>
+          {portfolioPctGain !== null && (
+            <p className={`text-xs mt-0.5 ${portfolioPctGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+              {portfolioPctGain >= 0 ? '+' : ''}{portfolioPctGain.toFixed(1)}% since bought
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Monthly Burn Rate */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
+          Monthly Burn Rate
+        </p>
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="flex justify-between py-1.5 text-sm">
+            <span className="text-gray-600 dark:text-gray-400">Subscriptions</span>
+            <span className="font-medium text-gray-900 dark:text-white">{fmtDecimal(monthlySubCost)}/mo</span>
+          </div>
+          {apptMonthly > 0 && (
+            <div className="flex justify-between py-1.5 text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Appointments (12-mo avg)</span>
+              <span className="font-medium text-gray-900 dark:text-white">{fmtDecimal(apptMonthly)}/mo</span>
+            </div>
+          )}
+          {maintMonthly > 0 && (
+            <div className="flex justify-between py-1.5 text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Maintenance (12-mo avg)</span>
+              <span className="font-medium text-gray-900 dark:text-white">{fmtDecimal(maintMonthly)}/mo</span>
+            </div>
+          )}
+          <div className="flex justify-between py-1.5 text-sm font-semibold">
+            <span className="text-gray-900 dark:text-white">Total estimated</span>
+            <span className="text-gray-900 dark:text-white">{fmtDecimal(totalMonthlyBurn)}/mo</span>
+          </div>
         </div>
       </div>
 
