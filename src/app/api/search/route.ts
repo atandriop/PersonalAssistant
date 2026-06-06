@@ -196,6 +196,11 @@ export async function GET(req: Request) {
     })),
     maintenanceItems: homeItems,
   }
-  cache.set(q, { result, ts: Date.now() })
+  // prune stale entries
+  const now = Date.now()
+  for (const [key, entry] of cache) {
+    if (now - entry.ts >= CACHE_TTL_MS) cache.delete(key)
+  }
+  cache.set(q, { result, ts: now })
   return NextResponse.json(result)
 }
