@@ -50,12 +50,12 @@ export default function NotificationScheduler() {
       const appointments: Appointment[] = await fetch('/api/appointments')
         .then(r => r.json())
         .catch(() => [])
-      const now = Date.now()
+      const nowMs = Date.now()
 
       for (const appt of appointments) {
         if (appt.date !== today || !appt.time || appt.done) continue
         const apptMs = new Date(`${today}T${appt.time}`).getTime()
-        const msUntilReminder = apptMs - now - 15 * 60 * 1000
+        const msUntilReminder = apptMs - nowMs - 15 * 60 * 1000
         if (msUntilReminder > 0) {
           const id = setTimeout(() => {
             new Notification('Homebase', {
