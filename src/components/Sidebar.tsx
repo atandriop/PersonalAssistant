@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, Sun, CalendarCheck, CheckSquare, GitFork, FileText,
+  LayoutDashboard, Sun, CalendarCheck, CalendarDays, CheckSquare, GitFork, FileText,
   TrendingUp, ShoppingBag, Heart, Wrench, Compass, Search, Target, Settings,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -17,6 +17,7 @@ const NAV: NavItem[] = [
   { type: 'section', label: 'Planning' },
   { type: 'link', href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { type: 'link', href: '/today', label: 'Today', icon: Sun },
+  { type: 'link', href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { type: 'link', href: '/weekly-review', label: 'Weekly Review', icon: CalendarCheck },
 
   { type: 'section', label: 'Productivity' },
