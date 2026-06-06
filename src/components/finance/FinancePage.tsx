@@ -98,8 +98,11 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const costBasis = holdings
     .filter(h => h.quantity != null && h.buyPrice != null)
     .reduce((s, h) => s + (h.buyPrice! * h.quantity!), 0)
+  const tradingMarketValue = holdings
+    .filter(h => h.quantity != null && h.buyPrice != null)
+    .reduce((s, h) => s + holdingValue(h), 0)
   const portfolioPctGain = costBasis > 0
-    ? ((portfolioTotal - costBasis) / costBasis) * 100
+    ? ((tradingMarketValue - costBasis) / costBasis) * 100
     : null
 
   // Monthly burn rate (12-month trailing average)
@@ -210,12 +213,12 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
           <p className={`text-2xl font-bold ${netWorth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>{fmt(netWorth)}</p>
           {finDelta30 !== null && (
             <p className={`text-xs mt-1 font-semibold ${finDelta30 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-              {finDelta30 >= 0 ? '▲' : '▼'} {fmt(Math.abs(finDelta30))} this month
+              {finDelta30 >= 0 ? '▲' : '▼'} {fmt(Math.abs(finDelta30))} 30-day change
             </p>
           )}
           {finDelta90 !== null && (
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              {finDelta90 >= 0 ? '+' : ''}{fmt(finDelta90)} vs 3 months ago
+              {finDelta90 >= 0 ? '▲' : '▼'} {fmt(Math.abs(finDelta90))} vs 3 months ago
             </p>
           )}
         </div>
