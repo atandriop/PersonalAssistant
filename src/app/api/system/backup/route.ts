@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
-import { execSync } from 'child_process'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { mkdirSync, readdirSync, statSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { log } from '@/lib/logger'
+
+const execAsync = promisify(exec)
 
 const ROOT = process.cwd()
 const BACKUPS_DIR = join(ROOT, 'backups')
@@ -34,7 +37,7 @@ export async function POST() {
     const filename = `homebase-${ts}.tar.gz`
     const dest = join(BACKUPS_DIR, filename)
     // Archive the database + all user assets into a single compressed tarball
-    execSync(`tar -czf "${dest}" -C "${ROOT}" prisma/dev.db assets/`, { timeout: 30000 })
+    await execAsync(`tar -czf "${dest}" -C "${ROOT}" prisma/dev.db assets/`, { timeout: 30000 })
     const size = statSync(dest).size
     log(`Backup created: ${filename} (${(size / 1024).toFixed(0)} KB)`)
     return NextResponse.json({ filename }, { status: 201 })
