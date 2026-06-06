@@ -1,16 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-function addInterval(dateStr: string, interval: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  switch (interval) {
-    case 'daily': d.setDate(d.getDate() + 1); break
-    case 'weekly': d.setDate(d.getDate() + 7); break
-    case 'monthly': d.setMonth(d.getMonth() + 1); break
-    case 'yearly': d.setFullYear(d.getFullYear() + 1); break
-  }
-  return d.toISOString().slice(0, 10)
-}
+import { addInterval } from '@/lib/taskUtils'
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id)
@@ -31,7 +21,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       cost: cost != null ? Number(cost) : null,
       recurring: recurring ?? existing?.recurring ?? false,
       recurringInterval: recurringInterval !== undefined ? recurringInterval : (existing?.recurringInterval ?? null),
-      done: done ?? false,
+      done: done !== undefined ? done : existing?.done ?? false,
     },
   })
 
