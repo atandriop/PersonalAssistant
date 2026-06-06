@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PortfolioPage from '@/components/portfolio/PortfolioPage'
-import { holdingValue } from '@/lib/netWorthUtils'
+import { holdingValue, PortfolioHolding, NetWorthSnapshot } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -18,21 +18,6 @@ interface NetWorthEntry {
   type: 'asset' | 'liability'
   category: Category
   notes: string | null
-}
-
-interface PortfolioHolding {
-  id: number
-  name: string
-  type: string
-  quantity: number | null
-  currentPrice: number | null
-  balance: number | null
-}
-
-interface NetWorthSnapshot {
-  id: number
-  date: string
-  total: number
 }
 
 interface Snapshot {
