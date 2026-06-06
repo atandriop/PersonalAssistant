@@ -1,4 +1,6 @@
 export interface PortfolioHolding {
+  id: number
+  name: string
   type: string
   quantity?: number | null
   currentPrice?: number | null
