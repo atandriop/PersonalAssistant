@@ -72,6 +72,19 @@ export function isSameDay(a: Date, b: Date): boolean {
     a.getDate() === b.getDate()
 }
 
+function eventOnDay(event: CalEvent, date: Date): boolean {
+  if (event.endDate) {
+    // Trip spanning multiple days: show on every day in the range
+    const d = date.getTime()
+    return d >= event.date.getTime() && d <= event.endDate.getTime()
+  }
+  return isSameDay(event.date, date)
+}
+
+function eventsForDay(events: CalEvent[], date: Date, active: Set<EventSourceType>): CalEvent[] {
+  return events.filter(e => active.has(e.type) && eventOnDay(e, date))
+}
+
 export default function CalendarPage() {
   const today = new Date()
   const [currentYear, setCurrentYear]   = useState(today.getFullYear())
@@ -244,7 +257,21 @@ export default function CalendarPage() {
                   `}>
                     {date.getDate()}
                   </span>
-                  {/* dots rendered in Task 4 */}
+                  {isCurrentMonth && (() => {
+                    const dots = eventsForDay(allEvents, date, activeTypes)
+                    if (dots.length === 0) return null
+                    return (
+                      <div className="flex flex-wrap gap-[2px] justify-center mt-0.5 px-0.5">
+                        {dots.slice(0, 5).map(e => (
+                          <div
+                            key={e.id}
+                            className="w-[5px] h-[5px] rounded-full shrink-0"
+                            style={{ background: isSelected ? 'rgba(255,255,255,0.8)' : SOURCE_COLOR[e.type] }}
+                          />
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </button>
               )
             })}
@@ -256,7 +283,33 @@ export default function CalendarPage() {
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
             {selectedDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </h2>
-          <p className="text-sm text-gray-400 dark:text-gray-600">No events</p>
+          {(() => {
+            const dayEvents = eventsForDay(allEvents, selectedDay, activeTypes)
+            if (dayEvents.length === 0) {
+              return <p className="text-sm text-gray-400 dark:text-gray-600">No events this day.</p>
+            }
+            return (
+              <div className="space-y-2">
+                {dayEvents.map(e => (
+                  <div
+                    key={e.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                      style={{ background: SOURCE_COLOR[e.type] }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{e.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {SOURCE_LABEL[e.type]} · {e.meta}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
