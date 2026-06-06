@@ -86,7 +86,9 @@ function WeekSection({ title, children }: { title: string; children: React.React
 
 export default function WeeklyReviewPage() {
   const { data } = useSWR<WeeklyData>('/api/weekly-review', fetcher)
-  const { data: habits = [] } = useSWR<Habit[]>('/api/habits', fetcher)
+  const { data: activeHabits = [] } = useSWR<Habit[]>('/api/habits', fetcher)
+  const { data: archivedHabits = [] } = useSWR<Habit[]>('/api/habits?archived=true', fetcher)
+  const habits = [...activeHabits, ...archivedHabits]
   const { data: maintenanceItems = [] } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: lifeAreas = [] } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
