@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+const cache = new Map<string, { result: unknown; ts: number }>()
+const CACHE_TTL_MS = 300
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() ?? ''
@@ -14,6 +17,11 @@ export async function GET(req: Request) {
       appointments: [], subscriptions: [], wishlistItems: [],
       inventoryItems: [], travelTrips: [], maintenanceItems: [],
     })
+  }
+
+  const cached = cache.get(q)
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    return NextResponse.json(cached.result)
   }
 
   const [
@@ -167,7 +175,7 @@ export async function GET(req: Request) {
     .flatMap(a => a.goals.map(g => ({ ...g, areaName: a.name })))
     .slice(0, 5)
 
-  return NextResponse.json({
+  const result = {
     tasks,
     memories,
     documents,
@@ -187,5 +195,7 @@ export async function GET(req: Request) {
       endDate: t.endDate,
     })),
     maintenanceItems: homeItems,
-  })
+  }
+  cache.set(q, { result, ts: Date.now() })
+  return NextResponse.json(result)
 }
