@@ -28,7 +28,8 @@ export async function GET(
     'Content-Length': String(buffer.length),
   }
   if (download) {
-    headers['Content-Disposition'] = `attachment; filename="${doc.originalName}"`
+    const safeName = doc.originalName.replace(/[\x00-\x1f\x7f"\\]/g, '_')
+    headers['Content-Disposition'] = `attachment; filename="${safeName}"`
   }
 
   return new Response(new Uint8Array(buffer), { headers })
