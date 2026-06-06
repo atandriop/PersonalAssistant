@@ -48,7 +48,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     data: {
       title,
       priority,
-      dueDate: dueDate ?? null,
+      dueDate: dueDate !== undefined ? dueDate : existing?.dueDate ?? null,
       category: category ?? null,
       notes: notes ?? null,
       done: done ?? false,
