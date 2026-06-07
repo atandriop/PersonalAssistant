@@ -74,11 +74,11 @@ export default function HabitRow({ habit, onEdit, onDelete, onArchive }: {
   const isDone = loggedSet.has(today)
   const todayNote = logMap.get(today)?.note ?? null
 
-  async function toggle(note?: string | null) {
+  async function toggle(note?: string | null, date?: string) {
     await fetch(`/api/habits/${habit.id}/logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: note ?? null }),
+      body: JSON.stringify({ note: note ?? null, date: date ?? today }),
     })
     mutate()
     setShowNoteInput(false)
@@ -137,7 +137,8 @@ export default function HabitRow({ habit, onEdit, onDelete, onArchive }: {
                 <div
                   key={ds}
                   title={logEntry?.note ? `${ds}: ${logEntry.note}` : ds}
-                  className={`w-3 h-3 rounded-sm transition-colors ${isToday ? 'ring-1 ring-offset-1 ring-gray-400 dark:ring-gray-500' : ''} ${isFuture ? 'invisible' : ''}`}
+                  onClick={() => !isFuture && toggle(null, ds)}
+                  className={`w-3 h-3 rounded-sm transition-colors ${isFuture ? 'invisible' : 'cursor-pointer hover:opacity-70'} ${isToday ? 'ring-1 ring-offset-1 ring-gray-400 dark:ring-gray-500' : ''}`}
                   style={{ backgroundColor: done ? habit.color : 'rgb(229 231 235)' }}
                 />
               )

@@ -315,9 +315,10 @@ export default function DashboardPage() {
   }
 
   // ── Net Worth widget ──
-  const nwPortfolioTotal = nwHoldings.reduce((s, h) => s + holdingValue(h), 0)
-  const nwEntryTotal     = nwEntries.reduce((s, e) => s + (e.type === 'asset' ? e.value : -e.value), 0)
-  const currentNetWorth  = nwPortfolioTotal + nwEntryTotal
+  const nwPortfolioTotal   = nwHoldings.reduce((s, h) => s + holdingValue(h), 0)
+  const nwLiabilityTotal   = nwEntries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0)
+  const nwSubAnnual        = subscriptions.filter(s => s.active).reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
+  const currentNetWorth    = nwPortfolioTotal - nwLiabilityTotal - nwSubAnnual
 
   const sortedSnaps = [...nwSnapshots].sort((a, b) => a.date.localeCompare(b.date))
   const now = new Date()

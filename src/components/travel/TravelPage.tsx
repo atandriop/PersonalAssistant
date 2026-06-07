@@ -57,9 +57,19 @@ export default function TravelPage() {
     return true
   })
 
+  const today = new Date().toISOString().slice(0, 10)
+
   const filteredTrips = trips.filter(t =>
     countryFilter === 'All' || t.countryName === countryFilter
   )
+
+  const upcomingTrips = filteredTrips
+    .filter(t => !t.startDate || t.startDate >= today)
+    .sort((a, b) => (a.startDate ?? '9999').localeCompare(b.startDate ?? '9999'))
+
+  const pastTrips = filteredTrips
+    .filter(t => t.startDate && t.startDate < today)
+    .sort((a, b) => b.startDate!.localeCompare(a.startDate!))
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -127,8 +137,30 @@ export default function TravelPage() {
             {countryFilter === 'All' ? "No trips yet. Click '+ Add Trip' to log your first." : `No trips to ${countryFilter}.`}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTrips.map(t => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+          <div className="flex flex-col gap-8">
+            {upcomingTrips.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
+                  <span>Upcoming</span>
+                  <span className="text-gray-400 font-normal normal-case tracking-normal">({upcomingTrips.length})</span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {upcomingTrips.map(t => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+                </div>
+              </div>
+            )}
+
+            {pastTrips.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
+                  <span>Past</span>
+                  <span className="font-normal normal-case tracking-normal">({pastTrips.length})</span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pastTrips.map(t => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -32,7 +32,7 @@ function fmtDecimal(n: number): string {
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  stock: '#3b82f6', crypto: '#f59e0b', savings: '#10b981', other: '#8b5cf6',
+  stock: '#3b82f6', crypto: '#f59e0b', bonds: '#14b8a6', savings: '#10b981', other: '#8b5cf6',
 }
 
 const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const
@@ -74,7 +74,7 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
     s + (sub.period === 'yearly' ? sub.cost / 12 : sub.cost), 0)
 
   const totalPortfolioValue = portfolioTotal || 1
-  const byType = ['stock', 'crypto', 'savings', 'other'].map(type => ({
+  const byType = ['stock', 'crypto', 'bonds', 'savings', 'other'].map(type => ({
     type,
     value: holdings.filter(h => h.type === type).reduce((s, h) => s + holdingValue(h), 0),
   })).filter(x => x.value > 0)

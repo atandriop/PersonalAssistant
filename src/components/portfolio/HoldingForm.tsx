@@ -53,6 +53,7 @@ export default function HoldingForm({ initial, onSave, onCancel }: Props) {
       <select value={type} onChange={e => setType(e.target.value)} className={field}>
         <option value="stock">Stock</option>
         <option value="crypto">Crypto</option>
+        <option value="bonds">Bonds</option>
         <option value="savings">Savings</option>
         <option value="other">Other</option>
       </select>

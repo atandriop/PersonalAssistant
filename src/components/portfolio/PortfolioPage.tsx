@@ -16,7 +16,7 @@ interface Holding {
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  stock: '#3b82f6', crypto: '#f59e0b', savings: '#10b981', other: '#8b5cf6',
+  stock: '#3b82f6', crypto: '#f59e0b', bonds: '#14b8a6', savings: '#10b981', other: '#8b5cf6',
 }
 
 function holdingValue(h: Holding): number {
@@ -60,7 +60,7 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
   const totalPnl = nonSavings.reduce((s, h) => s + holdingPnl(h), 0)
   const totalCost = nonSavings.reduce((s, h) => s + (h.buyPrice ?? 0), 0)
 
-  const byType = ['stock', 'crypto', 'savings', 'other']
+  const byType = ['stock', 'crypto', 'bonds', 'savings', 'other']
     .map(t => ({ type: t, total: holdings.filter(h => h.type === t).reduce((s, h) => s + holdingValue(h), 0) }))
     .filter(x => x.total > 0)
 
@@ -110,7 +110,7 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
       const p = holdingPnl(h)
       return `[${h.type.toUpperCase()} — ${h.name}]: value €${v.toFixed(2)}, P&L ${p >= 0 ? '+' : ''}€${p.toFixed(2)}`
     }).join('\n')
-    const byType = ['stock', 'crypto', 'savings', 'other']
+    const byType = ['stock', 'crypto', 'bonds', 'savings', 'other']
       .map(t => {
         const total = holdings.filter(h => h.type === t).reduce((s, h) => s + holdingValue(h), 0)
         return total > 0 ? `${t} €${total.toFixed(2)}` : ''
@@ -175,6 +175,7 @@ Please analyse this portfolio. Identify concentration risk, comment on the balan
           <option value="">All types</option>
           <option value="stock">Stock</option>
           <option value="crypto">Crypto</option>
+          <option value="bonds">Bonds</option>
           <option value="savings">Savings</option>
           <option value="other">Other</option>
         </select>

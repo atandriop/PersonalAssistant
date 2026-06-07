@@ -92,6 +92,7 @@ function TaskForm({ itemId, initial, onSave, onCancel }: { itemId: number; initi
   const [type, setType] = useState<'recurring' | 'once'>(initial?.intervalMonths != null ? 'recurring' : 'once')
   const [intervalMonths, setIntervalMonths] = useState(initial?.intervalMonths?.toString() ?? '12')
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? '')
+  const [lastDoneDate, setLastDoneDate] = useState(initial?.lastDoneDate ?? '')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -99,7 +100,7 @@ function TaskForm({ itemId, initial, onSave, onCancel }: { itemId: number; initi
       description,
       intervalMonths: type === 'recurring' ? Number(intervalMonths) : null,
       dueDate: type === 'once' ? dueDate : null,
-      lastDoneDate: initial?.lastDoneDate ?? null,
+      lastDoneDate: lastDoneDate || null,
     }
     if (initial?.id) {
       await fetch(`/api/maintenance/tasks/${initial.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -117,11 +118,17 @@ function TaskForm({ itemId, initial, onSave, onCancel }: { itemId: number; initi
         <button type="button" onClick={() => setType('once')} className={`flex-1 py-2 text-sm rounded-lg border ${type === 'once' ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300'}`}>One-off</button>
       </div>
       {type === 'recurring' ? (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Every</span>
-          <input required type="number" min="1" value={intervalMonths} onChange={e => setIntervalMonths(e.target.value)} className="w-20 border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
-          <span className="text-sm text-gray-600 dark:text-gray-400">months</span>
-        </div>
+        <>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Every</span>
+            <input required type="number" min="1" value={intervalMonths} onChange={e => setIntervalMonths(e.target.value)} className="w-20 border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">months</span>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Last done date (sets next due)</label>
+            <input type="date" value={lastDoneDate} onChange={e => setLastDoneDate(e.target.value)} className="border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
+          </div>
+        </>
       ) : (
         <input required type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" />
       )}

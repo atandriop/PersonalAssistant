@@ -24,14 +24,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const today = new Date().toISOString().slice(0, 10)
   const body = await req.json().catch(() => ({}))
   const note: string | null = body.note?.trim() || null
+  const date: string = body.date && body.date <= today ? body.date : today
 
   const existing = await prisma.habitLog.findUnique({
-    where: { habitId_date: { habitId, date: today } },
+    where: { habitId_date: { habitId, date } },
   })
   if (existing) {
     await prisma.habitLog.delete({ where: { id: existing.id } })
     return NextResponse.json({ action: 'deleted' })
   }
-  await prisma.habitLog.create({ data: { habitId, date: today, note } })
+  await prisma.habitLog.create({ data: { habitId, date, note } })
   return NextResponse.json({ action: 'created' }, { status: 201 })
 }
