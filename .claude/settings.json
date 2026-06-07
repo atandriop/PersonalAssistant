@@ -1,7 +1,28 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E '\\\\.\\(ts|tsx\\)$')"
+      "Bash(grep -E '\\\\.\\(ts|tsx\\)$')",
+      "Bash(git -C /home/than/PersonalAssistant add src/app/api/portfolio/refresh-prices/route.ts)",
+      "Bash(git -C /home/than/PersonalAssistant commit -m ' *)",
+      "Bash(sort -t'|' -k2 -rn)",
+      "Bash(git diff *)",
+      "Bash(grep -E '\\\\.\\(tsx|ts|js|jsx\\)$')",
+      "Bash(git -C /home/than/PersonalAssistant add src/lib/travelUtils.ts src/app/api/travel/trips/route.ts \"src/app/api/travel/trips/[id]/route.ts\")",
+      "Bash(find /home/than/.claude/plugins -name \"start-server.sh\" 2>/dev/null; find /home/than/.claude -name \"start-server.sh\" 2>/dev/null)",
+      "Read(//home/than/.claude/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/calendar)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(git -C /home/than/PersonalAssistant show e5e7a32 --stat)",
+      "Bash(node /tmp/test_calendar.js)",
+      "Bash(node /tmp/test_calendar2.js)",
+      "Bash(node /tmp/test_selection.js)",
+      "Bash(node /tmp/test_month_nav.js)",
+      "Bash(node /tmp/test_normal_nav.js)",
+      "Bash(git -C /home/than/PersonalAssistant add src/components/calendar/CalendarPage.tsx)",
+      "Bash(git -C /home/than/PersonalAssistant commit -m \"feat: calendar source-type filter chips with localStorage persistence\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)[:20]\\); print\\(len\\(list\\(d.keys\\(\\)\\)\\), 'countries'\\); sample=list\\(d.items\\(\\)\\)[:3]; [print\\(k, ':', v\\) for k,v in sample]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Greece:', d.get\\('Greece', []\\)\\); print\\(\\); print\\('Italy:', d.get\\('Italy', []\\)\\); print\\(\\); print\\('Spain:', d.get\\('Spain', []\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,'\\(',len\\(v\\),'\\)'\\) for k,v in list\\(d.items\\(\\)\\)[:30]]\")"
     ]
   }
 }

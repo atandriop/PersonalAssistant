@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { Memory, TravelTrip } from '@/types'
+import Combobox from '@/components/ui/Combobox'
+import { useCompanions, useCompanies } from '@/lib/usePeopleCompanies'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -20,6 +22,8 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
   onCancel: () => void
 }) {
   const { data: trips = [] } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
+  const { names: allCompanions, ensureCompanion } = useCompanions()
+  const { names: allCompanies, ensureCompany } = useCompanies()
 
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? '')
@@ -32,7 +36,24 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
   )
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [tagInput, setTagInput] = useState('')
+  const [companions, setCompanions] = useState<string[]>(initial?.companions ?? [])
+  const [companionInput, setCompanionInput] = useState('')
+  const [company, setCompany] = useState(initial?.company ?? '')
   const [saving, setSaving] = useState(false)
+
+  function addCompanion(name: string) {
+    const trimmed = name.trim().replace(/,+$/, '')
+    if (!trimmed || companions.includes(trimmed)) { setCompanionInput(''); return }
+    setCompanions(prev => [...prev, trimmed])
+    setCompanionInput('')
+    ensureCompanion(trimmed)
+  }
+
+  function handleCompanySelect(name: string) {
+    const trimmed = name.trim()
+    if (trimmed) ensureCompany(trimmed)
+    setCompany(trimmed)
+  }
 
   function addTag() {
     const t = tagInput.trim().toLowerCase()
@@ -63,6 +84,8 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
       notes: notes.trim() || null,
       tripIds: selectedTripIds,
       tags,
+      companions,
+      company: company.trim() || null,
     }
     if (initial) {
       await fetch(`/api/memories/${initial.id}`, {
@@ -200,6 +223,38 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
               />
               <button type="button" onClick={addTag} className="px-3 py-1.5 text-sm border rounded-lg dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Add</button>
             </div>
+          </div>
+          {/* Companions */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Companions</label>
+            {companions.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {companions.map(p => (
+                  <span key={p} className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+                    {p}
+                    <button type="button" onClick={() => setCompanions(prev => prev.filter(c => c !== p))} className="hover:text-purple-900 dark:hover:text-purple-100 leading-none">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <Combobox
+              value={companionInput}
+              onChange={setCompanionInput}
+              onSelect={addCompanion}
+              options={allCompanions.filter(c => !companions.includes(c))}
+              placeholder="Type a name, press Enter…"
+            />
+          </div>
+          {/* Company */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company / Work</label>
+            <Combobox
+              value={company}
+              onChange={setCompany}
+              onSelect={handleCompanySelect}
+              options={allCompanies}
+              placeholder="e.g. Accenture"
+            />
           </div>
           {/* Linked Trips */}
           {trips.length > 0 && (

@@ -22,9 +22,8 @@ export async function POST() {
     return sum
   }, 0)
 
-  const assetTotal = entries.filter(e => e.type === 'asset').reduce((s, e) => s + e.value, 0)
   const liabilityTotal = entries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0)
-  const total = portfolioValue + assetTotal - liabilityTotal
+  const total = portfolioValue - liabilityTotal
 
   const snapshot = await prisma.netWorthSnapshot.upsert({
     where: { date: today },

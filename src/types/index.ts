@@ -116,6 +116,8 @@ export interface TravelTrip {
   countryId: number
   countryName: string
   cities: string[]
+  companions: string[]
+  company: string | null
   startDate: string | null
   endDate: string | null
   actualCost: number | null
@@ -136,6 +138,8 @@ export interface Memory {
   location: string | null
   notes: string | null
   tags: string[]
+  companions: string[]
+  company: string | null
   trips: { id: number; countryName: string; startDate: string | null }[]
   createdAt: string
 }

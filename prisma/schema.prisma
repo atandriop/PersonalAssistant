@@ -353,6 +353,8 @@ model TravelTrip {
   countryId    Int
   country      TravelCountry @relation(fields: [countryId], references: [id], onDelete: Cascade)
   cities       String?
+  companions   String?
+  company      String?
   startDate    String?
   endDate      String?
   actualCost   Float?
@@ -365,17 +367,19 @@ model TravelTrip {
 }
 
 model Memory {
-  id        Int          @id @default(autoincrement())
-  title     String
-  date      String
-  endDate   String?
-  category  String
-  location  String?
-  notes     String?
-  tags      String       @default("")
-  trips     MemoryTrip[]
-  costLines TripCostLine[]
-  createdAt DateTime     @default(now())
+  id          Int          @id @default(autoincrement())
+  title       String
+  date        String
+  endDate     String?
+  category    String
+  location    String?
+  notes       String?
+  tags        String       @default("")
+  companions  String?
+  company     String?
+  trips       MemoryTrip[]
+  costLines   TripCostLine[]
+  createdAt   DateTime     @default(now())
 }
 
 model MemoryTrip {
@@ -397,6 +401,16 @@ model TripCostLine {
   memoryId  Int?
   memory    Memory?    @relation(fields: [memoryId], references: [id], onDelete: SetNull)
   createdAt DateTime   @default(now())
+}
+
+model Companion {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
+model Company {
+  id   Int    @id @default(autoincrement())
+  name String @unique
 }
 
 model CollectibleItem {

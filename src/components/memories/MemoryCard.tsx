@@ -47,6 +47,20 @@ export default function MemoryCard({ memory, onClick }: {
         <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2 mb-2">{memory.notes}</p>
       )}
 
+      {memory.company && (
+        <div className="mt-1">
+          <span className="text-xs px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-full">{memory.company}</span>
+        </div>
+      )}
+
+      {memory.companions.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {memory.companions.map(p => (
+            <span key={p} className="text-xs px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full">{p}</span>
+          ))}
+        </div>
+      )}
+
       {memory.trips.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2" onClick={e => e.stopPropagation()}>
           {memory.trips.map(t => (

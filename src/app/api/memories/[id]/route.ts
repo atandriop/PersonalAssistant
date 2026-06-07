@@ -6,7 +6,7 @@ const VALID_CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other']
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id)
-  const { title, date, endDate, category, location, notes, tripIds, tags } = await req.json()
+  const { title, date, endDate, category, location, notes, tripIds, tags, companions, company } = await req.json()
   if (!title?.trim() || !date) {
     return NextResponse.json({ error: 'title and date are required' }, { status: 400 })
   }
@@ -26,6 +26,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         location: location?.trim() || null,
         notes: notes?.trim() || null,
         tags: Array.isArray(tags) ? tags.filter(Boolean).join(',') : '',
+        companions: Array.isArray(companions) && companions.length > 0 ? JSON.stringify(companions) : null,
+        company: company?.trim() || null,
       },
     })
     if (Array.isArray(tripIds) && tripIds.length > 0) {

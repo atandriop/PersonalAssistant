@@ -4,7 +4,7 @@ import { CostLineInput, TRIP_INCLUDE, resolveCostLines, serializeTrip } from '@/
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const id = Number(params.id)
-  const { countryId, countryName, cities, startDate, endDate, actualCost, rating, notes, costLines } = await req.json()
+  const { countryId, countryName, cities, companions, company, startDate, endDate, actualCost, rating, notes, costLines } = await req.json()
 
   let resolvedCountryId: number | undefined = countryId ? Number(countryId) : undefined
   if (!resolvedCountryId && countryName?.trim()) {
@@ -43,6 +43,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       data: {
         ...(resolvedCountryId !== undefined ? { countryId: resolvedCountryId } : {}),
         cities: cities && cities.length > 0 ? JSON.stringify(cities) : null,
+        companions: companions && companions.length > 0 ? JSON.stringify(companions) : null,
+        company: company?.trim() || null,
         startDate: startDate ?? null,
         endDate: endDate ?? null,
         actualCost: computedCost,

@@ -1,15 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import useSWR from 'swr'
 import type { TravelCountry, TravelTrip } from '@/types'
 import CountryCard from './CountryCard'
 import CountryForm from './CountryForm'
 import TripCard from './TripCard'
 import TripForm from './TripForm'
+import WorldMap from './WorldMap'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
+
+function CollapsibleSection({ label, count, labelColor, defaultOpen, children }: {
+  label: string
+  count: number
+  labelColor: string
+  defaultOpen: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 mb-3 group w-full text-left"
+      >
+        <span className={`text-sm font-semibold uppercase tracking-wide ${labelColor}`}>{label}</span>
+        <span className="text-gray-400 text-sm font-normal normal-case tracking-normal">({count})</span>
+        <span className="text-gray-400 text-xs ml-1">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && children}
+    </div>
+  )
+}
 
 export default function TravelPage() {
   const { data: countries = [], mutate: mutateCountries } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
@@ -27,7 +51,7 @@ export default function TravelPage() {
     { key: 'countryName', label: 'Country', type: 'text', required: true },
     { key: 'cities', label: 'Cities (comma-separated)', type: 'text' },
     { key: 'startDate', label: 'Start Date', type: 'date' },
-    { key: 'endDate', label: 'End Date', type: 'date' },
+    { key: 'duration', label: 'Duration (days)', type: 'number' },
     { key: 'actualCost', label: 'Cost (€)', type: 'number' },
     { key: 'rating', label: 'Rating (1–5)', type: 'number' },
     { key: 'notes', label: 'Notes', type: 'text' },
@@ -39,7 +63,13 @@ export default function TravelPage() {
         const cities = typeof row.cities === 'string'
           ? row.cities.split(',').map((c: string) => c.trim()).filter(Boolean)
           : []
-        const body = { ...row, cities }
+        let endDate: string | null = null
+        if (row.startDate && row.duration) {
+          const d = new Date(row.startDate + 'T00:00:00')
+          d.setDate(d.getDate() + Number(row.duration) - 1)
+          endDate = d.toISOString().slice(0, 10)
+        }
+        const body = { ...row, cities, endDate }
         return typeof row.id === 'number'
           ? fetch(`/api/travel/trips/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
           : fetch('/api/travel/trips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -59,6 +89,25 @@ export default function TravelPage() {
 
   const today = new Date().toISOString().slice(0, 10)
 
+  // Build companion → trips map
+  const byCompanion = new Map<string, typeof trips>()
+  trips.forEach(t => {
+    t.companions.forEach(p => {
+      if (!byCompanion.has(p)) byCompanion.set(p, [])
+      byCompanion.get(p)!.push(t)
+    })
+  })
+  const companionList = Array.from(byCompanion.entries()).sort((a, b) => b[1].length - a[1].length)
+
+  // Build company → trips map
+  const byCompany = new Map<string, typeof trips>()
+  trips.forEach(t => {
+    if (t.company) {
+      if (!byCompany.has(t.company)) byCompany.set(t.company, [])
+      byCompany.get(t.company)!.push(t)
+    }
+  })
+
   const filteredTrips = trips.filter(t =>
     countryFilter === 'All' || t.countryName === countryFilter
   )
@@ -73,7 +122,17 @@ export default function TravelPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Travel</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Travel</h1>
+
+      {/* World map */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
+            {countries.length} {countries.length === 1 ? 'country' : 'countries'} visited
+          </p>
+        </div>
+        <WorldMap visitedCountries={countries.map(c => c.name)} />
+      </div>
 
       {/* Trips section */}
       <div className="mb-10">
@@ -123,7 +182,9 @@ export default function TravelPage() {
               countryName: t.countryName,
               cities: t.cities.join(', '),
               startDate: t.startDate ?? '',
-              endDate: t.endDate ?? '',
+              duration: (t.startDate && t.endDate)
+                ? Math.round((new Date(t.endDate + 'T00:00:00').getTime() - new Date(t.startDate + 'T00:00:00').getTime()) / 86400000) + 1
+                : '',
               actualCost: t.actualCost,
               rating: t.rating,
               notes: t.notes ?? '',
@@ -137,29 +198,31 @@ export default function TravelPage() {
             {countryFilter === 'All' ? "No trips yet. Click '+ Add Trip' to log your first." : `No trips to ${countryFilter}.`}
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             {upcomingTrips.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
-                  <span>Upcoming</span>
-                  <span className="text-gray-400 font-normal normal-case tracking-normal">({upcomingTrips.length})</span>
-                </h3>
+              <CollapsibleSection
+                label="Upcoming"
+                count={upcomingTrips.length}
+                labelColor="text-blue-600 dark:text-blue-400"
+                defaultOpen
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {upcomingTrips.map(t => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
                 </div>
-              </div>
+              </CollapsibleSection>
             )}
 
             {pastTrips.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
-                  <span>Past</span>
-                  <span className="font-normal normal-case tracking-normal">({pastTrips.length})</span>
-                </h3>
+              <CollapsibleSection
+                label="Past"
+                count={pastTrips.length}
+                labelColor="text-gray-400 dark:text-gray-500"
+                defaultOpen={upcomingTrips.length === 0}
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pastTrips.map(t => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
                 </div>
-              </div>
+              </CollapsibleSection>
             )}
           </div>
         )}
@@ -212,6 +275,54 @@ export default function TravelPage() {
           </div>
         )}
       </div>
+
+      {/* By Person */}
+      {companionList.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">By Person</h2>
+          <div className="flex flex-col gap-4">
+            {companionList.map(([person, personTrips]) => (
+              <CollapsibleSection
+                key={person}
+                label={person}
+                count={personTrips.length}
+                labelColor="text-purple-600 dark:text-purple-400"
+                defaultOpen={false}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...personTrips]
+                    .sort((a: TravelTrip, b: TravelTrip) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
+                    .map((t: TravelTrip) => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+                </div>
+              </CollapsibleSection>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* By Company */}
+      {byCompany.size > 0 && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">By Company</h2>
+          <div className="flex flex-col gap-4">
+            {Array.from(byCompany.entries()).sort((a, b) => b[1].length - a[1].length).map(([co, coTrips]) => (
+              <CollapsibleSection
+                key={co}
+                label={co}
+                count={coTrips.length}
+                labelColor="text-amber-600 dark:text-amber-400"
+                defaultOpen={false}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...coTrips]
+                    .sort((a: TravelTrip, b: TravelTrip) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
+                    .map((t: TravelTrip) => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+                </div>
+              </CollapsibleSection>
+            ))}
+          </div>
+        </div>
+      )}
 
       {addingCountry && <CountryForm onSave={() => { mutateCountries(); setAddingCountry(false) }} onCancel={() => setAddingCountry(false)} />}
       {addingTrip && <TripForm onSave={() => { mutateTrips(); mutateCountries(); setAddingTrip(false) }} onCancel={() => setAddingTrip(false)} />}

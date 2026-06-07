@@ -2,14 +2,14 @@
 
 import type { TravelTrip } from '@/types'
 
-function formatDateRange(startDate: string | null, endDate: string | null): string {
+function formatTripMeta(startDate: string | null, endDate: string | null): string {
   if (!startDate) return ''
   const start = new Date(startDate + 'T00:00:00')
-  const end = endDate ? new Date(endDate + 'T00:00:00') : null
-  const startStr = start.toLocaleString('default', { month: 'short', year: 'numeric' })
-  if (!end) return startStr
-  const endStr = end.toLocaleString('default', { month: 'short', year: 'numeric' })
-  return startStr === endStr ? startStr : `${startStr} – ${endStr}`
+  const monthYear = start.toLocaleString('default', { month: 'short', year: 'numeric' })
+  if (!endDate) return monthYear
+  const end = new Date(endDate + 'T00:00:00')
+  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+  return `${monthYear} · ${days}d`
 }
 
 export default function TripCard({ trip, onClick }: {
@@ -56,7 +56,7 @@ export default function TripCard({ trip, onClick }: {
         {isDraft ? (
           <span className="text-amber-500 dark:text-amber-400 font-medium">Add dates</span>
         ) : (
-          <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
+          <span>{formatTripMeta(trip.startDate, trip.endDate)}</span>
         )}
         {trip.actualCost != null && <span>€{trip.actualCost.toLocaleString()}</span>}
       </div>
@@ -79,8 +79,20 @@ export default function TripCard({ trip, onClick }: {
           ))}
         </div>
       )}
+      {trip.company && (
+        <div className="flex items-center gap-1 mt-1">
+          <span className="text-xs px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-full">{trip.company}</span>
+        </div>
+      )}
+      {trip.companions.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {trip.companions.map(p => (
+            <span key={p} className="text-xs px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full">{p}</span>
+          ))}
+        </div>
+      )}
       {trip.notes && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{trip.notes}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-1">{trip.notes}</p>
       )}
       {trip.memories.length > 0 && (
         <a

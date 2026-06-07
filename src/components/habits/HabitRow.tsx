@@ -23,7 +23,10 @@ interface HabitLog { date: string; note: string | null }
 // ---- Helpers ----
 
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function getStreak(loggedSet: Set<string>): number {
@@ -42,14 +45,20 @@ function getStreak(loggedSet: Set<string>): number {
 function buildHeatmapDates(): Date[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const start = new Date(today.getTime() - 83 * 86400000)
-  const dayOfWeek = start.getDay() || 7
-  start.setDate(start.getDate() - (dayOfWeek - 1))
+  // Use setDate() not ms arithmetic so DST transitions don't shift by an hour
+  const start = new Date(today)
+  start.setDate(today.getDate() - 83)
+  start.setHours(0, 0, 0, 0)
+  // Align back to the Monday of that week
+  const dow = start.getDay() || 7  // 1=Mon … 7=Sun
+  start.setDate(start.getDate() - (dow - 1))
+  start.setHours(0, 0, 0, 0)
   const dates: Date[] = []
   const d = new Date(start)
   while (dates.length < 84) {
     dates.push(new Date(d))
     d.setDate(d.getDate() + 1)
+    d.setHours(0, 0, 0, 0)  // re-normalise each step across DST boundaries
   }
   return dates
 }
@@ -67,6 +76,8 @@ export default function HabitRow({ habit, onEdit, onDelete, onArchive }: {
   const heatmapDates = buildHeatmapDates()
   const [showNoteInput, setShowNoteInput] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [showLogs, setShowLogs] = useState(false)
+  const [logDateInput, setLogDateInput] = useState('')
 
   const weeks: Date[][] = []
   for (let i = 0; i < 12; i++) weeks.push(heatmapDates.slice(i * 7, i * 7 + 7))
@@ -124,27 +135,102 @@ export default function HabitRow({ habit, onEdit, onDelete, onArchive }: {
         <p className="text-xs text-gray-400 italic mb-2">&quot;{todayNote}&quot;</p>
       )}
 
-      <div className="flex gap-1 overflow-x-auto">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-1">
-            {week.map(d => {
-              const ds = toDateStr(d)
-              const logEntry = logMap.get(ds)
-              const done = loggedSet.has(ds)
-              const isToday = ds === today
-              const isFuture = d > new Date()
-              return (
-                <div
-                  key={ds}
-                  title={logEntry?.note ? `${ds}: ${logEntry.note}` : ds}
-                  onClick={() => !isFuture && toggle(null, ds)}
-                  className={`w-3 h-3 rounded-sm transition-colors ${isFuture ? 'invisible' : 'cursor-pointer hover:opacity-70'} ${isToday ? 'ring-1 ring-offset-1 ring-gray-400 dark:ring-gray-500' : ''}`}
-                  style={{ backgroundColor: done ? habit.color : 'rgb(229 231 235)' }}
-                />
-              )
-            })}
+      <div className="mt-3 overflow-x-auto">
+        {/* Month labels */}
+        <div className="flex gap-1 mb-0.5 pl-5">
+          {weeks.map((week, wi) => {
+            const label = week.find(d => d.getDate() <= 7 && d.getDate() === 1)
+              ? new Date(week.find(d => d.getDate() === 1)!).toLocaleString('default', { month: 'short' })
+              : null
+            return (
+              <div key={wi} className="w-3 shrink-0 text-center">
+                {label && <span className="text-gray-400" style={{ fontSize: '9px' }}>{label}</span>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Day labels + week columns */}
+        <div className="flex gap-1">
+          <div className="flex flex-col gap-1 mr-1 shrink-0">
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+              <div key={i} className="w-3 h-3 flex items-center justify-center">
+                <span className="text-gray-400" style={{ fontSize: '9px' }}>{d}</span>
+              </div>
+            ))}
           </div>
-        ))}
+
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-1 shrink-0">
+              {week.map(d => {
+                const ds = toDateStr(d)
+                const logEntry = logMap.get(ds)
+                const done = loggedSet.has(ds)
+                const isToday = ds === today
+                const isFuture = d > new Date()
+                return (
+                  <div
+                    key={ds}
+                    title={logEntry?.note ? `${ds}: ${logEntry.note}` : ds}
+                    onClick={() => !isFuture && toggle(null, ds)}
+                    className={`w-3 h-3 rounded-sm transition-colors cursor-pointer hover:opacity-70 ${isFuture ? 'invisible pointer-events-none' : ''} ${isToday ? 'ring-1 ring-offset-1 ring-gray-400 dark:ring-gray-500' : ''}`}
+                    style={{ backgroundColor: done ? habit.color : 'rgb(229 231 235)' }}
+                  />
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <button
+          onClick={() => setShowLogs(v => !v)}
+          className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1"
+        >
+          <span>{showLogs ? '▾' : '▸'}</span>
+          {logs.length} log{logs.length !== 1 ? 's' : ''}
+        </button>
+
+        {showLogs && (
+          <div className="mt-2 flex flex-col gap-1">
+            {logs.length === 0 && (
+              <p className="text-xs text-gray-400">No logs yet.</p>
+            )}
+            {[...logs].sort((a, b) => b.date.localeCompare(a.date)).map(log => (
+              <div key={log.date} className="flex items-center gap-2 text-xs group">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: log.date === today ? habit.color : 'rgb(156 163 175)' }} />
+                <span className="text-gray-700 dark:text-gray-300 w-24 shrink-0">{log.date}</span>
+                {log.note && <span className="text-gray-400 italic truncate flex-1">{log.note}</span>}
+                {log.date !== today && (
+                  <button
+                    onClick={() => toggle(null, log.date)}
+                    className="hidden group-hover:block text-gray-300 hover:text-red-400 dark:text-gray-600 dark:hover:text-red-400 shrink-0"
+                    title="Remove this log"
+                  >×</button>
+                )}
+              </div>
+            ))}
+
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <input
+                type="date"
+                max={today}
+                value={logDateInput}
+                onChange={e => setLogDateInput(e.target.value)}
+                className="text-xs border rounded px-2 py-1 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+              />
+              <button
+                disabled={!logDateInput}
+                onClick={async () => { await toggle(null, logDateInput); setLogDateInput('') }}
+                className="text-xs px-2 py-1 rounded border disabled:opacity-40"
+                style={{ borderColor: habit.color, color: habit.color }}
+              >
+                {logDateInput && loggedSet.has(logDateInput) ? 'Remove' : 'Log date'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {habit.goalLinks.length > 0 && (

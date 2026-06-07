@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { countryId, countryName, cities, startDate, endDate, actualCost, rating, notes, bucketTripId, costLines } = await req.json()
+  const { countryId, countryName, cities, companions, company, startDate, endDate, actualCost, rating, notes, bucketTripId, costLines } = await req.json()
 
   let resolvedCountryId: number | undefined = countryId ? Number(countryId) : undefined
   if (!resolvedCountryId && countryName?.trim()) {
@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     data: {
       countryId: resolvedCountryId,
       cities: cities && cities.length > 0 ? JSON.stringify(cities) : null,
+      companions: companions && companions.length > 0 ? JSON.stringify(companions) : null,
+      company: company?.trim() || null,
       startDate: startDate ?? null,
       endDate: endDate ?? null,
       actualCost: computedCost,

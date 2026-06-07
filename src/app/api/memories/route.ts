@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { title, date, endDate, category, location, notes, tripIds, tags } = await req.json()
+  const { title, date, endDate, category, location, notes, tripIds, tags, companions, company } = await req.json()
   if (!title?.trim() || !date) {
     return NextResponse.json({ error: 'title and date are required' }, { status: 400 })
   }
@@ -32,6 +32,8 @@ export async function POST(req: Request) {
       location: location?.trim() || null,
       notes: notes?.trim() || null,
       tags: Array.isArray(tags) ? tags.filter(Boolean).join(',') : '',
+      companions: Array.isArray(companions) && companions.length > 0 ? JSON.stringify(companions) : null,
+      company: company?.trim() || null,
       trips: Array.isArray(tripIds) && tripIds.length > 0
         ? { create: (tripIds as number[]).map(tripId => ({ tripId })) }
         : undefined,

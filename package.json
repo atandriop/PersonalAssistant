@@ -17,6 +17,7 @@
     "prisma": "^7.8.0",
     "react": "^18",
     "react-dom": "^18",
+    "react-simple-maps": "^3.0.0",
     "recharts": "^3.8.1",
     "swr": "^2.4.1"
   },

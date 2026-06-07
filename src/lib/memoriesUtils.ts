@@ -13,7 +13,7 @@ export const TRIP_INCLUDE = {
 export function serializeMemory(m: {
   id: number; title: string; date: string; endDate: string | null
   category: string; location: string | null; notes: string | null
-  tags: string
+  tags: string; companions: string | null; company: string | null
   createdAt: Date
   trips: { trip: { id: number; startDate: string | null; country: { name: string } } }[]
 }) {
@@ -26,6 +26,8 @@ export function serializeMemory(m: {
     location: m.location,
     notes: m.notes,
     tags: m.tags ? m.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    companions: m.companions ? JSON.parse(m.companions) as string[] : [],
+    company: m.company,
     createdAt: m.createdAt.toISOString(),
     trips: m.trips.map(mt => ({
       id: mt.trip.id,

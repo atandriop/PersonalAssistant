@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 export type RawCostLine = { id: number; category: string; amount: number; label: string | null; memoryId: number | null }
 export type RawMemoryTrip = { memory: { id: number; title: string; date: string } }
 export type RawTrip = {
-  id: number; countryId: number; cities: string | null
+  id: number; countryId: number; cities: string | null; companions: string | null; company: string | null
   startDate: string | null; endDate: string | null
   actualCost: number | null; rating: number | null
   notes: string | null; bucketTripId: number | null; createdAt: Date
@@ -21,7 +21,7 @@ export interface CostLineInput {
 }
 
 export function serializeTrip(trip: RawTrip) {
-  const { country, cities, memories, costLines, actualCost, ...rest } = trip
+  const { country, cities, companions, memories, costLines, actualCost, ...rest } = trip
   const linesTotal = costLines.length > 0
     ? costLines.reduce((s, l) => s + l.amount, 0)
     : null
@@ -29,6 +29,7 @@ export function serializeTrip(trip: RawTrip) {
     ...rest,
     countryName: country.name,
     cities: cities ? JSON.parse(cities) as string[] : [],
+    companions: companions ? JSON.parse(companions) as string[] : [],
     memories: memories.map(mt => ({
       id: mt.memory.id,
       title: mt.memory.title,
