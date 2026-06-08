@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const { name, color } = await req.json()
+  const { name, color, valueMethod, depreciationRate } = await req.json()
   const category = await prisma.category.update({
     where: { id: Number(params.id) },
-    data: { name, color },
+    data: {
+      name,
+      color,
+      valueMethod: valueMethod ?? 'cost',
+      depreciationRate: depreciationRate !== undefined && depreciationRate !== null
+        ? Number(depreciationRate)
+        : null,
+    },
   })
   return NextResponse.json(category)
 }
