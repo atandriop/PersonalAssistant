@@ -10,11 +10,12 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, cost, quantity, purchaseDate, notes, categoryId, upgradeTargetId } = await req.json()
+  const { name, cost, quantity, purchaseDate, notes, categoryId, upgradeTargetId, currentValue } = await req.json()
   const item = await prisma.inventoryItem.create({
     data: {
       name,
       cost: Number(cost),
+      currentValue: currentValue !== undefined && currentValue !== null ? Number(currentValue) : null,
       quantity: Number(quantity ?? 1),
       purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
       notes: notes ?? null,

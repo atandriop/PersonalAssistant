@@ -8,6 +8,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     data: {
       name: data.name,
       cost: Number(data.cost),
+      currentValue: data.currentValue !== undefined && data.currentValue !== null
+        ? Number(data.currentValue)
+        : null,
       quantity: Number(data.quantity ?? 1),
       purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
       notes: data.notes ?? null,
