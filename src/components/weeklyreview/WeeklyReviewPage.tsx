@@ -9,7 +9,7 @@ import type { Habit, LifeArea, Subscription } from '@/types'
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface WishlistItemRow { id: number; name: string; cost: number; priority: string }
-interface InventoryItemRow { id: number; name: string; cost: number }
+interface InventoryItemRow { id: number; name: string; cost: number; currentValue?: number | null }
 interface PortfolioHoldingRow {
   id: number; name: string; type: string
   currentPrice?: number | null; buyPrice?: number | null; quantity?: number | null
@@ -144,7 +144,10 @@ export default function WeeklyReviewPage() {
       ? wishlistItems.map(i => `- ${i.name} — €${i.cost.toFixed(2)} [${i.priority}]`).join('\n')
       : '(none)'
     const iLines = inventoryItems.length
-      ? inventoryItems.map(i => `- ${i.name} — €${i.cost.toFixed(2)}`).join('\n')
+      ? inventoryItems.map(i => {
+          const displayVal = (i.currentValue !== null && i.currentValue !== undefined) ? i.currentValue : i.cost
+          return `- ${i.name} — €${displayVal.toFixed(2)}`
+        }).join('\n')
       : '(none)'
     const pLines = portfolioHoldings.length
       ? portfolioHoldings.map(h => {
@@ -306,12 +309,15 @@ Please identify patterns in this week's activity across habits, goals, and finan
           <WeekSection title={`Inventory added (${data?.inventoryItems.length ?? 0})`}>
             {data?.inventoryItems.length ? (
               <ul className="flex flex-col gap-1">
-                {data.inventoryItems.map(i => (
-                  <li key={i.id} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-800 dark:text-gray-200">{i.name}</span>
-                    <span className="text-gray-500">€{i.cost.toFixed(2)}</span>
-                  </li>
-                ))}
+                {data.inventoryItems.map(i => {
+                  const displayVal = (i.currentValue !== null && i.currentValue !== undefined) ? i.currentValue : i.cost
+                  return (
+                    <li key={i.id} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-800 dark:text-gray-200">{i.name}</span>
+                      <span className="text-gray-500">€{displayVal.toFixed(2)}</span>
+                    </li>
+                  )
+                })}
               </ul>
             ) : <p className="text-sm text-gray-400">Nothing added this week.</p>}
           </WeekSection>
