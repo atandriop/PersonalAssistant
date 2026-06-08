@@ -7,11 +7,13 @@ datasource db {
 }
 
 model Category {
-  id             Int             @id @default(autoincrement())
-  name           String
-  color          String
-  wishlistItems  WishlistItem[]
-  inventoryItems InventoryItem[]
+  id              Int             @id @default(autoincrement())
+  name            String
+  color           String
+  valueMethod     String          @default("cost")
+  depreciationRate Float?
+  wishlistItems   WishlistItem[]
+  inventoryItems  InventoryItem[]
 }
 
 model WishlistItem {
@@ -32,6 +34,7 @@ model InventoryItem {
   id              Int           @id @default(autoincrement())
   name            String
   cost            Float
+  currentValue    Float?
   quantity        Int           @default(1)
   purchaseDate    DateTime?
   notes           String?
