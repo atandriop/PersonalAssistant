@@ -55,6 +55,8 @@ export default function ItemsPage() {
   const [bulkInv, setBulkInv] = useState(false)
   const [collapsedCats, setCollapsedCats] = useState<Set<number>>(new Set())
   const [showUpdateValues, setShowUpdateValues] = useState(false)
+  const [sortWish, setSortWish] = useState<'priority' | 'name' | 'cost'>('priority')
+  const [sortInv, setSortInv] = useState<'name' | 'cost'>('name')
 
   function toggleCat(id: number) {
     setCollapsedCats(prev => {
@@ -295,10 +297,16 @@ export default function ItemsPage() {
       )}
 
       {visibleCategories.map(cat => {
-        const catInv = filteredInv.filter(i => i.categoryId === cat.id)
+        const catInv = filteredInv
+          .filter(i => i.categoryId === cat.id)
+          .sort((a, b) => sortInv === 'cost' ? a.cost - b.cost : a.name.localeCompare(b.name))
         const catWish = filteredWish
           .filter(i => i.categoryId === cat.id)
-          .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+          .sort((a, b) => {
+            if (sortWish === 'name') return a.name.localeCompare(b.name)
+            if (sortWish === 'cost') return a.cost - b.cost
+            return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+          })
         const isCatCollapsed = collapsedCats.has(cat.id)
 
         return (
