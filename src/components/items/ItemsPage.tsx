@@ -10,9 +10,13 @@ import CategoryManager from '@/components/categories/CategoryManager'
 import TaskForm from '@/components/tasks/TaskForm'
 import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
+import { computeValue, type ItemForValue } from '@/lib/inventoryUtils'
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-interface Category { id: number; name: string; color: string }
+interface Category {
+  id: number; name: string; color: string
+  valueMethod: string; depreciationRate: number | null
+}
 
 interface WishlistItem {
   id: number; name: string; url?: string; cost: number; priority: string
@@ -23,6 +27,7 @@ interface WishlistItem {
 interface InventoryItem {
   id: number; name: string; cost: number; quantity: number
   purchaseDate?: string; notes?: string; categoryId: number
+  currentValue?: number | null
   category: Category; upgradeTarget?: { id: number; name: string; cost: number }
 }
 
@@ -73,7 +78,9 @@ export default function ItemsPage() {
   const visibleCategories = categories.filter(c => allCatIds.has(c.id))
 
   const wishTotal = activeWish.reduce((s, i) => s + i.cost, 0)
-  const invTotal = invItems.reduce((s, i) => s + i.cost * i.quantity, 0)
+  const invCostTotal = invItems.reduce((s, i) => s + i.cost * i.quantity, 0)
+  const invValueTotal = invItems.reduce((s, i) => s + computeValue(i as ItemForValue, i.category) * i.quantity, 0)
+  const invNetDelta = invValueTotal - invCostTotal
   const withUpgrades = invItems.filter(i => i.upgradeTarget).length
 
   async function markGotIt(item: WishlistItem) {
@@ -118,6 +125,7 @@ export default function ItemsPage() {
   const INVENTORY_COLUMNS: ColumnDef[] = [
     { key: 'name', label: 'Name', type: 'text', required: true },
     { key: 'cost', label: 'Cost (€)', type: 'number', required: true },
+    { key: 'currentValue', label: 'Value Override (€)', type: 'number' },
     { key: 'quantity', label: 'Quantity', type: 'number' },
     { key: 'purchaseDate', label: 'Purchase Date', type: 'date' },
     { key: 'categoryId', label: 'Category', type: 'select', options: categories.map(c => ({ label: c.name, value: String(c.id) })) },
@@ -210,7 +218,14 @@ export default function ItemsPage() {
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
         <span className="text-gray-500 dark:text-gray-400">Wishlist to spend: <span className="font-semibold text-gray-800 dark:text-gray-200">€{wishTotal.toFixed(2)}</span></span>
         <span className="text-gray-300 dark:text-gray-600">·</span>
-        <span className="text-gray-500 dark:text-gray-400">Owned value: <span className="font-semibold text-gray-800 dark:text-gray-200">€{invTotal.toFixed(2)}</span></span>
+        <span className="text-gray-500 dark:text-gray-400">Cost: <span className="font-semibold text-gray-800 dark:text-gray-200">€{invCostTotal.toFixed(2)}</span></span>
+        <span className="text-gray-300 dark:text-gray-600">·</span>
+        <span className="text-gray-500 dark:text-gray-400">Value: <span className="font-semibold text-gray-800 dark:text-gray-200">€{invValueTotal.toFixed(2)}</span></span>
+        {Math.abs(invNetDelta) > 0.01 && (
+          <span className={`font-semibold text-sm ${invNetDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+            {invNetDelta > 0 ? '+' : ''}€{invNetDelta.toFixed(2)}
+          </span>
+        )}
         {withUpgrades > 0 && (
           <>
             <span className="text-gray-300 dark:text-gray-600">·</span>
@@ -330,7 +345,26 @@ export default function ItemsPage() {
                           {item.notes && <p className="text-xs text-gray-400">{item.notes}</p>}
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">€{(item.cost * item.quantity).toFixed(2)}</span>
+                          {(() => {
+                            const val = computeValue(item as ItemForValue, item.category)
+                            const totalVal = val * item.quantity
+                            const totalCost = item.cost * item.quantity
+                            const delta = totalVal - totalCost
+                            const isEstimated = (item.currentValue === null || item.currentValue === undefined) && item.category.valueMethod === 'depreciation'
+                            return (
+                              <>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {isEstimated ? '~' : ''}€{totalVal.toFixed(2)}
+                                </span>
+                                {Math.abs(delta) > 0.01 && (
+                                  <div className={`text-xs ${delta > 0 ? 'text-green-500' : 'text-red-400'}`}>
+                                    {delta > 0 ? '+' : ''}€{delta.toFixed(2)}
+                                  </div>
+                                )}
+                                <div className="text-xs text-gray-400">cost €{totalCost.toFixed(2)}</div>
+                              </>
+                            )
+                          })()}
                           <div className="flex gap-1 mt-1 justify-end">
                             <button onClick={() => setEditInv(item)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
                             <button onClick={() => delInv(item.id)} className="text-xs px-1.5 py-0.5 text-red-500 border border-red-200 rounded hover:bg-red-50 dark:border-red-900/30">Del</button>
@@ -397,12 +431,13 @@ export default function ItemsPage() {
             id: i.id,
             name: i.name,
             cost: i.cost,
+            currentValue: i.currentValue ?? '',
             quantity: i.quantity,
             purchaseDate: i.purchaseDate ? i.purchaseDate.slice(0, 10) : '',
             categoryId: String(i.categoryId),
             notes: i.notes ?? '',
           }))}
-          csvHint="name,cost,quantity,purchaseDate,categoryId,notes"
+          csvHint="name,cost,currentValue,quantity,purchaseDate,categoryId,notes"
           onSave={handleInventoryBulkSave}
           onCancel={() => setBulkInv(false)}
         />
