@@ -11,6 +11,7 @@ import TaskForm from '@/components/tasks/TaskForm'
 import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 import { computeValue, type ItemForValue } from '@/lib/inventoryUtils'
+import UpdateValuesModal from '@/components/inventory/UpdateValuesModal'
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 interface Category {
@@ -53,6 +54,7 @@ export default function ItemsPage() {
   const [bulkWish, setBulkWish] = useState(false)
   const [bulkInv, setBulkInv] = useState(false)
   const [collapsedCats, setCollapsedCats] = useState<Set<number>>(new Set())
+  const [showUpdateValues, setShowUpdateValues] = useState(false)
 
   function toggleCat(id: number) {
     setCollapsedCats(prev => {
@@ -174,6 +176,30 @@ export default function ItemsPage() {
     setBulkInv(false)
   }
 
+  async function handleApplyValues(updates: { id: number; currentValue: number }[]) {
+    await Promise.all(
+      updates.map(u => {
+        const item = invItems.find(i => i.id === u.id)
+        if (!item) return Promise.resolve()
+        return fetch(`/api/inventory/${u.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: item.name,
+            cost: item.cost,
+            currentValue: u.currentValue,
+            quantity: item.quantity,
+            purchaseDate: item.purchaseDate ?? null,
+            notes: item.notes ?? null,
+            categoryId: item.categoryId,
+            upgradeTargetId: item.upgradeTarget?.id ?? null,
+          }),
+        })
+      })
+    )
+    mutateInv()
+  }
+
   function buildPrompt(): string {
     const byPriority: Record<string, typeof activeWish> = { High: [], Medium: [], Low: [] }
     activeWish.forEach(i => { byPriority[i.priority]?.push(i) })
@@ -203,6 +229,10 @@ export default function ItemsPage() {
           </button>
           <button onClick={() => setBulkWish(true)} className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             Edit Wishlist
+          </button>
+          <button onClick={() => setShowUpdateValues(true)} disabled={invItems.length === 0}
+            className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50">
+            Update Values
           </button>
           <button onClick={() => setShowAddInv(true)} className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
             + Inventory
@@ -485,6 +515,15 @@ export default function ItemsPage() {
         <Modal title="Add to Tasks" onClose={() => setAddToTask(null)}>
           <TaskForm preTitle={addToTask.title} preSourceLink={{ sourceType: 'wishlist', sourceId: addToTask.sourceId }}
             onSave={() => setAddToTask(null)} onCancel={() => setAddToTask(null)} />
+        </Modal>
+      )}
+      {showUpdateValues && (
+        <Modal title="Update Inventory Values" onClose={() => setShowUpdateValues(false)}>
+          <UpdateValuesModal
+            items={invItems}
+            onApply={handleApplyValues}
+            onClose={() => setShowUpdateValues(false)}
+          />
         </Modal>
       )}
     </div>
