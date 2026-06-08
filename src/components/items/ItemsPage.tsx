@@ -281,13 +281,29 @@ export default function ItemsPage() {
 
       {/* Column headers */}
       <div className="grid grid-cols-2 gap-4 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wishlist</span>
           <span className="text-xs text-gray-400">{filteredWish.length} items</span>
+          <div className="flex gap-1 ml-1">
+            {(['priority', 'name', 'cost'] as const).map(s => (
+              <button key={s} onClick={() => setSortWish(s)}
+                className={`text-xs px-1.5 py-0.5 rounded ${sortWish === s ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Inventory</span>
           <span className="text-xs text-gray-400">{filteredInv.length} items</span>
+          <div className="flex gap-1 ml-1">
+            {(['name', 'cost'] as const).map(s => (
+              <button key={s} onClick={() => setSortInv(s)}
+                className={`text-xs px-1.5 py-0.5 rounded ${sortInv === s ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
