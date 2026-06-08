@@ -57,12 +57,6 @@ export default function TripForm({ initial, onSave, onCancel }: {
     ensureCompanion(trimmed)
   }
 
-  function handleCompanyBlurOrSelect(name: string) {
-    const trimmed = name.trim()
-    if (trimmed) ensureCompany(trimmed)
-    setCompany(trimmed)
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const pendingCity = cityInput.trim().replace(/,+$/, '')
@@ -70,6 +64,7 @@ export default function TripForm({ initial, onSave, onCancel }: {
 
     if (!countryName.trim()) return
     setSaving(true)
+    if (company.trim()) ensureCompany(company.trim())
 
     // Resolve country: use existing DB entry by name if found, else create via countryName
     const existing = dbCountries.find(c => c.name.toLowerCase() === countryName.trim().toLowerCase())
@@ -171,7 +166,6 @@ export default function TripForm({ initial, onSave, onCancel }: {
             <Combobox
               value={company}
               onChange={setCompany}
-              onSelect={handleCompanyBlurOrSelect}
               options={allCompanies}
               placeholder="e.g. Accenture"
             />

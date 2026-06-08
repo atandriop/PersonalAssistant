@@ -49,12 +49,6 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
     ensureCompanion(trimmed)
   }
 
-  function handleCompanySelect(name: string) {
-    const trimmed = name.trim()
-    if (trimmed) ensureCompany(trimmed)
-    setCompany(trimmed)
-  }
-
   function addTag() {
     const t = tagInput.trim().toLowerCase()
     if (t && !tags.includes(t)) setTags(prev => [...prev, t])
@@ -75,6 +69,7 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
     e.preventDefault()
     if (!title.trim() || !date) return
     setSaving(true)
+    if (company.trim()) ensureCompany(company.trim())
     const body = {
       title: title.trim(),
       date,
@@ -251,7 +246,6 @@ export default function MemoryForm({ initial, onSave, onCancel }: {
             <Combobox
               value={company}
               onChange={setCompany}
-              onSelect={handleCompanySelect}
               options={allCompanies}
               placeholder="e.g. Accenture"
             />
