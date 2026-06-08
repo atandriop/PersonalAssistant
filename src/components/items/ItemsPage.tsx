@@ -315,12 +315,12 @@ export default function ItemsPage() {
       {visibleCategories.map(cat => {
         const catInv = filteredInv
           .filter(i => i.categoryId === cat.id)
-          .sort((a, b) => sortInv === 'cost' ? a.cost - b.cost : a.name.localeCompare(b.name))
+          .sort((a, b) => sortInv === 'cost' ? (a.cost ?? 0) - (b.cost ?? 0) : a.name.localeCompare(b.name))
         const catWish = filteredWish
           .filter(i => i.categoryId === cat.id)
           .sort((a, b) => {
             if (sortWish === 'name') return a.name.localeCompare(b.name)
-            if (sortWish === 'cost') return a.cost - b.cost
+            if (sortWish === 'cost') return (a.cost ?? 0) - (b.cost ?? 0)
             return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
           })
         const isCatCollapsed = collapsedCats.has(cat.id)
