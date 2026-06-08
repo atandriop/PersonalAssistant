@@ -1,4 +1,5 @@
 import { getTaskStatus, HomeItem, MaintenanceTask } from './maintenance'
+import { computeValue } from '@/lib/inventoryUtils'
 
 function esc(s: string | null | undefined): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -114,10 +115,17 @@ export async function exportPdf(): Promise<void> {
     ).join('')
 
   // Inventory
-  const invTotal = inventory.reduce((s: number, i: { cost: number; quantity: number }) => s + i.cost * i.quantity, 0)
-  const invRows = inventory.map((i: { name: string; category: { name: string } | null; quantity: number; cost: number }) =>
-    `<tr><td>${esc(i.name)}</td><td>${esc(i.category?.name)}</td><td>${i.quantity}</td><td>${fmt(i.cost * i.quantity)}</td></tr>`
-  ).join('')
+  type InvItem = { name: string; category: { name: string; valueMethod: string; depreciationRate: number | null } | null; quantity: number; cost: number; currentValue: number | null; purchaseDate: string | null }
+  const invCostTotal = inventory.reduce((s: number, i: InvItem) => s + i.cost * i.quantity, 0)
+  const invValueTotal = inventory.reduce((s: number, i: InvItem) => {
+    const cat = i.category ?? { valueMethod: 'cost', depreciationRate: null }
+    return s + computeValue({ cost: i.cost, currentValue: i.currentValue, purchaseDate: i.purchaseDate }, cat) * i.quantity
+  }, 0)
+  const invRows = inventory.map((i: InvItem) => {
+    const cat = i.category ?? { valueMethod: 'cost', depreciationRate: null }
+    const val = computeValue({ cost: i.cost, currentValue: i.currentValue, purchaseDate: i.purchaseDate }, cat)
+    return `<tr><td>${esc(i.name)}</td><td>${esc(i.category?.name)}</td><td>${i.quantity}</td><td>${fmt(i.cost * i.quantity)}</td><td>${fmt(val * i.quantity)}</td></tr>`
+  }).join('')
 
   // Collectibles
   const collectibleRows = collectibles.map((c: { name: string; collectionType: string; condition: string | null; purchasePrice: number | null; currentValue: number | null }) =>
@@ -268,9 +276,9 @@ export async function exportPdf(): Promise<void> {
   <tbody>${wishRows}</tbody>
 </table>
 
-<h2>Inventory (${inventory.length} items · ${fmt(invTotal)} total)</h2>
+<h2>Inventory (${inventory.length} items · cost ${fmt(invCostTotal)} · value ${fmt(invValueTotal)})</h2>
 <table>
-  <thead><tr><th>Name</th><th>Category</th><th>Quantity</th><th>Total Cost</th></tr></thead>
+  <thead><tr><th>Name</th><th>Category</th><th>Quantity</th><th>Cost</th><th>Value</th></tr></thead>
   <tbody>${invRows}</tbody>
 </table>
 
