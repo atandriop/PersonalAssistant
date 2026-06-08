@@ -8,7 +8,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     data: {
       name: data.name,
       cost: Number(data.cost),
-      currentValue: data.currentValue !== undefined && data.currentValue !== null
+      currentValue: data.currentValue !== undefined && data.currentValue !== null && data.currentValue !== ''
         ? Number(data.currentValue)
         : null,
       quantity: Number(data.quantity ?? 1),

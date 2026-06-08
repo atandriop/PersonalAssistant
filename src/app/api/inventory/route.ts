@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     data: {
       name,
       cost: Number(cost),
-      currentValue: currentValue !== undefined && currentValue !== null ? Number(currentValue) : null,
+      currentValue: currentValue !== undefined && currentValue !== null && currentValue !== '' ? Number(currentValue) : null,
       quantity: Number(quantity ?? 1),
       purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
       notes: notes ?? null,
