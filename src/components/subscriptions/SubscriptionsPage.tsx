@@ -7,6 +7,8 @@ import Badge from '@/components/ui/Badge'
 import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 
+import { advanceRenewalDate } from '@/lib/subscriptionUtils'
+
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export const SUBSCRIPTION_CATEGORIES = [
@@ -119,6 +121,17 @@ export default function SubscriptionsPage() {
       return `- ${s.name} [${s.category}]: €${s.cost.toFixed(2)}/${s.period}${suffix}`
     }).join('\n')
     return `Here are my active subscriptions:\n${lines}\n\nTotal monthly spend: €${monthlyTotal.toFixed(2)}\nTotal annual spend: €${annualTotal.toFixed(2)}\n\nIdentify any likely redundancies, suggest cuts, and flag anything that seems overpriced for what it provides.`
+  }
+
+  async function markPaid(s: Subscription) {
+    if (!s.renewalDate) return
+    const newDate = advanceRenewalDate(s.renewalDate.slice(0, 10), s.period)
+    await fetch(`/api/subscriptions/${s.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, renewalDate: newDate }),
+    })
+    mutate()
   }
 
   async function del(id: number) {
@@ -240,6 +253,9 @@ export default function SubscriptionsPage() {
                         {(s.period === 'yearly' || s.period === 'quarterly') && <p className="text-xs text-gray-400">€{mo.toFixed(2)}/mo</p>}
                       </div>
                       <div className="flex gap-1 shrink-0">
+                        {s.renewalDate && (
+                          <button onClick={() => markPaid(s)} className="text-xs px-2 py-1 text-green-600 border border-green-300 rounded-md hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20">Paid</button>
+                        )}
                         <button onClick={() => setEditing(s)} className="text-xs px-2 py-1 border rounded-md dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
                         <button onClick={() => del(s.id)} className="text-xs px-2 py-1 text-red-500 border border-red-200 rounded-md hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">Del</button>
                       </div>
