@@ -22,3 +22,9 @@ describe('serializeTags', () => {
     expect(serializeTags([])).toBe('')
   })
 })
+
+describe('round-trip', () => {
+  it('parseTags(serializeTags(tags)) returns original array', () => {
+    expect(parseTags(serializeTags(['work', 'personal', 'home']))).toEqual(['work', 'personal', 'home'])
+  })
+})
