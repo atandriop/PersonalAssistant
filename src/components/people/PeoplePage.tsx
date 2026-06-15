@@ -6,7 +6,7 @@ import type { Person } from '@/types'
 import Modal from '@/components/ui/Modal'
 import PersonForm from './PersonForm'
 import { daysUntilBirthday } from '@/lib/peopleUtils'
-import { Plus, Pencil, Trash2, Cake, Phone, Mail, Calendar } from 'lucide-react'
+import { Plus, Pencil, Trash2, Cake, Phone, Mail, Calendar, Gift, Plane } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -22,6 +22,10 @@ const RELATIONSHIP_COLOR: Record<string, string> = {
 
 export default function PeoplePage() {
   const { data: people = [], mutate } = useSWR<Person[]>('/api/people', fetcher)
+  const { data: companions = [] } = useSWR<{ id: number; name: string }[]>('/api/companions', fetcher)
+  const { data: giftPeople = [] } = useSWR<{ id: number; name: string }[]>('/api/gifts/people', fetcher)
+  const companionNames = new Set(companions.map(c => c.name.toLowerCase()))
+  const giftNames = new Set(giftPeople.map(g => g.name.toLowerCase()))
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Person | undefined>()
   const [search, setSearch] = useState('')
@@ -67,6 +71,8 @@ export default function PeoplePage() {
             : daysUntil === 0 ? 'Birthday today!'
             : daysUntil <= 30 ? `Birthday in ${daysUntil}d`
             : null
+          const isGiftPerson = giftNames.has(p.name.toLowerCase())
+          const isCompanion = companionNames.has(p.name.toLowerCase())
 
           return (
             <div key={p.id} className="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -82,6 +88,22 @@ export default function PeoplePage() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 flex items-center gap-1">
                       <Cake size={10} /> {birthdayLabel}
                     </span>
+                  )}
+                  {isGiftPerson && (
+                    <a
+                      href="/gifts"
+                      className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 flex items-center gap-1 hover:bg-pink-200 dark:hover:bg-pink-900/50"
+                    >
+                      <Gift size={10} /> Gift list
+                    </a>
+                  )}
+                  {isCompanion && (
+                    <a
+                      href="/travel"
+                      className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 flex items-center gap-1 hover:bg-sky-200 dark:hover:bg-sky-900/50"
+                    >
+                      <Plane size={10} /> Travel buddy
+                    </a>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
