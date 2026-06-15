@@ -39,10 +39,25 @@ export interface Task {
   blockedByTitle: string | null
   lifeAreaId: number | null
   lifeArea: { id: number; name: string; color: string } | null
+  projectId: number | null
+  project: { id: number; name: string; color: string } | null
   tags: string[]
   createdAt: string
   subtasks: Subtask[]
   sourceLink: TaskSourceLink | null
+}
+
+export interface Project {
+  id: number
+  name: string
+  description: string | null
+  color: string
+  lifeAreaId: number | null
+  lifeArea: { id: number; name: string; color: string } | null
+  done: boolean
+  taskCount: number
+  openTaskCount: number
+  createdAt: string
 }
 
 export interface Appointment {
