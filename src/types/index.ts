@@ -161,3 +161,15 @@ export interface Memory {
   trips: { id: number; countryName: string; startDate: string | null }[]
   createdAt: string
 }
+
+export interface Person {
+  id: number
+  name: string
+  birthday: string | null
+  relationship: string | null
+  email: string | null
+  phone: string | null
+  lastContactDate: string | null
+  notes: string | null
+  createdAt: string
+}
