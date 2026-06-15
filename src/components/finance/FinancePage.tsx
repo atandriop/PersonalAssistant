@@ -9,6 +9,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 import CostsTab from '@/components/finance/CostsTab'
+import HealthTab from '@/components/finance/HealthTab'
 import { holdingValue, snapshotNear, type NetWorthSnapshot } from '@/lib/netWorthUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -38,13 +39,14 @@ const TYPE_COLOR: Record<string, string> = {
 const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const
 const PRIORITY_COLOR: Record<string, string> = { High: '#ef4444', Medium: '#f59e0b', Low: '#6b7280' }
 
-type FinanceSection = 'overview' | 'net-worth' | 'subscriptions' | 'costs'
+type FinanceSection = 'overview' | 'net-worth' | 'subscriptions' | 'costs' | 'health'
 
 const SECTIONS: { id: FinanceSection; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'net-worth', label: 'Net Worth', icon: PieChart },
   { id: 'subscriptions', label: 'Subscriptions', icon: RefreshCw },
   { id: 'costs', label: 'Costs', icon: Receipt },
+  { id: 'health', label: 'Health', icon: Activity },
 ]
 
 export default function FinancePage({ defaultSection = 'overview' }: { defaultSection?: FinanceSection }) {
@@ -55,9 +57,9 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const { data: wishlist = [] } = useSWR<WishlistItem[]>('/api/wishlist', fetcher)
   const { data: snapshots = [] }    = useSWR<NetWorthSnapshot[]>('/api/net-worth/snapshots', fetcher)
   const { data: appointments = [] } = useSWR<{ cost: number | null; date: string }[]>(
-    section === 'overview' ? '/api/appointments' : null, fetcher)
+    (section === 'overview' || section === 'health') ? '/api/appointments' : null, fetcher)
   const { data: maintItems = [] }   = useSWR<{ logs: { cost: number | null; date: string }[] }[]>(
-    section === 'overview' ? '/api/maintenance/items' : null, fetcher)
+    (section === 'overview' || section === 'health') ? '/api/maintenance/items' : null, fetcher)
   const [showPrompt, setShowPrompt] = useState(false)
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
@@ -194,6 +196,15 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
       {section === 'net-worth' && <NetWorthPage />}
       {section === 'subscriptions' && <SubscriptionsPage />}
       {section === 'costs' && <CostsTab />}
+      {section === 'health' && (
+        <HealthTab
+          monthlySubCost={monthlySubCost}
+          apptMonthly={apptMonthly}
+          maintMonthly={maintMonthly}
+          portfolioTotal={portfolioTotal}
+          netWorthAssets={assetTotal}
+        />
+      )}
       {section === 'overview' && <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance</h1>
