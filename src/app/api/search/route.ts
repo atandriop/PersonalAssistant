@@ -16,6 +16,7 @@ export async function GET(req: Request) {
       bucketTrips: [], bucketExperiences: [], goals: [],
       appointments: [], subscriptions: [], wishlistItems: [],
       inventoryItems: [], travelTrips: [], maintenanceItems: [],
+      people: [], projects: [],
     })
   }
 
@@ -29,6 +30,7 @@ export async function GET(req: Request) {
     bucketTrips, bucketExperiences, lifeAreas,
     appointments, subscriptions, wishlistItems,
     inventoryItems, travelTrips, homeItems,
+    people, projects,
   ] = await Promise.all([
     prisma.task.findMany({
       where: {
@@ -169,6 +171,29 @@ export async function GET(req: Request) {
       select: { id: true, name: true },
       take: 5,
     }),
+    prisma.person.findMany({
+      where: {
+        OR: [
+          { name: { contains: q } },
+          { notes: { contains: q } },
+          { relationship: { contains: q } },
+          { email: { contains: q } },
+        ],
+      },
+      select: { id: true, name: true, relationship: true, birthday: true },
+      take: 10,
+    }),
+    prisma.project.findMany({
+      where: {
+        done: false,
+        OR: [
+          { name: { contains: q } },
+          { description: { contains: q } },
+        ],
+      },
+      select: { id: true, name: true, description: true, color: true },
+      take: 10,
+    }),
   ])
 
   const goals = lifeAreas
@@ -195,6 +220,8 @@ export async function GET(req: Request) {
       endDate: t.endDate,
     })),
     maintenanceItems: homeItems,
+    people,
+    projects,
   }
   // prune stale entries
   const now = Date.now()
