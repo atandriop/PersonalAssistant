@@ -20,6 +20,8 @@ interface SearchResults {
   inventoryItems: { id: number; name: string; cost: number }[]
   travelTrips: { id: number; countryName: string; cities: string | null; startDate: string | null }[]
   maintenanceItems: { id: number; name: string }[]
+  people: { id: number; name: string; relationship: string | null; birthday: string | null }[]
+  projects: { id: number; name: string; description: string | null; color: string }[]
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -68,7 +70,8 @@ export default function SearchPage() {
       data.habits.length + data.bucketTrips.length + data.bucketExperiences.length +
       data.goals.length + data.appointments.length + data.subscriptions.length +
       data.wishlistItems.length + data.inventoryItems.length +
-      data.travelTrips.length + data.maintenanceItems.length
+      data.travelTrips.length + data.maintenanceItems.length +
+      data.people.length + data.projects.length
     : 0
 
   return (
@@ -101,6 +104,18 @@ export default function SearchPage() {
           <Section title="Tasks" count={data.tasks.length}>
             {data.tasks.map(t => (
               <ResultRow key={t.id} href="/tasks" label={t.title} sub={t.dueDate ?? t.priority} />
+            ))}
+          </Section>
+
+          <Section title="People" count={data.people.length}>
+            {data.people.map(p => (
+              <ResultRow key={p.id} href="/people" label={p.name} sub={p.relationship ?? undefined} />
+            ))}
+          </Section>
+
+          <Section title="Projects" count={data.projects.length}>
+            {data.projects.map(p => (
+              <ResultRow key={p.id} href="/projects" label={p.name} sub={p.description ?? undefined} />
             ))}
           </Section>
 
