@@ -14,6 +14,16 @@ interface SystemStats {
 
 interface Config { port: number }
 
+interface PredictorsCompression { codec: string; level: number }
+
+const CODEC_OPTIONS: { value: string; label: string; description: string; hasLevel: boolean }[] = [
+  { value: 'snappy-mt', label: 'Snappy-MT',   description: 'Fastest write + read (~386 MB)',              hasLevel: false },
+  { value: 'brotli-mt', label: 'Brotli-MT-6', description: 'Best balance — near-fastest read (~170 MB)',  hasLevel: true  },
+  { value: 'zstd',      label: 'Zstd',        description: 'Standard compression (~204 MB)',              hasLevel: true  },
+  { value: 'pzstd',     label: 'Pzstd',       description: 'Parallel Zstd — faster write (~206 MB)',     hasLevel: true  },
+  { value: 'xz',        label: 'XZ',          description: 'Maximum compression, slowest write (~162 MB)', hasLevel: true },
+]
+
 interface BackupFile {
   name: string
   size: number
@@ -54,12 +64,15 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function SystemPage() {
   const { data: stats } = useSWR<SystemStats>('/api/system', fetcher, { refreshInterval: 10000 })
   const { data: config, mutate: mutateConfig } = useSWR<Config>('/api/config', fetcher)
+  const { data: predComp, mutate: mutatePredComp } = useSWR<PredictorsCompression>('/api/predictors-config', fetcher)
   const { data: backups = [], mutate: mutateBackups } = useSWR<BackupFile[]>('/api/system/backup', fetcher)
   const { data: logsData, mutate: mutateLogs } = useSWR<LogsData>('/api/system/logs', fetcher)
 
   const [portInput, setPortInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [codecSaving, setCodecSaving] = useState(false)
+  const [codecSaved, setCodecSaved] = useState(false)
   const [shutting, setShutting] = useState(false)
   const [backingUp, setBackingUp] = useState(false)
   const [clearingBackups, setClearingBackups] = useState(false)
@@ -90,6 +103,17 @@ export default function SystemPage() {
     } finally {
       setExportingPdf(false)
     }
+  }
+
+  async function saveCodec(codec: string, level: number) {
+    setCodecSaving(true)
+    await fetch('/api/predictors-config', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codec, level }),
+    })
+    await mutatePredComp()
+    setCodecSaving(false); setCodecSaved(true)
+    setTimeout(() => setCodecSaved(false), 2000)
   }
 
   async function saveConfig() {
@@ -156,6 +180,49 @@ export default function SystemPage() {
             <Stat label="Platform" value={stats.platform} />
           </div>
         )}
+      </section>
+
+      <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">StatsPredictors</h2>
+        {!predComp ? <p className="text-sm text-gray-400">Loading…</p> : (() => {
+          const currentOption = CODEC_OPTIONS.find(o => o.value === predComp.codec)
+          return (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-900 dark:text-white">Compression codec</label>
+                <select
+                  value={predComp.codec}
+                  onChange={e => saveCodec(e.target.value, predComp.level)}
+                  className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white w-56"
+                >
+                  {CODEC_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {currentOption && (
+                  <p className="text-xs text-gray-400">{currentOption.description}</p>
+                )}
+              </div>
+              {currentOption?.hasLevel && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-900 dark:text-white">Compression level</label>
+                  <input
+                    type="number" min={1} max={22}
+                    value={predComp.level}
+                    onChange={e => saveCodec(predComp.codec, Number(e.target.value))}
+                    className="border rounded-lg px-3 py-2 text-sm w-24 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-400">Applies to Zstd (1–22), Pzstd (1–19), XZ (1–9), Brotli-MT (0–11).</p>
+                </div>
+              )}
+              {(codecSaving || codecSaved) && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  {codecSaving ? 'Saving…' : 'Saved! Re-run the pipeline to apply.'}
+                </p>
+              )}
+            </div>
+          )
+        })()}
       </section>
 
       <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-5">

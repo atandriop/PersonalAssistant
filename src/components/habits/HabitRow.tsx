@@ -45,22 +45,36 @@ function getStreak(loggedSet: Set<string>): number {
 function buildHeatmapDates(): Date[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  // Use setDate() not ms arithmetic so DST transitions don't shift by an hour
-  const start = new Date(today)
-  start.setDate(today.getDate() - 83)
-  start.setHours(0, 0, 0, 0)
-  // Align back to the Monday of that week
-  const dow = start.getDay() || 7  // 1=Mon … 7=Sun
-  start.setDate(start.getDate() - (dow - 1))
+  // Anchor to Monday of the current week so today is always visible
+  const dow = today.getDay() || 7  // 1=Mon … 7=Sun
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - (dow - 1))
+  monday.setHours(0, 0, 0, 0)
+  // Go back 11 full weeks to start of 12-week window
+  const start = new Date(monday)
+  start.setDate(monday.getDate() - 77)
   start.setHours(0, 0, 0, 0)
   const dates: Date[] = []
   const d = new Date(start)
   while (dates.length < 84) {
     dates.push(new Date(d))
     d.setDate(d.getDate() + 1)
-    d.setHours(0, 0, 0, 0)  // re-normalise each step across DST boundaries
+    d.setHours(0, 0, 0, 0)
   }
   return dates
+}
+
+function formatLastDone(logs: HabitLog[]): string {
+  if (logs.length === 0) return 'Never'
+  const lastDate = [...logs].sort((a, b) => b.date.localeCompare(a.date))[0].date
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const last = new Date(lastDate + 'T00:00:00')
+  const diff = Math.round((today.getTime() - last.getTime()) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  if (diff < 7) return `${diff}d ago`
+  if (diff < 30) return `${Math.floor(diff / 7)}w ago`
+  return lastDate
 }
 
 // ---- HabitRow (default export) ----
@@ -108,6 +122,9 @@ export default function HabitRow({ habit, onEdit, onDelete, onArchive }: {
         <span className="font-medium text-gray-900 dark:text-white flex-1">{habit.name}</span>
         <span className="text-sm text-gray-500 dark:text-gray-400">
           {streak > 0 ? `🔥 ${streak} day${streak !== 1 ? 's' : ''}` : '—'}
+        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
+          Last: {formatLastDone(logs)}
         </span>
         <button
           onClick={handleMarkDoneClick}
