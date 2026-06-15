@@ -37,6 +37,8 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
   const [recurring, setRecurring] = useState(initial?.recurring ?? false)
   const [recurringInterval, setRecurringInterval] = useState(initial?.recurringInterval ?? 'weekly')
   const [blockedById, setBlockedById] = useState<number | ''>(initial?.blockedById ?? '')
+  const [lifeAreaId, setLifeAreaId] = useState<number | ''>(initial?.lifeAreaId ?? '')
+  const [tagInput, setTagInput] = useState(initial?.tags?.join(', ') ?? '')
 
   const { data: wishlistItems = [] } = useSWR<WishlistOption[]>(
     sourceType === 'wishlist' ? '/api/wishlist' : null,
@@ -44,6 +46,10 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
   )
   const { data: lifeAreas = [] } = useSWR<LifeAreaWithGoals[]>(
     sourceType === 'goal' ? '/api/life-areas' : null,
+    fetcher
+  )
+  const { data: allLifeAreas = [] } = useSWR<{ id: number; name: string; color: string }[]>(
+    '/api/life-areas',
     fetcher
   )
   const { data: allTasks = [] } = useSWR<{ id: number; title: string; done: boolean }[]>('/api/tasks', fetcher)
@@ -77,6 +83,8 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
       recurring,
       recurringInterval: recurring ? recurringInterval : null,
       blockedById: blockedById !== '' ? Number(blockedById) : null,
+      lifeAreaId: lifeAreaId !== '' ? Number(lifeAreaId) : null,
+      tags: tagInput.split(',').map(t => t.trim()).filter(Boolean),
     }
     if (initial?.id) {
       await fetch(`/api/tasks/${initial.id}`, {
@@ -247,6 +255,31 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
           </div>
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Life area</label>
+        <select
+          className={inputCls}
+          value={lifeAreaId}
+          onChange={e => setLifeAreaId(e.target.value === '' ? '' : Number(e.target.value))}
+        >
+          <option value="">None</option>
+          {allLifeAreas.map(a => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+        <input
+          className={inputCls}
+          placeholder="work, personal, urgent…"
+          value={tagInput}
+          onChange={e => setTagInput(e.target.value)}
+        />
+        <p className="text-xs text-gray-400 mt-0.5">Comma-separated</p>
+      </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">

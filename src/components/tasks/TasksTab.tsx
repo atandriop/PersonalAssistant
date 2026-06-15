@@ -69,6 +69,8 @@ function TaskRow({
         recurring: task.recurring,
         recurringInterval: task.recurringInterval,
         blockedById: task.blockedById,
+        lifeAreaId: task.lifeAreaId,
+        tags: task.tags,
       }),
     })
     onMutate()
@@ -138,11 +140,33 @@ function TaskRow({
             }`}
           />
         )}
-        <span className={`flex-1 text-sm font-medium min-w-0 truncate ${
-          task.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
-        }`}>
-          {task.title}
-        </span>
+        <div className="flex-1 min-w-0">
+          <span className={`text-sm font-medium truncate block ${
+            task.done ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'
+          }`}>
+            {task.title}
+          </span>
+          {(task.lifeArea || (task.tags && task.tags.length > 0)) && (
+            <div className="flex flex-wrap items-center gap-1 mt-0.5">
+              {task.lifeArea && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full text-white font-medium"
+                  style={{ backgroundColor: task.lifeArea.color }}
+                >
+                  {task.lifeArea.name}
+                </span>
+              )}
+              {task.tags?.map(tag => (
+                <span
+                  key={tag}
+                  className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
         {task.subtasks.length > 0 && (
           <span className="text-xs text-gray-400 shrink-0">{doneCount}/{task.subtasks.length}</span>
         )}
