@@ -9,6 +9,8 @@ function serializeTask(t: {
   blockedById: number | null; tags: string; createdAt: Date
   lifeAreaId: number | null
   lifeArea: { id: number; name: string; color: string } | null
+  projectId: number | null
+  project: { id: number; name: string; color: string } | null
   subtasks: { id: number; taskId: number; title: string; done: boolean }[]
   sourceLink: { id: number; taskId: number; sourceType: string; sourceId: number } | null
   blockedBy: { title: string } | null
@@ -26,6 +28,7 @@ const INCLUDE = {
   sourceLink: true,
   blockedBy: { select: { title: true } },
   lifeArea: { select: { id: true, name: true, color: true } },
+  project: { select: { id: true, name: true, color: true } },
 } as const
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -42,7 +45,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const body = await req.json()
   const {
     title, priority, dueDate, category, notes, done, recurring,
-    recurringInterval, blockedById, lifeAreaId, tags,
+    recurringInterval, blockedById, lifeAreaId, projectId, tags,
   } = body
 
   const existing = await prisma.task.findUnique({ where: { id }, include: { subtasks: true } })
@@ -60,6 +63,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       recurringInterval: recurringInterval !== undefined ? recurringInterval : (existing?.recurringInterval ?? null),
       blockedById: blockedById !== undefined ? (blockedById ? Number(blockedById) : null) : existing?.blockedById,
       lifeAreaId: lifeAreaId !== undefined ? (lifeAreaId ? Number(lifeAreaId) : null) : existing?.lifeAreaId,
+      projectId: projectId !== undefined ? (projectId ? Number(projectId) : null) : existing?.projectId,
       tags: tags !== undefined ? serializeTags(Array.isArray(tags) ? tags : []) : existing?.tags ?? '',
     },
     include: INCLUDE,
@@ -77,6 +81,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         notes: task.notes,
         tags: task.tags,
         lifeAreaId: task.lifeAreaId,
+        projectId: task.projectId,
         recurring: true,
         recurringInterval: task.recurringInterval,
         subtasks: existing?.subtasks && existing.subtasks.length > 0

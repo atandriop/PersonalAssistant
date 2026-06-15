@@ -10,6 +10,8 @@ function serializeTask(t: {
   blockedById: number | null; tags: string; createdAt: Date
   lifeAreaId: number | null
   lifeArea: { id: number; name: string; color: string } | null
+  projectId: number | null
+  project: { id: number; name: string; color: string } | null
   subtasks: { id: number; taskId: number; title: string; done: boolean }[]
   sourceLink: { id: number; taskId: number; sourceType: string; sourceId: number } | null
   blockedBy: { title: string } | null
@@ -35,6 +37,7 @@ export async function GET(req: Request) {
       sourceLink: true,
       blockedBy: { select: { title: true } },
       lifeArea: { select: { id: true, name: true, color: true } },
+      project: { select: { id: true, name: true, color: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -44,7 +47,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const {
     title, priority, dueDate, category, notes, subtasks = [], sourceLink,
-    recurring, recurringInterval, blockedById, lifeAreaId, tags = [],
+    recurring, recurringInterval, blockedById, lifeAreaId, projectId, tags = [],
   } = await req.json()
 
   const task = await prisma.task.create({
@@ -58,6 +61,7 @@ export async function POST(req: Request) {
       recurringInterval: recurringInterval ?? null,
       blockedById: blockedById ? Number(blockedById) : null,
       lifeAreaId: lifeAreaId ? Number(lifeAreaId) : null,
+      projectId: projectId ? Number(projectId) : null,
       tags: serializeTags(Array.isArray(tags) ? tags : []),
       subtasks: subtasks.length > 0
         ? { create: subtasks.map((s: { title: string }) => ({ title: s.title })) }
@@ -71,6 +75,7 @@ export async function POST(req: Request) {
       sourceLink: true,
       blockedBy: { select: { title: true } },
       lifeArea: { select: { id: true, name: true, color: true } },
+      project: { select: { id: true, name: true, color: true } },
     },
   })
   return NextResponse.json(serializeTask(task), { status: 201 })
