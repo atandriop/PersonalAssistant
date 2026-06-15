@@ -23,7 +23,7 @@ const RELATIONSHIP_COLOR: Record<string, string> = {
 export default function PeoplePage() {
   const { data: people = [], mutate } = useSWR<Person[]>('/api/people', fetcher)
   const { data: companions = [] } = useSWR<{ id: number; name: string }[]>('/api/companions', fetcher)
-  const { data: giftPeople = [] } = useSWR<{ id: number; name: string }[]>('/api/gifts/people', fetcher)
+  const { data: giftPeople = [] } = useSWR<{ id: number; name: string; budget: number | null; notes: string | null }[]>('/api/gifts/people', fetcher)
   const companionNames = new Set(companions.map(c => c.name.toLowerCase()))
   const giftNames = new Set(giftPeople.map(g => g.name.toLowerCase()))
   const [showForm, setShowForm] = useState(false)
