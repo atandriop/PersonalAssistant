@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { parseTags, serializeTags } from '@/lib/taskTagUtils'
 
 export const dynamic = 'force-dynamic'
 
 function serializeTask(t: {
   id: number; title: string; priority: string; dueDate: string | null; category: string | null
   notes: string | null; done: boolean; recurring: boolean; recurringInterval: string | null
-  blockedById: number | null; createdAt: Date
+  blockedById: number | null; tags: string; createdAt: Date
+  lifeAreaId: number | null
+  lifeArea: { id: number; name: string; color: string } | null
   subtasks: { id: number; taskId: number; title: string; done: boolean }[]
   sourceLink: { id: number; taskId: number; sourceType: string; sourceId: number } | null
   blockedBy: { title: string } | null
@@ -15,6 +18,7 @@ function serializeTask(t: {
     ...t,
     createdAt: t.createdAt.toISOString(),
     blockedByTitle: t.blockedBy?.title ?? null,
+    tags: parseTags(t.tags),
   }
 }
 
@@ -30,6 +34,7 @@ export async function GET(req: Request) {
       subtasks: true,
       sourceLink: true,
       blockedBy: { select: { title: true } },
+      lifeArea: { select: { id: true, name: true, color: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -37,7 +42,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { title, priority, dueDate, category, notes, subtasks = [], sourceLink, recurring, recurringInterval, blockedById } = await req.json()
+  const {
+    title, priority, dueDate, category, notes, subtasks = [], sourceLink,
+    recurring, recurringInterval, blockedById, lifeAreaId, tags = [],
+  } = await req.json()
+
   const task = await prisma.task.create({
     data: {
       title,
@@ -48,6 +57,8 @@ export async function POST(req: Request) {
       recurring: recurring ?? false,
       recurringInterval: recurringInterval ?? null,
       blockedById: blockedById ? Number(blockedById) : null,
+      lifeAreaId: lifeAreaId ? Number(lifeAreaId) : null,
+      tags: serializeTags(Array.isArray(tags) ? tags : []),
       subtasks: subtasks.length > 0
         ? { create: subtasks.map((s: { title: string }) => ({ title: s.title })) }
         : undefined,
@@ -59,6 +70,7 @@ export async function POST(req: Request) {
       subtasks: true,
       sourceLink: true,
       blockedBy: { select: { title: true } },
+      lifeArea: { select: { id: true, name: true, color: true } },
     },
   })
   return NextResponse.json(serializeTask(task), { status: 201 })
