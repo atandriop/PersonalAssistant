@@ -154,7 +154,20 @@ model LifeArea {
   goals     Goal[]
   habits    Habit[]
   tasks     Task[]   @relation("TaskLifeArea")
+  projects  Project[] @relation("ProjectLifeArea")
   createdAt DateTime @default(now())
+}
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  color       String    @default("#6b7280")
+  lifeAreaId  Int?
+  lifeArea    LifeArea? @relation("ProjectLifeArea", fields: [lifeAreaId], references: [id], onDelete: SetNull)
+  done        Boolean   @default(false)
+  tasks       Task[]
+  createdAt   DateTime  @default(now())
 }
 
 model Goal {
@@ -274,6 +287,8 @@ model Task {
   blocking          Task[]           @relation("TaskBlocking")
   lifeAreaId        Int?
   lifeArea          LifeArea?        @relation("TaskLifeArea", fields: [lifeAreaId], references: [id], onDelete: SetNull)
+  projectId         Int?
+  project           Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
   tags              String           @default("")
   createdAt         DateTime         @default(now())
   subtasks          Subtask[]
