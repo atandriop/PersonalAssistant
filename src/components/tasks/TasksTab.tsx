@@ -360,13 +360,17 @@ export default function TasksTab() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [projectFilter, setProjectFilter] = useState<number | ''>('')
+  const [tagFilter, setTagFilter] = useState<string>('')
 
   const today = new Date().toISOString().slice(0, 10)
   const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
 
+  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags))).sort()
+
   const active = tasks
     .filter(t => !t.done)
     .filter(t => projectFilter === '' || t.projectId === Number(projectFilter))
+    .filter(t => tagFilter === '' || t.tags.includes(tagFilter))
   const overdue = active.filter(t => t.dueDate && t.dueDate.slice(0, 10) < today)
   const dueSoon = active.filter(
     t => t.dueDate && t.dueDate.slice(0, 10) >= today && t.dueDate.slice(0, 10) <= in7
@@ -469,6 +473,18 @@ export default function TasksTab() {
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
+              {allTags.length > 0 && (
+                <select
+                  className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  value={tagFilter}
+                  onChange={e => setTagFilter(e.target.value)}
+                >
+                  <option value="">All tags</option>
+                  {allTags.map(tag => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <button
               onClick={() => setShowAdd(true)}
