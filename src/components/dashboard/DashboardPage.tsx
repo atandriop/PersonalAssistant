@@ -12,16 +12,17 @@ import GiftPersonForm from '@/components/gifts/GiftPersonForm'
 import GiftIdeaForm from '@/components/gifts/GiftIdeaForm'
 import {
   Activity, Wrench, Target, Gift, Calendar, AlertCircle,
-  Clock, RefreshCw, Compass, Heart, Map, FileWarning, TrendingUp,
+  Clock, RefreshCw, Compass, Heart, Map, FileWarning, TrendingUp, Cake,
 } from 'lucide-react'
 import { holdingValue, snapshotNear, fmtEur, type NetWorthSnapshot, type PortfolioHolding } from '@/lib/netWorthUtils'
+import { upcomingBirthdays } from '@/lib/peopleUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const ALL_WIDGETS = [
   'habits', 'maintenance', 'goals', 'gifts',
   'appointments', 'overdue-tasks', 'on-this-day', 'subscriptions',
-  'travel', 'memories', 'bucket-list', 'expiring-docs', 'net-worth',
+  'travel', 'memories', 'bucket-list', 'expiring-docs', 'net-worth', 'birthdays',
 ] as const
 type WidgetId = typeof ALL_WIDGETS[number]
 
@@ -39,6 +40,7 @@ const WIDGET_LABELS: Record<WidgetId, string> = {
   'bucket-list': 'Bucket List',
   'expiring-docs': 'Expiring Documents',
   'net-worth': 'Net Worth',
+  'birthdays': 'Upcoming Birthdays',
 }
 
 const LS_KEY = 'dashboard-hidden-widgets'
@@ -200,6 +202,10 @@ export default function DashboardPage() {
   const { data: memories = [] } = useSWR<Memory[]>('/api/memories', fetcher)
   const { data: tasks = [] } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
+  const { data: people = [] } = useSWR<{ id: number; name: string; birthday: string | null; relationship: string | null }[]>(
+    '/api/people',
+    fetcher
+  )
 
   const isNWVisible = !hidden.has('net-worth')
   const { data: nwSnapshots = [] } = useSWR<NetWorthSnapshot[]>(
@@ -295,6 +301,9 @@ export default function DashboardPage() {
     .filter(t => t.startDate != null && t.startDate >= today)
     .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))
     .slice(0, 3)
+
+  // ── Birthdays ──
+  const birthdaySoon = upcomingBirthdays(people, 30)
 
   async function markApptDone(id: number) {
     await fetch(`/api/appointments/${id}`, {
@@ -802,6 +811,27 @@ export default function DashboardPage() {
                   )
                 })}
               </div>
+            )}
+          </WidgetCard>
+        )}
+
+        {/* Upcoming Birthdays */}
+        {show('birthdays') && (
+          <WidgetCard title="Upcoming Birthdays" icon={<Cake size={13} strokeWidth={2.5} color="#f97316" />} accentColor="#f97316">
+            {birthdaySoon.length === 0 ? (
+              <p className="text-sm text-gray-400">No birthdays in the next 30 days.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {birthdaySoon.map(p => (
+                  <li key={p.id} className="flex items-center gap-2 text-sm">
+                    <Cake size={14} className="text-orange-400 shrink-0" />
+                    <span className="flex-1 text-gray-900 dark:text-white">{p.name}</span>
+                    <span className="text-gray-400 text-xs">
+                      {p.daysUntil === 0 ? 'Today!' : `in ${p.daysUntil}d`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </WidgetCard>
         )}
