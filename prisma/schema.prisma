@@ -153,6 +153,7 @@ model LifeArea {
   color     String
   goals     Goal[]
   habits    Habit[]
+  tasks     Task[]   @relation("TaskLifeArea")
   createdAt DateTime @default(now())
 }
 
@@ -271,6 +272,9 @@ model Task {
   blockedById       Int?
   blockedBy         Task?            @relation("TaskBlocking", fields: [blockedById], references: [id])
   blocking          Task[]           @relation("TaskBlocking")
+  lifeAreaId        Int?
+  lifeArea          LifeArea?        @relation("TaskLifeArea", fields: [lifeAreaId], references: [id], onDelete: SetNull)
+  tags              String           @default("")
   createdAt         DateTime         @default(now())
   subtasks          Subtask[]
   sourceLink        TaskSourceLink?
