@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Sun, CalendarCheck, CalendarDays, CheckSquare, GitFork, FileText,
-  TrendingUp, ShoppingBag, Heart, Wrench, Compass, Search, Target, Settings,
+  TrendingUp, ShoppingBag, Heart, Wrench, Compass, Search, Target, Settings, FolderKanban,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
 
   { type: 'section', label: 'Productivity' },
   { type: 'link', href: '/tasks', label: 'Tasks & Gifts', icon: CheckSquare },
+  { type: 'link', href: '/projects', label: 'Projects', icon: FolderKanban },
   { type: 'link', href: '/decisions', label: 'Decisions', icon: GitFork },
   { type: 'link', href: '/documents', label: 'Documents', icon: FileText },
 

@@ -39,6 +39,7 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
   const [blockedById, setBlockedById] = useState<number | ''>(initial?.blockedById ?? '')
   const [lifeAreaId, setLifeAreaId] = useState<number | ''>(initial?.lifeAreaId ?? '')
   const [tagInput, setTagInput] = useState(initial?.tags?.join(', ') ?? '')
+  const [projectId, setProjectId] = useState<number | ''>(initial?.projectId ?? '')
 
   const { data: wishlistItems = [] } = useSWR<WishlistOption[]>(
     sourceType === 'wishlist' ? '/api/wishlist' : null,
@@ -53,6 +54,7 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
     fetcher
   )
   const { data: allTasks = [] } = useSWR<{ id: number; title: string; done: boolean }[]>('/api/tasks', fetcher)
+  const { data: projects = [] } = useSWR<{ id: number; name: string; color: string; done: boolean }[]>('/api/projects', fetcher)
   const blockableOptions = allTasks.filter(t => !t.done && t.id !== initial?.id)
 
   const goalOptions = lifeAreas.flatMap(a =>
@@ -85,6 +87,7 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
       blockedById: blockedById !== '' ? Number(blockedById) : null,
       lifeAreaId: lifeAreaId !== '' ? Number(lifeAreaId) : null,
       tags: tagInput.split(',').map(t => t.trim()).filter(Boolean),
+      projectId: projectId !== '' ? Number(projectId) : null,
     }
     if (initial?.id) {
       await fetch(`/api/tasks/${initial.id}`, {
@@ -255,6 +258,20 @@ export default function TaskForm({ initial, preTitle, preSourceLink, onSave, onC
           </div>
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+        <select
+          className={inputCls}
+          value={projectId}
+          onChange={e => setProjectId(e.target.value === '' ? '' : Number(e.target.value))}
+        >
+          <option value="">None</option>
+          {projects.filter(p => !p.done).map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Life area</label>

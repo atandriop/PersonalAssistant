@@ -71,6 +71,7 @@ function TaskRow({
         blockedById: task.blockedById,
         lifeAreaId: task.lifeAreaId,
         tags: task.tags,
+        projectId: task.projectId,
       }),
     })
     onMutate()
@@ -146,8 +147,16 @@ function TaskRow({
           }`}>
             {task.title}
           </span>
-          {(task.lifeArea || (task.tags && task.tags.length > 0)) && (
+          {(task.project || task.lifeArea || (task.tags && task.tags.length > 0)) && (
             <div className="flex flex-wrap items-center gap-1 mt-0.5">
+              {task.project && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border"
+                  style={{ borderColor: task.project.color, color: task.project.color }}
+                >
+                  {task.project.name}
+                </span>
+              )}
               {task.lifeArea && (
                 <span
                   className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full text-white font-medium"
@@ -345,15 +354,19 @@ function Section({
 
 export default function TasksTab() {
   const { data: tasks = [], mutate } = useSWR<Task[]>('/api/tasks', fetcher)
+  const { data: projects = [] } = useSWR<{ id: number; name: string; color: string; done: boolean }[]>('/api/projects', fetcher)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [projectFilter, setProjectFilter] = useState<number | ''>('')
 
   const today = new Date().toISOString().slice(0, 10)
   const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
 
-  const active = tasks.filter(t => !t.done)
+  const active = tasks
+    .filter(t => !t.done)
+    .filter(t => projectFilter === '' || t.projectId === Number(projectFilter))
   const overdue = active.filter(t => t.dueDate && t.dueDate.slice(0, 10) < today)
   const dueSoon = active.filter(
     t => t.dueDate && t.dueDate.slice(0, 10) >= today && t.dueDate.slice(0, 10) <= in7
@@ -439,12 +452,24 @@ export default function TasksTab() {
           </div>
         ) : (
           <>
-            <button
-              onClick={() => setSelectMode(true)}
-              className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              Select
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectMode(true)}
+                className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Select
+              </button>
+              <select
+                className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                value={projectFilter}
+                onChange={e => setProjectFilter(e.target.value === '' ? '' : Number(e.target.value))}
+              >
+                <option value="">All projects</option>
+                {projects.filter(p => !p.done).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={() => setShowAdd(true)}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
