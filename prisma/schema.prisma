@@ -447,3 +447,15 @@ model CollectibleItem {
   metadata       String?
   createdAt      DateTime @default(now())
 }
+
+model Person {
+  id              Int      @id @default(autoincrement())
+  name            String
+  birthday        String?
+  relationship    String?
+  email           String?
+  phone           String?
+  lastContactDate String?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
