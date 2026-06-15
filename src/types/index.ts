@@ -37,6 +37,9 @@ export interface Task {
   recurringInterval: string | null
   blockedById: number | null
   blockedByTitle: string | null
+  lifeAreaId: number | null
+  lifeArea: { id: number; name: string; color: string } | null
+  tags: string[]
   createdAt: string
   subtasks: Subtask[]
   sourceLink: TaskSourceLink | null
