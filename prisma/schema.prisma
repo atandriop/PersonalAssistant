@@ -256,6 +256,8 @@ model GiftPerson {
   name      String
   budget    Float?
   notes     String?
+  personId  Int?
+  person    Person?    @relation("GiftPersonLink", fields: [personId], references: [id], onDelete: SetNull)
   ideas     GiftIdea[]
   createdAt DateTime   @default(now())
 }
@@ -426,8 +428,10 @@ model TripCostLine {
 }
 
 model Companion {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  personId Int?
+  person   Person? @relation("CompanionLink", fields: [personId], references: [id], onDelete: SetNull)
 }
 
 model Company {
@@ -449,7 +453,7 @@ model CollectibleItem {
 }
 
 model Person {
-  id              Int      @id @default(autoincrement())
+  id              Int          @id @default(autoincrement())
   name            String
   birthday        String?
   relationship    String?
@@ -457,5 +461,7 @@ model Person {
   phone           String?
   lastContactDate String?
   notes           String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime     @default(now())
+  giftLinks       GiftPerson[] @relation("GiftPersonLink")
+  companionLinks  Companion[]  @relation("CompanionLink")
 }
