@@ -5,7 +5,8 @@ export interface Milestone { id: number; completedAt: string | null; targetDate?
 export interface Goal { id: number; title: string; milestones: Milestone[] }
 export interface LifeArea { id: number; name: string; goals: Goal[] }
 export interface GiftIdea { id: number; estimatedCost: number | null; purchased: boolean }
-export interface GiftPerson { id: number; name: string; budget: number | null; notes: string | null; ideas: GiftIdea[] }
+export interface GiftPerson { id: number; name: string; budget: number | null; notes: string | null; ideas: GiftIdea[]; personId: number | null }
+export interface Companion { id: number; name: string; personId: number | null }
 export interface Subscription {
   id: number; name: string; cost: number; period: string
   active: boolean; renewalDate?: string | null
