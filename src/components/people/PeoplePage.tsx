@@ -22,10 +22,12 @@ const RELATIONSHIP_COLOR: Record<string, string> = {
 
 export default function PeoplePage() {
   const { data: people = [], mutate } = useSWR<Person[]>('/api/people', fetcher)
-  const { data: companions = [] } = useSWR<{ id: number; name: string }[]>('/api/companions', fetcher)
-  const { data: giftPeople = [] } = useSWR<{ id: number; name: string; budget: number | null; notes: string | null }[]>('/api/gifts/people', fetcher)
-  const companionNames = new Set(companions.map(c => c.name.toLowerCase()))
-  const giftNames = new Set(giftPeople.map(g => g.name.toLowerCase()))
+  const { data: companions = [] } = useSWR<{ id: number; name: string; personId: number | null }[]>('/api/companions', fetcher)
+  const { data: giftPeople = [] } = useSWR<{ id: number; name: string; budget: number | null; notes: string | null; personId: number | null }[]>('/api/gifts/people', fetcher)
+  const companionPersonIds = new Set(companions.filter(c => c.personId).map(c => c.personId!))
+  const companionNames = new Set(companions.filter(c => !c.personId).map(c => c.name.toLowerCase()))
+  const giftPersonIds = new Set(giftPeople.filter(g => g.personId).map(g => g.personId!))
+  const giftNames = new Set(giftPeople.filter(g => !g.personId).map(g => g.name.toLowerCase()))
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Person | undefined>()
   const [search, setSearch] = useState('')
@@ -71,8 +73,8 @@ export default function PeoplePage() {
             : daysUntil === 0 ? 'Birthday today!'
             : daysUntil <= 30 ? `Birthday in ${daysUntil}d`
             : null
-          const isGiftPerson = giftNames.has(p.name.toLowerCase())
-          const isCompanion = companionNames.has(p.name.toLowerCase())
+          const isGiftPerson = giftPersonIds.has(p.id) || giftNames.has(p.name.toLowerCase())
+          const isCompanion = companionPersonIds.has(p.id) || companionNames.has(p.name.toLowerCase())
 
           return (
             <div key={p.id} className="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
