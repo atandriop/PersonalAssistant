@@ -57,6 +57,26 @@ export default function ItemsPage() {
   const [showUpdateValues, setShowUpdateValues] = useState(false)
   const [sortWish, setSortWish] = useState<'priority' | 'name' | 'cost'>('priority')
   const [sortInv, setSortInv] = useState<'name' | 'cost'>('name')
+  const [sortWishDir, setSortWishDir] = useState<'asc' | 'desc'>('asc')
+  const [sortInvDir, setSortInvDir] = useState<'asc' | 'desc'>('asc')
+
+  function handleSortWish(field: typeof sortWish) {
+    if (field === sortWish) {
+      setSortWishDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortWish(field)
+      setSortWishDir('asc')
+    }
+  }
+
+  function handleSortInv(field: typeof sortInv) {
+    if (field === sortInv) {
+      setSortInvDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortInv(field)
+      setSortInvDir('asc')
+    }
+  }
 
   function toggleCat(id: number) {
     setCollapsedCats(prev => {
@@ -286,9 +306,9 @@ export default function ItemsPage() {
           <span className="text-xs text-gray-400">{filteredWish.length} items</span>
           <div className="flex gap-1 ml-1">
             {(['priority', 'name', 'cost'] as const).map(s => (
-              <button key={s} onClick={() => setSortWish(s)}
+              <button key={s} onClick={() => handleSortWish(s)}
                 className={`text-xs px-1.5 py-0.5 rounded ${sortWish === s ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
+                {s.charAt(0).toUpperCase() + s.slice(1)}{sortWish === s ? (sortWishDir === 'asc' ? ' ↑' : ' ↓') : ''}
               </button>
             ))}
           </div>
@@ -298,9 +318,9 @@ export default function ItemsPage() {
           <span className="text-xs text-gray-400">{filteredInv.length} items</span>
           <div className="flex gap-1 ml-1">
             {(['name', 'cost'] as const).map(s => (
-              <button key={s} onClick={() => setSortInv(s)}
+              <button key={s} onClick={() => handleSortInv(s)}
                 className={`text-xs px-1.5 py-0.5 rounded ${sortInv === s ? 'bg-gray-200 dark:bg-gray-700 font-medium text-gray-800 dark:text-gray-100' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
+                {s.charAt(0).toUpperCase() + s.slice(1)}{sortInv === s ? (sortInvDir === 'asc' ? ' ↑' : ' ↓') : ''}
               </button>
             ))}
           </div>
@@ -315,13 +335,18 @@ export default function ItemsPage() {
       {visibleCategories.map(cat => {
         const catInv = filteredInv
           .filter(i => i.categoryId === cat.id)
-          .sort((a, b) => sortInv === 'cost' ? (a.cost ?? 0) - (b.cost ?? 0) : a.name.localeCompare(b.name))
+          .sort((a, b) => {
+            const cmp = sortInv === 'cost' ? (a.cost ?? 0) - (b.cost ?? 0) : a.name.localeCompare(b.name)
+            return sortInvDir === 'asc' ? cmp : -cmp
+          })
         const catWish = filteredWish
           .filter(i => i.categoryId === cat.id)
           .sort((a, b) => {
-            if (sortWish === 'name') return a.name.localeCompare(b.name)
-            if (sortWish === 'cost') return (a.cost ?? 0) - (b.cost ?? 0)
-            return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+            let cmp: number
+            if (sortWish === 'name') cmp = a.name.localeCompare(b.name)
+            else if (sortWish === 'cost') cmp = (a.cost ?? 0) - (b.cost ?? 0)
+            else cmp = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+            return sortWishDir === 'asc' ? cmp : -cmp
           })
         const isCatCollapsed = collapsedCats.has(cat.id)
 
