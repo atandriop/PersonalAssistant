@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import useSWR from 'swr'
 import { User } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
@@ -145,13 +146,13 @@ export default function GiftsPage() {
                 </div>
                 <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   {person.personId ? (
-                    <a
+                    <Link
                       href="/people"
                       title="View in People"
                       className="p-1 text-blue-500 hover:text-blue-600"
                     >
                       <User size={14} />
-                    </a>
+                    </Link>
                   ) : linkingId === person.id ? (
                     <select
                       autoFocus

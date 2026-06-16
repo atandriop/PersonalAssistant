@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import useSWR from 'swr'
 import { User } from 'lucide-react'
 import type { TravelCountry, TravelTrip, Companion } from '@/types'
@@ -54,7 +55,15 @@ export default function TravelPage() {
   const [bulkTrips, setBulkTrips] = useState(false)
 
   async function linkCompanion(companionName: string, personId: number | null) {
-    const companion = companions.find(c => c.name.toLowerCase() === companionName.toLowerCase())
+    let companion = companions.find(c => c.name.toLowerCase() === companionName.toLowerCase())
+    if (!companion) {
+      const res = await fetch('/api/companions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: companionName }),
+      })
+      companion = await res.json()
+    }
     if (!companion) return
     await fetch(`/api/companions/${companion.id}`, {
       method: 'PUT',
@@ -304,9 +313,9 @@ export default function TravelPage() {
               return companionList.map(([person, personTrips]) => {
                 const linkedPersonId = companionPersonIdMap.get(person.toLowerCase()) ?? null
                 const companionLinkSuffix = linkedPersonId ? (
-                  <a href="/people" title="View in People" className="ml-1 text-blue-500 hover:text-blue-600 inline-flex items-center">
+                  <Link href="/people" title="View in People" className="ml-1 text-blue-500 hover:text-blue-600 inline-flex items-center">
                     <User size={12} />
-                  </a>
+                  </Link>
                 ) : linkingCompanion === person ? (
                   <select
                     autoFocus
