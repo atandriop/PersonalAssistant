@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
+import { User } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import GiftPersonForm from './GiftPersonForm'
 import GiftIdeaForm from './GiftIdeaForm'
@@ -23,6 +24,7 @@ interface GiftPerson {
   name: string
   budget: number | null
   notes: string | null
+  personId: number | null
   ideas: GiftIdea[]
 }
 
@@ -84,13 +86,27 @@ function PersonDetail({ person, onMutate }: { person: GiftPerson; onMutate: () =
 // ─── Main page ────────────────────────────────────────────────────────────
 export default function GiftsPage() {
   const { data: people = [], mutate } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
+  const { data: allPeople = [] } = useSWR<{ id: number; name: string }[]>('/api/people', fetcher)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<GiftPerson | null>(null)
+  const [linkingId, setLinkingId] = useState<number | null>(null)
 
   async function deletePerson(id: number) {
     if (!confirm('Delete this person and all their gift ideas?')) return
     await fetch(`/api/gifts/people/${id}`, { method: 'DELETE' })
+    mutate()
+  }
+
+  async function linkPerson(giftPersonId: number, personId: number | null) {
+    const gp = people.find(p => p.id === giftPersonId)
+    if (!gp) return
+    await fetch(`/api/gifts/people/${giftPersonId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: gp.name, budget: gp.budget, notes: gp.notes, personId }),
+    })
+    setLinkingId(null)
     mutate()
   }
 
@@ -127,7 +143,37 @@ export default function GiftsPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                  {person.personId ? (
+                    <a
+                      href="/people"
+                      title="View in People"
+                      className="p-1 text-blue-500 hover:text-blue-600"
+                    >
+                      <User size={14} />
+                    </a>
+                  ) : linkingId === person.id ? (
+                    <select
+                      autoFocus
+                      className="text-xs border rounded-md dark:border-gray-600 dark:bg-gray-800 dark:text-white px-1 py-0.5"
+                      defaultValue=""
+                      onChange={e => linkPerson(person.id, e.target.value ? Number(e.target.value) : null)}
+                      onBlur={() => setLinkingId(null)}
+                    >
+                      <option value="">— pick person —</option>
+                      {allPeople.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button
+                      onClick={() => setLinkingId(person.id)}
+                      title="Link to People entry"
+                      className="p-1 text-gray-300 dark:text-gray-600 hover:text-blue-500"
+                    >
+                      <User size={14} />
+                    </button>
+                  )}
                   <button onClick={() => setEditing(person)} className="text-xs px-2 py-1 border rounded-md dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Edit</button>
                   <button onClick={() => deletePerson(person.id)} className="text-xs px-2 py-1 text-red-500 border border-red-200 rounded-md hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">Del</button>
                 </div>
