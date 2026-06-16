@@ -19,9 +19,9 @@ const RINGS = [
   { key: 'hold', label: 'Hold', color: '#6b7280', desc: 'Moving away from' },
 ] as const
 
-const CATEGORIES = ['language', 'framework', 'tool', 'platform'] as const
+const CATEGORIES = ['language', 'framework', 'tool', 'platform', 'project'] as const
 const CAT_COLOR: Record<string, string> = {
-  language: '#6366f1', framework: '#ec4899', tool: '#14b8a6', platform: '#f97316',
+  language: '#6366f1', framework: '#ec4899', tool: '#14b8a6', platform: '#f97316', project: '#8b5cf6',
 }
 
 function InlineAddForm({ ringKey, onSave, onCancel }: {
