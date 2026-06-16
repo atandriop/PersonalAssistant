@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react'
 import useSWR from 'swr'
-import type { TravelCountry, TravelTrip } from '@/types'
+import { User } from 'lucide-react'
+import type { TravelCountry, TravelTrip, Companion } from '@/types'
 import CountryCard from './CountryCard'
 import CountryForm from './CountryForm'
 import TripCard from './TripCard'
@@ -12,11 +13,12 @@ import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/Bu
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-function CollapsibleSection({ label, count, labelColor, defaultOpen, children }: {
+function CollapsibleSection({ label, count, labelColor, defaultOpen, labelSuffix, children }: {
   label: string
   count: number
-  labelColor: string
-  defaultOpen: boolean
+  labelColor?: string
+  defaultOpen?: boolean
+  labelSuffix?: ReactNode
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -29,6 +31,7 @@ function CollapsibleSection({ label, count, labelColor, defaultOpen, children }:
         <span className={`text-sm font-semibold uppercase tracking-wide ${labelColor}`}>{label}</span>
         <span className="text-gray-400 text-sm font-normal normal-case tracking-normal">({count})</span>
         <span className="text-gray-400 text-xs ml-1">{open ? '▾' : '▸'}</span>
+        {labelSuffix && <span onClick={e => e.stopPropagation()}>{labelSuffix}</span>}
       </button>
       {open && children}
     </div>
@@ -38,6 +41,9 @@ function CollapsibleSection({ label, count, labelColor, defaultOpen, children }:
 export default function TravelPage() {
   const { data: countries = [], mutate: mutateCountries } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
   const { data: trips = [], mutate: mutateTrips } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
+  const { data: companions = [], mutate: mutateCompanions } = useSWR<Companion[]>('/api/companions', fetcher)
+  const { data: allPeople = [] } = useSWR<{ id: number; name: string }[]>('/api/people', fetcher)
+  const [linkingCompanion, setLinkingCompanion] = useState<string | null>(null)
 
   const [countriesFilter, setCountriesFilter] = useState('All')
   const [countryFilter, setCountryFilter] = useState('All')
@@ -46,6 +52,18 @@ export default function TravelPage() {
   const [editCountry, setEditCountry] = useState<TravelCountry | null>(null)
   const [editTrip, setEditTrip] = useState<TravelTrip | null>(null)
   const [bulkTrips, setBulkTrips] = useState(false)
+
+  async function linkCompanion(companionName: string, personId: number | null) {
+    const companion = companions.find(c => c.name.toLowerCase() === companionName.toLowerCase())
+    if (!companion) return
+    await fetch(`/api/companions/${companion.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personId }),
+    })
+    setLinkingCompanion(null)
+    mutateCompanions()
+  }
 
   const TRIP_COLUMNS: ColumnDef[] = [
     { key: 'countryName', label: 'Country', type: 'text', required: true },
@@ -281,21 +299,54 @@ export default function TravelPage() {
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">By Person</h2>
           <div className="flex flex-col gap-4">
-            {companionList.map(([person, personTrips]) => (
-              <CollapsibleSection
-                key={person}
-                label={person}
-                count={personTrips.length}
-                labelColor="text-purple-600 dark:text-purple-400"
-                defaultOpen={false}
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[...personTrips]
-                    .sort((a: TravelTrip, b: TravelTrip) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
-                    .map((t: TravelTrip) => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
-                </div>
-              </CollapsibleSection>
-            ))}
+            {(() => {
+              const companionPersonIdMap = new Map(companions.map(c => [c.name.toLowerCase(), c.personId]))
+              return companionList.map(([person, personTrips]) => {
+                const linkedPersonId = companionPersonIdMap.get(person.toLowerCase()) ?? null
+                const companionLinkSuffix = linkedPersonId ? (
+                  <a href="/people" title="View in People" className="ml-1 text-blue-500 hover:text-blue-600 inline-flex items-center">
+                    <User size={12} />
+                  </a>
+                ) : linkingCompanion === person ? (
+                  <select
+                    autoFocus
+                    className="ml-1 text-xs border rounded dark:border-gray-600 dark:bg-gray-800 dark:text-white px-1 py-0"
+                    defaultValue=""
+                    onChange={e => linkCompanion(person, e.target.value ? Number(e.target.value) : null)}
+                    onBlur={() => setLinkingCompanion(null)}
+                  >
+                    <option value="">— pick person —</option>
+                    {allPeople.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => setLinkingCompanion(person)}
+                    title="Link to People entry"
+                    className="ml-1 text-gray-300 dark:text-gray-600 hover:text-blue-500 inline-flex items-center"
+                  >
+                    <User size={12} />
+                  </button>
+                )
+                return (
+                  <CollapsibleSection
+                    key={person}
+                    label={person}
+                    count={personTrips.length}
+                    labelColor="text-purple-600 dark:text-purple-400"
+                    defaultOpen={false}
+                    labelSuffix={companionLinkSuffix}
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {[...personTrips]
+                        .sort((a: TravelTrip, b: TravelTrip) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
+                        .map((t: TravelTrip) => <TripCard key={t.id} trip={t} onClick={() => setEditTrip(t)} />)}
+                    </div>
+                  </CollapsibleSection>
+                )
+              })
+            })()}
           </div>
         </div>
       )}
