@@ -7,6 +7,7 @@ interface GiftPersonFormInput {
   name: string
   budget: number | null
   notes: string | null
+  personId?: number | null
 }
 
 export default function GiftPersonForm({ initial, onSave, onCancel }: {
@@ -20,7 +21,7 @@ export default function GiftPersonForm({ initial, onSave, onCancel }: {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    const body = { name, budget: budget ? Number(budget) : null, notes: notes || null }
+    const body = { name, budget: budget ? Number(budget) : null, notes: notes || null, personId: initial?.personId ?? null }
     if (initial?.id) {
       await fetch(`/api/gifts/people/${initial.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     } else {
