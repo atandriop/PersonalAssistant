@@ -12,9 +12,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, budget, notes } = await req.json()
+  const { name, budget, notes, personId } = await req.json()
   const person = await prisma.giftPerson.create({
-    data: { name, budget: budget != null ? Number(budget) : null, notes: notes ?? null },
+    data: { name, budget: budget != null ? Number(budget) : null, notes: notes ?? null, personId: personId != null ? Number(personId) : null },
   })
   return NextResponse.json(person, { status: 201 })
 }
