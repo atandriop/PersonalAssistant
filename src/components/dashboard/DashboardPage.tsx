@@ -3,6 +3,7 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
 import useSWR from 'swr'
+import { todayLocal, addDays } from '@/lib/dateUtils'
 import { HomeItem, getTaskStatus, TaskStatus } from '@/lib/maintenance'
 import type { LifeArea, GiftPerson, Appointment, Document, BucketTrip, BucketExperience, TravelCountry, TravelTrip, Memory, Task, Subscription } from '@/types'
 import Modal from '@/components/ui/Modal'
@@ -217,7 +218,7 @@ export default function DashboardPage() {
   const { data: nwWishlist = [] } = useSWR<{ cost: number; purchased: boolean }[]>(
     isNWVisible ? '/api/wishlist' : null, fetcher)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
 
   // ── Habits ──
   const doneCount = habits.filter(h => h.doneToday).length
@@ -233,7 +234,7 @@ export default function DashboardPage() {
     .slice(0, 5)
 
   // ── Documents widget ──
-  const in90Days = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
+  const in90Days = addDays(today, 90)
   const expiringDocs = allDocs
     .filter(d => d.expiryDate != null && d.expiryDate <= in90Days)
     .sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''))
@@ -281,7 +282,7 @@ export default function DashboardPage() {
     .slice(0, 5)
 
   // ── Subscriptions renewing soon ──
-  const today30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const today30 = addDays(today, 30)
   const renewingSoon = subscriptions
     .filter(s => s.active && s.renewalDate != null)
     .filter(s => {

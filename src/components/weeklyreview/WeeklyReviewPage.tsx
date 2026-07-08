@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import PromptModal from '@/components/ui/PromptModal'
 import { HomeItem, getTaskStatus } from '@/lib/maintenance'
 import type { Habit, LifeArea, Subscription } from '@/types'
+import { toLocalYMD, todayLocal, addDays } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -46,7 +47,7 @@ function getWeekDates(): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
-    return d.toISOString().slice(0, 10)
+    return toLocalYMD(d)
   })
 }
 
@@ -120,8 +121,8 @@ export default function WeeklyReviewPage() {
       }))
   )
 
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const today30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const todayStr = todayLocal()
+  const today30 = addDays(todayStr, 30)
   const renewingSoon = subscriptions
     .filter(s => s.active && s.renewalDate != null && s.renewalDate.slice(0, 10) >= todayStr && s.renewalDate.slice(0, 10) <= today30)
     .sort((a, b) => (a.renewalDate ?? '').localeCompare(b.renewalDate ?? ''))

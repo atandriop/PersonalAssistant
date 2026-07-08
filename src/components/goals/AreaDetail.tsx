@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import TaskForm from '@/components/tasks/TaskForm'
+import { todayLocal } from '@/lib/dateUtils'
 
 // ---- Types (exported for consumers) ----
 
@@ -214,7 +215,7 @@ function GoalRow({ goal, allHabits, habitLogs, onMutate }: {
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Milestones</p>
             <div className="flex flex-col gap-1.5">
               {goal.milestones.map(m => {
-                const today = new Date().toISOString().slice(0, 10)
+                const today = todayLocal()
                 const overdue = !m.completedAt && m.targetDate && m.targetDate < today
                 const daysLeft = m.targetDate && !m.completedAt
                   ? Math.round((new Date(m.targetDate + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000)

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { todayLocal, toLocalYMD } from '@/lib/dateUtils'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ function esc(s: string | null | undefined): string {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const format = searchParams.get('format') ?? 'json'
-  const date = new Date().toISOString().slice(0, 10)
+  const date = todayLocal()
 
   if (format === 'csv') {
     const tasks = await prisma.task.findMany({
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
         t.recurring ? 'Yes' : 'No',
         t.recurringInterval ?? '',
         esc(t.subtasks.map(s => s.title).join('; ')),
-        t.createdAt.toISOString().slice(0, 10),
+        toLocalYMD(t.createdAt),
       ].join(',')
     )
     const csv = [header, ...rows].join('\n')

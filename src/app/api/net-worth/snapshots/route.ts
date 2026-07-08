@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { todayLocal } from '@/lib/dateUtils'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
 
   const [holdings, entries] = await Promise.all([
     prisma.portfolioHolding.findMany(),

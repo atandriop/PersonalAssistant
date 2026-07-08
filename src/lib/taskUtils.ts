@@ -1,3 +1,5 @@
+import { toLocalYMD } from '@/lib/dateUtils'
+
 export function addInterval(dateStr: string, interval: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   switch (interval) {
@@ -11,5 +13,5 @@ export function addInterval(dateStr: string, interval: string): string {
     }
     case 'yearly': d.setFullYear(d.getFullYear() + 1); break
   }
-  return d.toISOString().slice(0, 10)
+  return toLocalYMD(d)
 }

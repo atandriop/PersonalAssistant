@@ -6,6 +6,7 @@ import type { Subscription } from '@/types'
 import { LayoutDashboard, PieChart, RefreshCw, Receipt, TrendingUp, Activity } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import PromptModal from '@/components/ui/PromptModal'
+import { toLocalYMD, todayLocal, addDays } from '@/lib/dateUtils'
 import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 import CostsTab from '@/components/finance/CostsTab'
@@ -108,9 +109,8 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
     : null
 
   // Monthly burn rate (12-month trailing average)
-  const oneYearAgo = new Date(nowDate.getFullYear() - 1, nowDate.getMonth(), nowDate.getDate())
-    .toISOString().slice(0, 10)
-  const todayStr = nowDate.toISOString().slice(0, 10)
+  const oneYearAgo = toLocalYMD(new Date(nowDate.getFullYear() - 1, nowDate.getMonth(), nowDate.getDate()))
+  const todayStr = toLocalYMD(nowDate)
 
   const apptMonthly = appointments
     .filter(a => a.date >= oneYearAgo && a.date <= todayStr && a.cost != null)
@@ -166,8 +166,8 @@ ${wishlistLines || '  Empty'}
 Please analyse this. Comment on portfolio allocation and whether it looks balanced or concentrated. Flag any subscriptions that seem high relative to their likely value. Compare the wishlist total against liquid assets and suggest a prioritisation approach.`
   }
 
-  const today = new Date().toISOString().slice(0, 10)
-  const in14 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const today = todayLocal()
+  const in14 = addDays(today, 14)
 
   const hasData = holdings.length > 0 || entries.length > 0 || subscriptions.length > 0
 

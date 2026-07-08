@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { addInterval } from '@/lib/taskUtils'
+import { todayLocal } from '@/lib/dateUtils'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       tasks.map(async task => {
         await prisma.task.update({ where: { id: task.id }, data: { done: true } })
         if (task.recurring && task.recurringInterval) {
-          const baseDue = task.dueDate ?? new Date().toISOString().slice(0, 10)
+          const baseDue = task.dueDate ?? todayLocal()
           const nextDue = addInterval(baseDue, task.recurringInterval)
           await prisma.task.create({
             data: {

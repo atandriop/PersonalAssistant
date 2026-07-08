@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PortfolioPage from '@/components/portfolio/PortfolioPage'
 import { holdingValue, PortfolioHolding, NetWorthSnapshot } from '@/lib/netWorthUtils'
+import { todayLocal } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -158,7 +159,7 @@ export default function NetWorthPage() {
   const [showPortfolio, setShowPortfolio] = useState(false)
 
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayLocal()
     if (sessionStorage.getItem('lastNetWorthSnapshot') === today) return
     fetch('/api/net-worth/snapshots', { method: 'POST' }).then(r => {
       if (!r.ok) return

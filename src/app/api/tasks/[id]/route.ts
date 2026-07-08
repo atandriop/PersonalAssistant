@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { addInterval } from '@/lib/taskUtils'
 import { parseTags, serializeTags } from '@/lib/taskTagUtils'
+import { todayLocal } from '@/lib/dateUtils'
 
 function serializeTask(t: {
   id: number; title: string; priority: string; dueDate: string | null; category: string | null
@@ -70,7 +71,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   })
 
   if (done === true && task.recurring && task.recurringInterval) {
-    const baseDue = task.dueDate ?? new Date().toISOString().slice(0, 10)
+    const baseDue = task.dueDate ?? todayLocal()
     const nextDue = addInterval(baseDue, task.recurringInterval)
     await prisma.task.create({
       data: {

@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import TaskForm from './TaskForm'
 import type { Task, Subtask } from '@/types'
+import { todayLocal, addDays } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -267,12 +268,10 @@ function TaskRow({
             </button>
             <button
               onClick={async () => {
-                const base = task.dueDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
-                const next = new Date(base + 'T00:00:00')
-                next.setDate(next.getDate() + 1)
+                const base = task.dueDate?.slice(0, 10) ?? todayLocal()
                 await fetch(`/api/tasks/${task.id}`, {
                   method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ...task, dueDate: next.toISOString().slice(0, 10) }),
+                  body: JSON.stringify({ ...task, dueDate: addDays(base, 1) }),
                 })
                 onMutate()
               }}
@@ -282,12 +281,10 @@ function TaskRow({
             </button>
             <button
               onClick={async () => {
-                const base = task.dueDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
-                const next = new Date(base + 'T00:00:00')
-                next.setDate(next.getDate() + 7)
+                const base = task.dueDate?.slice(0, 10) ?? todayLocal()
                 await fetch(`/api/tasks/${task.id}`, {
                   method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ...task, dueDate: next.toISOString().slice(0, 10) }),
+                  body: JSON.stringify({ ...task, dueDate: addDays(base, 7) }),
                 })
                 onMutate()
               }}
@@ -362,8 +359,8 @@ export default function TasksTab() {
   const [projectFilter, setProjectFilter] = useState<number | ''>('')
   const [tagFilter, setTagFilter] = useState<string>('')
 
-  const today = new Date().toISOString().slice(0, 10)
-  const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+  const today = todayLocal()
+  const in7 = addDays(today, 7)
 
   const allTags = Array.from(new Set(tasks.flatMap(t => t.tags))).sort()
 

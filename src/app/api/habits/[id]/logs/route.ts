@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { todayLocal, addDays } from '@/lib/dateUtils'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const { searchParams } = new URL(req.url)
   const sinceParam = searchParams.get('since')
 
-  const defaultSince = new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const defaultSince = addDays(todayLocal(), -84)
   const sinceStr = sinceParam ?? defaultSince
 
   const logs = await prisma.habitLog.findMany({
@@ -21,7 +22,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const habitId = Number(params.id)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   const body = await req.json().catch(() => ({}))
   const note: string | null = body.note?.trim() || null
   const date: string = body.date && body.date <= today ? body.date : today

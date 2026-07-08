@@ -7,6 +7,7 @@ import AppointmentsTab from './AppointmentsTab'
 import GiftsPage from '@/components/gifts/GiftsPage'
 import PromptModal from '@/components/ui/PromptModal'
 import type { Task, Appointment } from '@/types'
+import { todayLocal } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -29,7 +30,7 @@ export default function TasksPage() {
   }
 
   function buildTasksPrompt(): string {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayLocal()
     const open = tasks.filter(t => !t.done)
     const byPriority: Record<string, Task[]> = { High: [], Medium: [], Low: [] }
     open.forEach(t => { (byPriority[t.priority] ?? byPriority.Medium).push(t) })

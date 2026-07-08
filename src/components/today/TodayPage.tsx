@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react'
 import useSWR from 'swr'
 import type { Task, Appointment } from '@/types'
+import { todayLocal } from '@/lib/dateUtils'
 import { Activity, AlertCircle, Calendar, RefreshCw, Gift, CheckSquare } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -41,7 +42,7 @@ function ColoredSectionHeader({ icon, color, title, count }: {
 }
 
 export default function TodayPage() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })

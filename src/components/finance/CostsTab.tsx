@@ -2,6 +2,7 @@
 
 import useSWR from 'swr'
 import { SUBSCRIPTION_CATEGORIES } from '@/components/subscriptions/SubscriptionsPage'
+import { toLocalYMD } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -39,7 +40,7 @@ export default function CostsTab() {
   const daysInYear = Math.ceil((endOfYear.getTime() - startOfYear.getTime()) / 86400000)
   const daysRemaining = daysInYear - daysElapsed
 
-  const today = now.toISOString().slice(0, 10)
+  const today = toLocalYMD(now)
 
   // Trips
   const pastTrips = trips.filter(t => {

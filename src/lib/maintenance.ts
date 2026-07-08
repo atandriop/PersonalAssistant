@@ -1,3 +1,5 @@
+import { todayLocal, addDays } from '@/lib/dateUtils'
+
 export type TaskStatus = 'overdue' | 'due-soon' | 'ok' | 'none'
 
 export interface MaintenanceTask {
@@ -24,8 +26,8 @@ export function addMonths(dateStr: string, months: number): string {
 }
 
 export function getTaskStatus(task: MaintenanceTask): { status: TaskStatus; nextDue: string | null } {
-  const today = new Date().toISOString().slice(0, 10)
-  const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const today = todayLocal()
+  const in30 = addDays(today, 30)
   let nextDue: string | null = null
   if (task.intervalMonths != null) {
     const base = task.lastDoneDate ?? task.createdAt.slice(0, 10)

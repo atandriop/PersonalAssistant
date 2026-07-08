@@ -11,6 +11,7 @@ import TripCard from './TripCard'
 import TripForm from './TripForm'
 import WorldMap from './WorldMap'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
+import { todayLocal, tripEndDate, daysInclusive } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -91,10 +92,8 @@ export default function TravelPage() {
           ? row.cities.split(',').map((c: string) => c.trim()).filter(Boolean)
           : []
         let endDate: string | null = null
-        if (row.startDate && row.duration) {
-          const d = new Date(row.startDate + 'T00:00:00')
-          d.setDate(d.getDate() + Number(row.duration) - 1)
-          endDate = d.toISOString().slice(0, 10)
+        if (row.startDate && Number(row.duration) >= 1) {
+          endDate = tripEndDate(String(row.startDate), Number(row.duration))
         }
         const body = { ...row, cities, endDate }
         return typeof row.id === 'number'
@@ -114,7 +113,7 @@ export default function TravelPage() {
     return true
   })
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
 
   // Build companion → trips map
   const byCompanion = new Map<string, typeof trips>()
@@ -209,9 +208,7 @@ export default function TravelPage() {
               countryName: t.countryName,
               cities: t.cities.join(', '),
               startDate: t.startDate ?? '',
-              duration: (t.startDate && t.endDate)
-                ? Math.round((new Date(t.endDate + 'T00:00:00').getTime() - new Date(t.startDate + 'T00:00:00').getTime()) / 86400000) + 1
-                : '',
+              duration: (t.startDate && t.endDate) ? daysInclusive(t.startDate, t.endDate) : '',
               actualCost: t.actualCost,
               rating: t.rating,
               notes: t.notes ?? '',

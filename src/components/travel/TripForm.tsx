@@ -7,6 +7,7 @@ import Combobox from '@/components/ui/Combobox'
 import { useCountries, useCities } from '@/lib/useGeoData'
 import { useCompanions, useCompanies } from '@/lib/usePeopleCompanies'
 import CostBreakdown, { type CostLinePayload } from './CostBreakdown'
+import { tripEndDate, daysInclusive } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -27,15 +28,9 @@ export default function TripForm({ initial, onSave, onCancel }: {
   const [companionInput, setCompanionInput] = useState('')
   const [company, setCompany] = useState(initial?.company ?? '')
   const [startDate, setStartDate] = useState(initial?.startDate ?? '')
-  const [duration, setDuration] = useState<string>(() => {
-    if (initial?.startDate && initial?.endDate) {
-      const start = new Date(initial.startDate + 'T00:00:00')
-      const end   = new Date(initial.endDate   + 'T00:00:00')
-      const days  = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-      return String(days)
-    }
-    return ''
-  })
+  const [duration, setDuration] = useState<string>(() =>
+    (initial?.startDate && initial?.endDate) ? String(daysInclusive(initial.startDate, initial.endDate)) : ''
+  )
   const [costLines, setCostLines] = useState<CostLinePayload[]>([])
   const [rating, setRating] = useState<number | null>(initial?.rating ?? null)
   const [notes, setNotes] = useState(initial?.notes ?? '')
@@ -69,10 +64,8 @@ export default function TripForm({ initial, onSave, onCancel }: {
     // Resolve country: use existing DB entry by name if found, else create via countryName
     const existing = dbCountries.find(c => c.name.toLowerCase() === countryName.trim().toLowerCase())
     let endDate: string | null = null
-    if (startDate && duration) {
-      const d = new Date(startDate + 'T00:00:00')
-      d.setDate(d.getDate() + Number(duration) - 1)
-      endDate = d.toISOString().slice(0, 10)
+    if (startDate && Number(duration) >= 1) {
+      endDate = tripEndDate(startDate, Number(duration))
     }
 
     const body = {
@@ -185,11 +178,8 @@ export default function TripForm({ initial, onSave, onCancel }: {
           </div>
           {startDate && duration && (
             <p className="text-xs text-gray-400 -mt-2">
-              End date: {(() => {
-                const d = new Date(startDate + 'T00:00:00')
-                d.setDate(d.getDate() + Number(duration) - 1)
-                return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              })()}
+              End date: {new Date(tripEndDate(startDate, Number(duration)) + 'T00:00:00')
+                .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </p>
           )}
 

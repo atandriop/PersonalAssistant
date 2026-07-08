@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import { exportPdf } from '@/lib/exportPdf'
+import { todayLocal } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -89,11 +90,11 @@ export default function SystemPage() {
   }
 
   function exportJson() {
-    downloadUrl('/api/export?format=json', `homebase-export-${new Date().toISOString().slice(0, 10)}.json`)
+    downloadUrl('/api/export?format=json', `homebase-export-${todayLocal()}.json`)
   }
 
   function exportCsv() {
-    downloadUrl('/api/export?format=csv', `homebase-tasks-${new Date().toISOString().slice(0, 10)}.csv`)
+    downloadUrl('/api/export?format=csv', `homebase-tasks-${todayLocal()}.csv`)
   }
 
   async function handleExportPdf() {

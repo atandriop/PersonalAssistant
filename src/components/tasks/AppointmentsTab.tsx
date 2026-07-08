@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import AppointmentForm from './AppointmentForm'
 import type { Appointment } from '@/types'
+import { toLocalYMD, todayLocal, addDays } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -38,7 +39,7 @@ function advanceDate(dateStr: string, interval: string): string {
     if (d.getMonth() !== targetMonth) d.setDate(0)
   }
   else if (interval === 'yearly') d.setFullYear(d.getFullYear() + 1)
-  return d.toISOString().slice(0, 10)
+  return toLocalYMD(d)
 }
 
 function ApptRow({
@@ -210,8 +211,8 @@ export default function AppointmentsTab() {
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<Appointment | null>(null)
 
-  const today = new Date().toISOString().slice(0, 10)
-  const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+  const today = todayLocal()
+  const in7 = addDays(today, 7)
 
   const active = appointments.filter(a => !a.done)
   const overdue = active.filter(a => a.date < today)

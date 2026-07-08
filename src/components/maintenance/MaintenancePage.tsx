@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
 import { TaskStatus, getTaskStatus } from '@/lib/maintenance'
+import { todayLocal } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -142,7 +143,7 @@ function TaskForm({ itemId, initial, onSave, onCancel }: { itemId: number; initi
 
 // ─── Log form ─────────────────────────────────────────────────────────────
 function LogForm({ itemId, prefillDescription, onSave, onCancel }: { itemId: number; prefillDescription?: string; onSave: () => void; onCancel: () => void }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   const [description, setDescription] = useState(prefillDescription ?? '')
   const [date, setDate] = useState(today)
   const [cost, setCost] = useState('')
@@ -174,7 +175,7 @@ function LogForm({ itemId, prefillDescription, onSave, onCancel }: { itemId: num
 
 // ─── Mark done form ───────────────────────────────────────────────────────
 function MarkDoneForm({ task, onSave, onCancel }: { task: MaintenanceTask; onSave: (date: string) => void; onCancel: () => void }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayLocal())
 
   return (
     <div className="flex flex-col gap-3">

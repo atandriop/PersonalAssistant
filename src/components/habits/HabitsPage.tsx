@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
 import HabitRow, { Habit } from './HabitRow'
 import HabitForm from './HabitForm'
+import { todayLocal, addDays } from '@/lib/dateUtils'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -40,20 +41,18 @@ export default function HabitsPage() {
 
   async function openPrompt() {
     setLoadingPrompt(true)
-    const now = new Date()
-    now.setHours(0, 0, 0, 0)
-    const cutoffStr = new Date(now.getTime() - 83 * 86400000).toISOString().slice(0, 10)
-    const todayStr = now.toISOString().slice(0, 10)
+    const todayStr = todayLocal()
+    const cutoffStr = addDays(todayStr, -83)
 
     const lines = await Promise.all(
       habits.map(async h => {
         const logs: HabitLog[] = await fetch(`/api/habits/${h.id}/logs`).then(r => r.json())
         const logSet = new Set(logs.map(l => l.date))
         let streak = 0
-        let cursor = new Date(logSet.has(todayStr) ? now : new Date(now.getTime() - 86400000))
-        while (logSet.has(cursor.toISOString().slice(0, 10))) {
+        let cursor = logSet.has(todayStr) ? todayStr : addDays(todayStr, -1)
+        while (logSet.has(cursor)) {
           streak++
-          cursor = new Date(cursor.getTime() - 86400000)
+          cursor = addDays(cursor, -1)
         }
         const recent = logs.filter(l => l.date >= cutoffStr)
         const pct = Math.round((recent.length / 84) * 100)
@@ -61,7 +60,7 @@ export default function HabitsPage() {
       })
     )
 
-    const prompt = `Here is my habit tracking snapshot as of ${now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:\n\n${lines.join('\n')}\n\nPlease analyse this. For each habit: call out whether the consistency is strong, inconsistent, or struggling. Identify which habit has the best momentum and which is at most risk of being abandoned. Suggest one concrete change I could make this week to improve the weakest habit without disrupting the strongest.`
+    const prompt = `Here is my habit tracking snapshot as of ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:\n\n${lines.join('\n')}\n\nPlease analyse this. For each habit: call out whether the consistency is strong, inconsistent, or struggling. Identify which habit has the best momentum and which is at most risk of being abandoned. Suggest one concrete change I could make this week to improve the weakest habit without disrupting the strongest.`
 
     setPromptText(prompt)
     setLoadingPrompt(false)

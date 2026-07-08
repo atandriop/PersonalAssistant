@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { todayLocal } from '@/lib/dateUtils'
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const { name, ring, category, notes } = await req.json()
@@ -17,7 +18,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       notes: notes ?? null,
       ...(ringChanged ? {
         previousRing: existing.ring,
-        ringChangedAt: new Date().toISOString().slice(0, 10),
+        ringChangedAt: todayLocal(),
       } : {}),
     },
   })
