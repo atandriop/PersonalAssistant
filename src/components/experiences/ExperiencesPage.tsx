@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import TravelPage from '@/components/travel/TravelPage'
 import BucketListPage from '@/components/bucket-list/BucketListPage'
 import MemoriesPage from '@/components/memories/MemoriesPage'
@@ -38,7 +38,13 @@ export default function ExperiencesPage({ defaultTab = 'travel' }: { defaultTab?
 
       {tab === 'travel' && <TravelPage />}
       {tab === 'bucket-list' && <BucketListPage />}
-      {tab === 'memories' && <MemoriesPage />}
+      {/* MemoriesPage reads useSearchParams (?tripId=), which needs a Suspense
+          boundary or the production build fails to prerender this route. */}
+      {tab === 'memories' && (
+        <Suspense fallback={<p className="text-sm text-gray-400">Loading memories…</p>}>
+          <MemoriesPage />
+        </Suspense>
+      )}
       {tab === 'timeline' && <TimelinePage />}
     </div>
   )

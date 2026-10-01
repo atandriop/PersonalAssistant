@@ -3,6 +3,8 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { log } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
+
 const LOG_FILE = join(process.cwd(), 'logs', 'app.log')
 
 export async function GET() {

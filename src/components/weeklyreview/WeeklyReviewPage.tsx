@@ -178,7 +178,7 @@ export default function WeeklyReviewPage() {
 
     const renewLines = renewingSoon.length
       ? renewingSoon.map(s =>
-          `- ${s.name}: €${s.cost.toFixed(2)}/${s.period} on ${new Date(s.renewalDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+          `- ${s.name}: €${s.cost.toFixed(2)}/${s.period} on ${new Date(s.renewalDate! + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
         ).join('\n')
       : '(none)'
 
@@ -402,7 +402,7 @@ Please identify patterns in this week's activity across habits, goals, and finan
                     <span className="text-sm text-gray-800 dark:text-gray-200">{s.name}</span>
                     <div className="text-right shrink-0 ml-2">
                       <span className="text-xs text-gray-500 block">
-                        {new Date(s.renewalDate!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        {new Date(s.renewalDate! + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </span>
                       <span className="text-xs text-gray-400">
                         €{s.cost.toFixed(2)} / {s.period}

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 
+export const dynamic = 'force-dynamic'
+
 const CONFIG_PATH = '/home/than/FootballRepo/config/config.json'
 
 function readPredictorsConfig() {

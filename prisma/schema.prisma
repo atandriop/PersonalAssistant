@@ -96,10 +96,12 @@ model PortfolioHolding {
 }
 
 model Snapshot {
-  id             Int      @id @default(autoincrement())
-  date           DateTime @default(now())
+  id             Int    @id @default(autoincrement())
+  date           String // 'YYYY-MM-DD', local calendar day
   wishlistTotal  Float
   portfolioTotal Float
+
+  @@unique([date])
 }
 
 model Subscription {
@@ -107,7 +109,7 @@ model Subscription {
   name        String
   cost        Float
   period      String
-  renewalDate DateTime?
+  renewalDate String?   // 'YYYY-MM-DD', like every other date in this schema
   url         String?
   notes       String?
   active      Boolean   @default(true)

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const matrices = await prisma.matrix.findMany({ orderBy: { createdAt: 'desc' } })
   return NextResponse.json(matrices)

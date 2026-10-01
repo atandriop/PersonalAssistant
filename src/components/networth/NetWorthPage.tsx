@@ -228,11 +228,11 @@ export default function NetWorthPage() {
     computeNetWorth({ holdings, entries, subscriptions })
 
   const sortedSnapshots = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
-  const chartData = sortedSnapshots.map(s => ({ x: new Date(s.date).getTime(), y: s.total }))
+  const chartData = sortedSnapshots.map(s => ({ x: new Date(s.date + 'T00:00:00').getTime(), y: s.total }))
 
-  const sortedSnapshots2 = [...snapshots2].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  const wishlistChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date).getTime(), y: s.wishlistTotal }))
-  const portfolioChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date).getTime(), y: s.portfolioTotal }))
+  const sortedSnapshots2 = [...snapshots2].sort((a, b) => a.date.localeCompare(b.date))
+  const wishlistChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date + 'T00:00:00').getTime(), y: s.wishlistTotal }))
+  const portfolioChartData = sortedSnapshots2.map(s => ({ x: new Date(s.date + 'T00:00:00').getTime(), y: s.portfolioTotal }))
 
   async function deleteEntry(id: number) {
     if (!confirm('Delete this entry?')) return

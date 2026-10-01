@@ -50,7 +50,7 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const { data: holdings = [] } = useSWR<Holding[]>('/api/portfolio', fetcher)
   const { data: entries = [] } = useSWR<NetWorthEntry[]>('/api/net-worth/entries', fetcher)
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
-  const { data: wishlist = [] } = useSWR<WishlistItem[]>('/api/wishlist', fetcher)
+  const { data: wishlist = [] } = useSWR<WishlistItem[]>('/api/wishlist?fields=summary', fetcher)
   const { data: snapshots = [] }    = useSWR<NetWorthSnapshot[]>('/api/net-worth/snapshots', fetcher)
   const { data: appointments = [] } = useSWR<{ cost: number | null; date: string }[]>(
     (section === 'overview' || section === 'health') ? '/api/appointments' : null, fetcher)
@@ -333,7 +333,7 @@ Please analyse this. Comment on portfolio allocation and whether it looks balanc
                         <span className="text-sm text-gray-700 dark:text-gray-300">{s.name}</span>
                         {s.renewalDate && (
                           <span className={`text-xs ml-2 ${renewSoon ? 'text-amber-500 font-medium' : 'text-gray-400'}`}>
-                            renews {new Date(s.renewalDate.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            renews {new Date(s.renewalDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                             {renewSoon && ' ⚠'}
                           </span>
                         )}

@@ -217,7 +217,7 @@ export default function DashboardPage() {
   const { data: nwHoldings = [] } = useSWR<PortfolioHolding[]>(
     isNWVisible ? '/api/portfolio' : null, fetcher)
   const { data: nwWishlist = [] } = useSWR<{ cost: number; purchased: boolean }[]>(
-    isNWVisible ? '/api/wishlist' : null, fetcher)
+    isNWVisible ? '/api/wishlist?fields=summary' : null, fetcher)
 
   const today = todayLocal()
 
@@ -272,9 +272,6 @@ export default function DashboardPage() {
     }))
   )
   const lowestGoals = [...allGoals].sort((a, b) => a.pct - b.pct).slice(0, 4)
-
-  // ── Gifts widget ──
-  const peopleWithIdeas = giftPeople.filter(p => p.ideas.length > 0)
 
   // ── Overdue tasks ──
   const overdueTasks = tasks

@@ -27,7 +27,7 @@ export default function CostsTab() {
   const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
   const { data: trips = [] } = useSWR<Trip[]>('/api/travel/trips', fetcher)
   const { data: appointments = [] } = useSWR<Appointment[]>('/api/appointments', fetcher)
-  const { data: inventory = [] } = useSWR<InventoryItem[]>('/api/inventory', fetcher)
+  const { data: inventory = [] } = useSWR<InventoryItem[]>('/api/inventory?fields=summary', fetcher)
   const { data: maintenanceItems = [] } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
   const { data: giftPeople = [] } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
 

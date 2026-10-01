@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     })
   } catch (e) {
     await unlink(join(UPLOADS_DIR, filename)).catch(() => {})
+    console.error('Failed to save document:', e)
     return NextResponse.json({ error: 'Failed to save document' }, { status: 500 })
   }
 

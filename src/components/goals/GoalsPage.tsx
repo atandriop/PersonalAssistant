@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
-import AreaDetail, { LifeArea, HabitRef, GoalForm, calcAreaProgress, useHabitLogs } from './AreaDetail'
+import AreaDetail, { LifeArea, HabitRef, calcAreaProgress, useHabitLogs } from './AreaDetail'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 

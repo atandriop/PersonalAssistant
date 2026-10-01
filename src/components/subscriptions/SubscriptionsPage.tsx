@@ -9,6 +9,7 @@ import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/Bu
 
 import { advanceRenewalDate } from '@/lib/subscriptionUtils'
 import { normalizeToMonthly, normalizeToYearly } from '@/lib/financialHealthUtils'
+import { daysBetween, todayLocal } from '@/lib/dateUtils'
 import { fetcher } from '@/lib/fetcher'
 
 export const SUBSCRIPTION_CATEGORIES = [
@@ -30,7 +31,8 @@ const monthlyEquiv = normalizeToMonthly
 
 function daysUntil(renewalDate: string | null | undefined): number | null {
   if (!renewalDate) return null
-  return Math.ceil((new Date(renewalDate).getTime() - Date.now()) / 86400000)
+  // Calendar-day difference, so a DST transition in the window cannot shift it.
+  return daysBetween(todayLocal(), renewalDate)
 }
 
 interface FormProps { initial?: Subscription; onSave: () => void; onCancel: () => void }
@@ -240,7 +242,7 @@ export default function SubscriptionsPage() {
                         </div>
                         {s.url && <a href={s.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate block">{s.url}</a>}
                         {s.notes && <p className="text-xs text-gray-400 mt-0.5">{s.notes}</p>}
-                        {s.renewalDate && <p className="text-xs text-gray-400">Renews {new Date(s.renewalDate).toLocaleDateString()}</p>}
+                        {s.renewalDate && <p className="text-xs text-gray-400">Renews {new Date(s.renewalDate + 'T00:00:00').toLocaleDateString()}</p>}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-semibold text-sm text-gray-900 dark:text-white">€{s.cost.toFixed(2)}/{s.period === 'monthly' ? 'mo' : s.period === 'quarterly' ? 'qtr' : 'yr'}</p>

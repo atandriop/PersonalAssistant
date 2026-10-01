@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { createReadStream, statSync } from 'fs'
 import { join } from 'path'
 
+export const dynamic = 'force-dynamic'
+
 const UPLOADS_DIR = join(process.cwd(), 'assets', 'documents')
 
 export async function GET(

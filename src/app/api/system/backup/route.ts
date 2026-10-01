@@ -5,6 +5,8 @@ import { mkdirSync, readdirSync, statSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { log } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
+
 const execAsync = promisify(exec)
 
 const ROOT = process.cwd()

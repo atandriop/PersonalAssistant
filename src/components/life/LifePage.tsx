@@ -151,7 +151,7 @@ export default function LifePage() {
 
           return (
             <div key={area.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-4 cursor-pointer flex items-center gap-3" onClick={() => setCollapsedAreaIds(prev => { const next = new Set(prev); next.has(area.id) ? next.delete(area.id) : next.add(area.id); return next })}>
+              <div className="px-4 py-4 cursor-pointer flex items-center gap-3" onClick={() => setCollapsedAreaIds(prev => { const next = new Set(prev); if (next.has(area.id)) next.delete(area.id); else next.add(area.id); return next })}>
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: area.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">

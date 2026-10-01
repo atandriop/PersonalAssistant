@@ -24,7 +24,7 @@ describe('upcomingBirthdays', () => {
       { id: 2, name: 'Bob',   birthday: '1985-07-20' },
       { id: 3, name: 'Carol', birthday: null },
     ]
-    const result = upcomingBirthdays(people as any, 30, today)
+    const result = upcomingBirthdays(people, 30, today)
     expect(result.map(r => r.id)).toEqual([1])
     expect(result[0].daysUntil).toBe(5)
   })
