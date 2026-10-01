@@ -1,3 +1,5 @@
+import { toLocalYMD, daysBetween } from '@/lib/dateUtils'
+
 export interface PortfolioHolding {
   id: number
   name: string
@@ -28,14 +30,17 @@ export function snapshotNear(
   maxDaysDiff = 15,
 ): NetWorthSnapshot | null {
   if (snapshots.length === 0) return null
-  const target = targetDate.getTime()
+  // Compare calendar days, not raw milliseconds: a DST transition between the
+  // snapshot and the target shifts the elapsed time by an hour, which silently
+  // pushed an exactly-in-range snapshot out of the window.
+  const targetYMD = toLocalYMD(targetDate)
   let best: NetWorthSnapshot | null = null
   let bestDiff = Infinity
   for (const s of snapshots) {
-    const diff = Math.abs(new Date(s.date + 'T00:00:00').getTime() - target)
+    const diff = Math.abs(daysBetween(s.date, targetYMD))
     if (diff < bestDiff) { bestDiff = diff; best = s }
   }
-  return bestDiff <= maxDaysDiff * 86_400_000 ? best : null
+  return bestDiff <= maxDaysDiff ? best : null
 }
 
 export function fmtEur(n: number, decimals = 0): string {

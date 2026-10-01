@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { addInterval } from '@/lib/taskUtils'
 import { parseTags, serializeTags } from '@/lib/taskTagUtils'
 import { todayLocal } from '@/lib/dateUtils'
+import { route, parseId, badRequest, notFound } from '@/lib/apiUtils'
 
 function serializeTask(t: {
   id: number; title: string; priority: string; dueDate: string | null; category: string | null
@@ -32,17 +33,19 @@ const INCLUDE = {
   project: { select: { id: true, name: true, color: true } },
 } as const
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const task = await prisma.task.findUnique({
-    where: { id: Number(params.id) },
-    include: INCLUDE,
-  })
+export const dynamic = 'force-dynamic'
+
+export const GET = route(async (_req: Request, { params }: { params: { id: string } }) => {
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid task id')
+  const task = await prisma.task.findUnique({ where: { id }, include: INCLUDE })
   if (!task) return new NextResponse(null, { status: 404 })
   return NextResponse.json(serializeTask(task))
-}
+})
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export const PUT = route(async (req: Request, { params }: { params: { id: string } }) => {
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid task id')
   const body = await req.json()
   const {
     title, priority, dueDate, category, notes, done, recurring,
@@ -50,6 +53,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   } = body
 
   const existing = await prisma.task.findUnique({ where: { id }, include: { subtasks: true } })
+  if (!existing) return notFound('Task not found')
 
   const task = await prisma.task.update({
     where: { id },
@@ -59,7 +63,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       dueDate: dueDate !== undefined ? dueDate : existing?.dueDate ?? null,
       category: category !== undefined ? category : existing?.category ?? null,
       notes: notes !== undefined ? notes : existing?.notes ?? null,
-      done: done ?? false,
+      // Must not default to false: TaskForm PUTs an edit body with no `done`
+      // key, which silently un-completed a finished task.
+      done: done !== undefined ? done : existing.done,
       recurring: recurring ?? existing?.recurring ?? false,
       recurringInterval: recurringInterval !== undefined ? recurringInterval : (existing?.recurringInterval ?? null),
       blockedById: blockedById !== undefined ? (blockedById ? Number(blockedById) : null) : existing?.blockedById,
@@ -70,32 +76,40 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     include: INCLUDE,
   })
 
-  if (done === true && task.recurring && task.recurringInterval) {
+  // Only on the not-done -> done transition. Firing on every PUT carrying
+  // `done: true` meant "Defer +1d" on an already-done recurring task cloned it.
+  if (done === true && existing.done === false && task.recurring && task.recurringInterval) {
     const baseDue = task.dueDate ?? todayLocal()
     const nextDue = addInterval(baseDue, task.recurringInterval)
-    await prisma.task.create({
-      data: {
-        title: task.title,
-        priority: task.priority,
-        dueDate: nextDue,
-        category: task.category,
-        notes: task.notes,
-        tags: task.tags,
-        lifeAreaId: task.lifeAreaId,
-        projectId: task.projectId,
-        recurring: true,
-        recurringInterval: task.recurringInterval,
-        subtasks: existing?.subtasks && existing.subtasks.length > 0
-          ? { create: existing.subtasks.map(s => ({ title: s.title })) }
-          : undefined,
-      },
-    })
+    // null means the interval is unrecognised — skip rather than clone the task
+    // onto the same due date (or a null one) forever.
+    if (nextDue !== null) {
+      await prisma.task.create({
+        data: {
+          title: task.title,
+          priority: task.priority,
+          dueDate: nextDue,
+          category: task.category,
+          notes: task.notes,
+          tags: task.tags,
+          lifeAreaId: task.lifeAreaId,
+          projectId: task.projectId,
+          recurring: true,
+          recurringInterval: task.recurringInterval,
+          subtasks: existing?.subtasks && existing.subtasks.length > 0
+            ? { create: existing.subtasks.map(s => ({ title: s.title })) }
+            : undefined,
+        },
+      })
+    }
   }
 
   return NextResponse.json(serializeTask(task))
-}
+})
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  await prisma.task.delete({ where: { id: Number(params.id) } })
+export const DELETE = route(async (_req: Request, { params }: { params: { id: string } }) => {
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid task id')
+  await prisma.task.delete({ where: { id } })
   return new NextResponse(null, { status: 204 })
-}
+})

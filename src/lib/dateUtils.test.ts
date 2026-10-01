@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toLocalYMD, addDays, tripEndDate, daysInclusive } from './dateUtils'
+import { toLocalYMD, addDays, tripEndDate, daysInclusive, daysBetween } from './dateUtils'
 
 describe('toLocalYMD', () => {
   it('formats using local calendar fields, not UTC', () => {
@@ -49,5 +49,29 @@ describe('daysInclusive', () => {
   })
   it('spans DST transition correctly', () => {
     expect(daysInclusive('2026-03-28', '2026-03-30')).toBe(3)
+  })
+})
+
+describe('daysBetween', () => {
+  it('returns 0 for the same day', () => {
+    expect(daysBetween('2026-07-08', '2026-07-08')).toBe(0)
+  })
+  it('counts whole days forward', () => {
+    expect(daysBetween('2026-07-08', '2026-07-15')).toBe(7)
+  })
+  it('returns a negative count when the end precedes the start', () => {
+    expect(daysBetween('2026-07-15', '2026-07-08')).toBe(-7)
+  })
+  it('counts across a DST fall-back without losing an hour', () => {
+    expect(daysBetween('2026-10-21', '2026-11-05')).toBe(15)
+  })
+  it('counts across a DST spring-forward without gaining an hour', () => {
+    expect(daysBetween('2026-03-18', '2026-04-02')).toBe(15)
+  })
+  it('counts across a leap day', () => {
+    expect(daysBetween('2024-02-28', '2024-03-01')).toBe(2)
+  })
+  it('counts across a year boundary', () => {
+    expect(daysBetween('2026-12-30', '2027-01-02')).toBe(3)
   })
 })

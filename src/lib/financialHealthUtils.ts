@@ -4,6 +4,11 @@ export function normalizeToMonthly(cost: number, period: string): number {
   return cost
 }
 
+/** Annualised cost for a subscription period. Always 12x normalizeToMonthly. */
+export function normalizeToYearly(cost: number, period: string): number {
+  return normalizeToMonthly(cost, period) * 12
+}
+
 export function calcFireNumber(monthlyBurn: number): number {
   return monthlyBurn * 12 * 25
 }

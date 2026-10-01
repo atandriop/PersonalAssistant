@@ -52,3 +52,29 @@ describe('computeValue', () => {
     expect(value).toBeGreaterThanOrEqual(0)
   })
 })
+
+describe('computeValue with an unusable depreciationRate', () => {
+  const item = { cost: 1000, currentValue: null, purchaseDate: '2024-01-01' }
+
+  it('falls back to cost when the rate exceeds 1 instead of returning NaN', () => {
+    // Math.pow(1 - 1.5, fractionalYears) is a negative base to a fractional
+    // power = NaN, and Math.max(0, NaN) is NaN, which poisons every total.
+    expect(computeValue(item, { valueMethod: 'depreciation', depreciationRate: 1.5 })).toBe(1000)
+  })
+  it('falls back to cost for a negative rate', () => {
+    expect(computeValue(item, { valueMethod: 'depreciation', depreciationRate: -0.2 })).toBe(1000)
+  })
+  it('returns 0 for a rate of exactly 1', () => {
+    expect(computeValue(item, { valueMethod: 'depreciation', depreciationRate: 1 })).toBe(0)
+  })
+  it('falls back to cost for an unparseable purchaseDate', () => {
+    expect(computeValue(
+      { cost: 1000, currentValue: null, purchaseDate: 'not-a-date' },
+      { valueMethod: 'depreciation', depreciationRate: 0.2 },
+    )).toBe(1000)
+  })
+  it('never returns a non-finite number', () => {
+    const value = computeValue(item, { valueMethod: 'depreciation', depreciationRate: 2 })
+    expect(Number.isFinite(value)).toBe(true)
+  })
+})

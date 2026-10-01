@@ -17,8 +17,10 @@ export async function POST(req: Request) {
   }
 
   if (action === 'markDone') {
+    // `done: false` guard: re-running markDone over the same ids otherwise
+    // spawned another recurrence clone on every call.
     const tasks = await prisma.task.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, done: false },
       include: { subtasks: true },
     })
     await Promise.all(
@@ -27,6 +29,7 @@ export async function POST(req: Request) {
         if (task.recurring && task.recurringInterval) {
           const baseDue = task.dueDate ?? todayLocal()
           const nextDue = addInterval(baseDue, task.recurringInterval)
+          if (nextDue === null) return
           await prisma.task.create({
             data: {
               title: task.title,
@@ -34,6 +37,12 @@ export async function POST(req: Request) {
               dueDate: nextDue,
               category: task.category,
               notes: task.notes,
+              // tags/lifeAreaId/projectId were dropped here while the
+              // single-task route copied them, so a bulk completion silently
+              // stripped the next occurrence's project, area and tags.
+              tags: task.tags,
+              lifeAreaId: task.lifeAreaId,
+              projectId: task.projectId,
               recurring: true,
               recurringInterval: task.recurringInterval,
               subtasks: task.subtasks.length > 0
@@ -44,7 +53,7 @@ export async function POST(req: Request) {
         }
       })
     )
-    return NextResponse.json({ updated: ids.length })
+    return NextResponse.json({ updated: tasks.length })
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

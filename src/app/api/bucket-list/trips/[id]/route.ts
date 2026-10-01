@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route, parseId, badRequest, notFound } from '@/lib/apiUtils'
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const id = Number(params.id)
+export const PUT = route(async (req: Request, { params }: { params: { id: string } }) => {
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid trip id')
   const { destination, cities, budget, targetYear, notes, done } = await req.json()
+
+  const current = await prisma.bucketTrip.findUnique({ where: { id } })
+  if (!current) return notFound('Trip not found')
+
   const updateData: {
     destination: string
     cities: string | null
@@ -18,7 +24,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     budget: budget != null ? Number(budget) : null,
     targetYear: targetYear != null ? Number(targetYear) : null,
     notes: notes ?? null,
-    done: done ?? false,
+    // Must not default to false: a PUT that only edits the destination would
+    // otherwise un-complete a finished trip.
+    done: done !== undefined ? done : current.done,
   }
   if (done === true) updateData.linkedToTravel = true
   const trip = await prisma.bucketTrip.update({ where: { id }, data: updateData })
@@ -45,9 +53,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json(
     { ...trip, cities: trip.cities ? JSON.parse(trip.cities) as string[] : [] }
   )
-}
+})
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  await prisma.bucketTrip.delete({ where: { id: Number(params.id) } })
+export const DELETE = route(async (_req: Request, { params }: { params: { id: string } }) => {
+  const id = parseId(params.id)
+  if (id === null) return badRequest('Invalid trip id')
+  await prisma.bucketTrip.delete({ where: { id } })
   return new NextResponse(null, { status: 204 })
-}
+})

@@ -24,7 +24,18 @@ export function tripEndDate(startDate: string, durationDays: number): string {
   return addDays(startDate, durationDays - 1)
 }
 
+/**
+ * Whole calendar days from startYMD to endYMD, negative if end precedes start.
+ * Compares the calendar fields via Date.UTC so a DST transition in between
+ * cannot add or drop an hour and skew the count.
+ */
+export function daysBetween(startYMD: string, endYMD: string): number {
+  const [ay, am, ad] = startYMD.split('-').map(Number)
+  const [by, bm, bd] = endYMD.split('-').map(Number)
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000)
+}
+
 /** Inclusive day count between two YYYY-MM-DD strings (same day = 1). */
 export function daysInclusive(startYMD: string, endYMD: string): number {
-  return Math.round((new Date(endYMD + 'T00:00:00').getTime() - new Date(startYMD + 'T00:00:00').getTime()) / 86400000) + 1
+  return daysBetween(startYMD, endYMD) + 1
 }

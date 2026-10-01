@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   normalizeToMonthly,
+  normalizeToYearly,
   calcFireNumber,
   calcRunwayMonths,
   calcFireProgress,
@@ -48,5 +49,25 @@ describe('calcFireProgress', () => {
   })
   it('caps at 100 when portfolio exceeds FIRE number', () => {
     expect(calcFireProgress(400000, 300000)).toBe(100)
+  })
+})
+
+describe('normalizeToYearly', () => {
+  it('multiplies a monthly cost by 12', () => {
+    expect(normalizeToYearly(10, 'monthly')).toBeCloseTo(120)
+  })
+  it('returns a yearly cost unchanged', () => {
+    expect(normalizeToYearly(120, 'yearly')).toBeCloseTo(120)
+  })
+  it('multiplies a quarterly cost by 4', () => {
+    expect(normalizeToYearly(30, 'quarterly')).toBeCloseTo(120)
+  })
+  it('treats an unrecognised period as monthly, matching normalizeToMonthly', () => {
+    expect(normalizeToYearly(10, 'weekly')).toBeCloseTo(120)
+  })
+  it('is normalizeToMonthly times twelve for every period', () => {
+    for (const period of ['monthly', 'quarterly', 'yearly', 'nonsense']) {
+      expect(normalizeToYearly(60, period)).toBeCloseTo(normalizeToMonthly(60, period) * 12)
+    }
   })
 })

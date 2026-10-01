@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PortfolioPage from '@/components/portfolio/PortfolioPage'
@@ -42,6 +42,9 @@ function formatCategory(cat: string): string {
 const SVG_W = 600, SVG_H = 160, PAD_L = 56, PAD_R = 16, PAD_T = 12, PAD_B = 24
 
 function LineChart({ data, color = '#10b981' }: { data: { x: number; y: number }[]; color?: string }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [hover, setHover] = useState<{ index: number; px: number; py: number; rectWidth: number } | null>(null)
+
   if (data.length < 2) {
     return <p className="text-sm text-gray-400 text-center py-6">Add more data to see the trend.</p>
   }
@@ -65,8 +68,29 @@ function LineChart({ data, color = '#10b981' }: { data: { x: number; y: number }
     { sx: toSx(maxX), label: new Date(maxX).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) },
   ]
   const gradId = `nw-grad-${color.replace('#', '')}`
+
+  function handleMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!rect || rect.width === 0 || rect.height === 0) return
+    const scaleX = rect.width / SVG_W
+    const scaleY = rect.height / SVG_H
+    const vbX = (e.clientX - rect.left) / scaleX
+    const vbY = (e.clientY - rect.top) / scaleY
+    let nearest = 0
+    let bestDist = Infinity
+    pts.forEach((p, i) => {
+      const dist = Math.hypot(p.sx - vbX, p.sy - vbY)
+      if (dist < bestDist) { bestDist = dist; nearest = i }
+    })
+    setHover({ index: nearest, px: pts[nearest].sx * scaleX, py: pts[nearest].sy * scaleY, rectWidth: rect.width })
+  }
+
+  const hp = hover ? pts[hover.index] : null
+
   return (
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ maxHeight: SVG_H }}>
+    <div className="relative">
+    <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none" className="w-full" style={{ maxHeight: SVG_H }}
+      onMouseMove={handleMove} onMouseLeave={() => setHover(null)}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.15" />
@@ -90,11 +114,25 @@ function LineChart({ data, color = '#10b981' }: { data: { x: number; y: number }
       <path d={areaD} fill={`url(#${gradId})`} />
       <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map((p, i) => (
-        <circle key={i} cx={p.sx.toFixed(1)} cy={p.sy.toFixed(1)} r="3" fill={color}>
-          <title>{fmt(p.y)} · {new Date(p.x).toLocaleDateString()}</title>
-        </circle>
+        <circle key={i} cx={p.sx.toFixed(1)} cy={p.sy.toFixed(1)} r="3" fill={color} />
       ))}
+      {hp && (
+        <g>
+          <line x1={hp.sx} y1={PAD_T} x2={hp.sx} y2={PAD_T + cH} stroke="currentColor" strokeOpacity="0.25" strokeDasharray="3" />
+          <circle cx={hp.sx} cy={hp.sy} r="5" fill={color} stroke="white" strokeWidth="2" />
+        </g>
+      )}
     </svg>
+    {hover && hp && (
+      <div
+        className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 shadow-lg whitespace-nowrap"
+        style={{ left: Math.min(Math.max(hover.px, 36), hover.rectWidth - 36), top: hover.py - 8 }}
+      >
+        <div className="font-semibold">{fmt(hp.y)}</div>
+        <div className="opacity-70">{new Date(hp.x).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+      </div>
+    )}
+    </div>
   )
 }
 
@@ -179,6 +217,8 @@ export default function NetWorthPage() {
   }, [mutateSnapshots2])
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
+  const savingsTotal = holdings.filter(h => h.type === 'savings').reduce((s, h) => s + holdingValue(h), 0)
+  const investmentsTotal = portfolioTotal - savingsTotal
   const liabilityEntries = entries.filter(e => e.type === 'liability')
   const totalAssets = portfolioTotal
   const subscriptionAnnualTotal = subscriptions
@@ -259,6 +299,10 @@ export default function NetWorthPage() {
             <p className="text-sm text-gray-400">No portfolio holdings yet.</p>
           ) : (
             <div>
+              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-3 pb-2 border-b border-gray-100 dark:border-gray-800">
+                <span>Savings <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(savingsTotal)}</span></span>
+                <span>Investments <span className="font-medium text-gray-700 dark:text-gray-300">{fmt(investmentsTotal)}</span></span>
+              </div>
               {holdings.map(h => (
                 <div key={h.id} className="flex justify-between items-center py-1 border-b border-gray-50 dark:border-gray-800 last:border-0">
                   <span className="text-sm text-gray-700 dark:text-gray-300">{h.name}</span>
