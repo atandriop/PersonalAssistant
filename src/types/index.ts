@@ -7,9 +7,15 @@ export interface LifeArea { id: number; name: string; goals: Goal[] }
 export interface GiftIdea { id: number; estimatedCost: number | null; purchased: boolean }
 export interface GiftPerson { id: number; name: string; budget: number | null; notes: string | null; ideas: GiftIdea[]; personId: number | null }
 export interface Companion { id: number; name: string; personId: number | null }
+/**
+ * As serialised by GET /api/subscriptions. `renewalDate` is a YYYY-MM-DD string,
+ * not a Date — NextResponse.json turns Prisma's DateTime into a string, which is
+ * why these types are hand-written rather than imported from @prisma/client.
+ */
 export interface Subscription {
   id: number; name: string; cost: number; period: string
-  active: boolean; renewalDate?: string | null
+  active: boolean; category: string
+  renewalDate?: string | null; url?: string | null; notes?: string | null
 }
 
 export interface Subtask {

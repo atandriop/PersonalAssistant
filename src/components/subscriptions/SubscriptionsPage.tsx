@@ -20,10 +20,7 @@ export const SUBSCRIPTION_CATEGORIES = [
   'Other',
 ] as const
 
-interface Subscription {
-  id: number; name: string; cost: number; period: string; category: string
-  renewalDate?: string | null; url?: string | null; notes?: string | null; active: boolean
-}
+import type { Subscription } from '@/types'
 
 const field = 'border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-800 dark:border-gray-600 dark:text-white'
 

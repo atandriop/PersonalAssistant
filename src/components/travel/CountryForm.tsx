@@ -4,12 +4,14 @@ import { useState } from 'react'
 import type { TravelCountry } from '@/types'
 import Combobox from '@/components/ui/Combobox'
 import { useCountries } from '@/lib/useGeoData'
+import { useEscapeKey, backdropProps, panelProps } from '@/components/ui/useModalDismiss'
 
 export default function CountryForm({ initial, onSave, onCancel }: {
   initial?: TravelCountry
   onSave: () => void
   onCancel: () => void
 }) {
+  useEscapeKey(onCancel)
   const [name, setName] = useState(initial?.name ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [saving, setSaving] = useState(false)
@@ -37,8 +39,8 @@ export default function CountryForm({ initial, onSave, onCancel }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" {...backdropProps(onCancel)}>
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm" {...panelProps}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{initial ? 'Edit Country' : 'Add Country'}</h2>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>

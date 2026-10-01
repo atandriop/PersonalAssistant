@@ -26,9 +26,7 @@ interface Snapshot {
   id: number; date: string; wishlistTotal: number; portfolioTotal: number
 }
 
-interface Subscription {
-  id: number; name: string; cost: number; period: string; active: boolean
-}
+import type { Subscription } from '@/types'
 
 const fmt = (n: number) => fmtEur(n)
 

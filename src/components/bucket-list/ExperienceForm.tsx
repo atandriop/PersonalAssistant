@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { BucketExperience } from '@/types'
+import { useEscapeKey, backdropProps, panelProps } from '@/components/ui/useModalDismiss'
 
 const CATEGORIES = ['Adventure', 'Learning', 'Career', 'Relationships', 'Health', 'Creative', 'Other']
 
@@ -10,6 +11,7 @@ export default function ExperienceForm({ initial, onSave, onCancel }: {
   onSave: () => void
   onCancel: () => void
 }) {
+  useEscapeKey(onCancel)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [category, setCategory] = useState(initial?.category ?? 'Other')
   const [targetYear, setTargetYear] = useState(initial?.targetYear != null ? String(initial.targetYear) : '')
@@ -50,8 +52,8 @@ export default function ExperienceForm({ initial, onSave, onCancel }: {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" {...backdropProps(onCancel)}>
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md" {...panelProps}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {initial ? 'Edit Experience' : 'Add Experience'}

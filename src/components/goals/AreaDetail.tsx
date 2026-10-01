@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import TaskForm from '@/components/tasks/TaskForm'
 import { todayLocal } from '@/lib/dateUtils'
+import { fetcher } from '@/lib/fetcher'
 
 // ---- Types (exported for consumers) ----
 
@@ -74,24 +76,20 @@ export function calcAreaProgress(area: LifeArea, habitLogs: Record<number, strin
   return area.goals.reduce((acc, g) => acc + calcProgress(g, habitLogs), 0) / area.goals.length
 }
 
+/**
+ * Logged dates per habit id. One batched request rather than one per habit —
+ * this used to fan out N fetches and set state only once they had all settled.
+ */
 export function useHabitLogs(habitIds: number[]): Record<number, string[]> {
-  const [logs, setLogs] = useState<Record<number, string[]>>({})
-  useEffect(() => {
-    if (habitIds.length === 0) return
-    Promise.allSettled(
-      habitIds.map(id =>
-        fetch(`/api/habits/${id}/logs`)
-          .then(r => r.json())
-          .then((ls: { date: string }[]) => ({ id, dates: ls.map(l => l.date) }))
-      )
-    ).then(results => {
-      const map: Record<number, string[]> = {}
-      results.forEach(r => { if (r.status === 'fulfilled') map[r.value.id] = r.value.dates })
-      setLogs(map)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [habitIds.join(',')])
-  return logs
+  const key = habitIds.length > 0 ? `/api/habits/logs?habitIds=${habitIds.join(',')}` : null
+  const { data } = useSWR<Record<number, { date: string }[]>>(key, fetcher)
+
+  return useMemo(() => {
+    if (!data) return {}
+    const map: Record<number, string[]> = {}
+    for (const [id, logs] of Object.entries(data)) map[Number(id)] = logs.map(l => l.date)
+    return map
+  }, [data])
 }
 
 // ---- GoalForm ----

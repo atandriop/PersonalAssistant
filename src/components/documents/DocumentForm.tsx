@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Document } from '@/types'
+import { useEscapeKey, backdropProps, panelProps } from '@/components/ui/useModalDismiss'
 
 const CATEGORIES = ['Identity', 'Finance', 'Vehicle', 'Health', 'Insurance', 'Other']
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function DocumentForm({ initial, onSave, onCancel }: Props) {
+  useEscapeKey(onCancel)
   const [name, setName] = useState(initial?.name ?? '')
   const [category, setCategory] = useState(initial?.category ?? 'Other')
   const [notes, setNotes] = useState(initial?.notes ?? '')
@@ -78,8 +80,8 @@ export default function DocumentForm({ initial, onSave, onCancel }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" {...backdropProps(onCancel)}>
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md" {...panelProps}>
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {initial ? 'Edit Document' : 'Upload Document'}

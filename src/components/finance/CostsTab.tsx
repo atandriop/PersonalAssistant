@@ -7,7 +7,7 @@ import { normalizeToYearly } from '@/lib/financialHealthUtils'
 import { fmtEur } from '@/lib/netWorthUtils'
 import { fetcher } from '@/lib/fetcher'
 
-interface Subscription { id: number; cost: number; period: string; active: boolean; category: string }
+import type { Subscription } from '@/types'
 interface Trip { id: number; startDate: string | null; endDate: string | null; actualCost: number | null }
 interface Appointment { id: number; date: string; cost: number | null }
 interface InventoryItem { id: number; cost: number; quantity: number; createdAt: string }

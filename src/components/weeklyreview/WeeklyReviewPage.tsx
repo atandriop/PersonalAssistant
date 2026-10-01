@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import PromptModal from '@/components/ui/PromptModal'
 import { HomeItem, getTaskStatus } from '@/lib/maintenance'
@@ -50,15 +50,12 @@ function getWeekDates(): string[] {
   })
 }
 
-function HabitWeekRow({ habit, weekDates, onCount }: {
-  habit: Habit; weekDates: string[]
-  onCount?: (id: number, count: number) => void
-}) {
-  const { data: logs = [] } = useSWR<{ date: string; note: string | null }[]>(`/api/habits/${habit.id}/logs`, fetcher)
-  const logDates = logs.map(l => l.date)
-  const count = weekDates.filter(d => logDates.includes(d)).length
+// The count is computed by the parent from one batched logs request and passed
+// in. This used to fetch its own logs per row (an N+1 over HTTP) and report the
+// count back up via onCount, which re-sorted the list and re-rendered the whole
+// 440-line page once per habit as each request landed.
+function HabitWeekRow({ habit, count }: { habit: Habit; count: number }) {
   const pct = count / 7
-  useEffect(() => { onCount?.(habit.id, count) }, [habit.id, count, onCount])
   return (
     <div className="mb-2">
       <div className="flex items-center justify-between mb-0.5">
@@ -97,11 +94,27 @@ export default function WeeklyReviewPage() {
   const weekKey = getWeekKey()
 
   const weekDates = getWeekDates()
-  const [weekCounts, setWeekCounts] = useState<Record<number, number>>({})
-  const handleWeekCount = useCallback((id: number, count: number) => {
-    setWeekCounts(prev => prev[id] === count ? prev : { ...prev, [id]: count })
-  }, [])
-  const sortedHabits = [...habits].sort((a, b) => (weekCounts[a.id] ?? 0) - (weekCounts[b.id] ?? 0))
+
+  // One request for every habit's logs, instead of one per row.
+  const habitIds = habits.map(h => h.id)
+  const { data: habitLogs } = useSWR<Record<number, { date: string }[]>>(
+    habitIds.length > 0 ? `/api/habits/logs?habitIds=${habitIds.join(',')}&since=${weekDates[0]}` : null,
+    fetcher,
+  )
+  const weekCounts = useMemo(() => {
+    const counts: Record<number, number> = {}
+    const week = new Set(weekDates)
+    for (const h of habits) {
+      counts[h.id] = (habitLogs?.[h.id] ?? []).filter(l => week.has(l.date)).length
+    }
+    return counts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitLogs, habits, weekDates.join(',')])
+
+  const sortedHabits = useMemo(
+    () => [...habits].sort((a, b) => (weekCounts[a.id] ?? 0) - (weekCounts[b.id] ?? 0)),
+    [habits, weekCounts],
+  )
 
   const maintenanceAlerts = maintenanceItems.flatMap(item =>
     item.tasks
@@ -344,7 +357,7 @@ Please identify patterns in this week's activity across habits, goals, and finan
               <p className="text-sm text-gray-400">No habits tracked.</p>
             ) : (
               <div>
-                {sortedHabits.map(h => <HabitWeekRow key={h.id} habit={h} weekDates={weekDates} onCount={handleWeekCount} />)}
+                {sortedHabits.map(h => <HabitWeekRow key={h.id} habit={h} count={weekCounts[h.id] ?? 0} />)}
               </div>
             )}
           </WeekSection>

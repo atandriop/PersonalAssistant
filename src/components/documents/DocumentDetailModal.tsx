@@ -5,6 +5,7 @@ import { mutate } from 'swr'
 import type { Document } from '@/types'
 import DocumentForm from './DocumentForm'
 import { CATEGORY_COLOR, formatSize } from './DocumentCard'
+import { useEscapeKey, backdropProps, panelProps } from '@/components/ui/useModalDismiss'
 
 interface Props {
   doc: Document
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function DocumentDetailModal({ doc, onClose }: Props) {
+  useEscapeKey(onClose)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const catCls = CATEGORY_COLOR[doc.category] ?? CATEGORY_COLOR.Other
@@ -38,8 +40,8 @@ export default function DocumentDetailModal({ doc, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" {...backdropProps(onClose)}>
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" {...panelProps}>
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
