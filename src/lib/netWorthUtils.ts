@@ -6,6 +6,8 @@ export interface PortfolioHolding {
   type: string
   quantity?: number | null
   currentPrice?: number | null
+  /** Total paid for the position, not a per-unit price. */
+  buyPrice?: number | null
   balance?: number | null
 }
 
@@ -24,6 +26,25 @@ export function holdingValue(h: PortfolioHolding): number {
  * Returns the snapshot whose date is nearest to targetDate,
  * or null if the closest one is more than maxDaysDiff days away.
  */
+/**
+ * Profit or loss on a tradable position, or null if it has none (savings, or an
+ * incomplete position). `buyPrice` is the TOTAL paid for the position — the form
+ * labels it "Total buy price" — so it is subtracted, never multiplied by
+ * quantity.
+ */
+export function holdingPnl(h: PortfolioHolding): number | null {
+  if (h.type === 'savings') return null
+  if (h.quantity == null || h.currentPrice == null || h.buyPrice == null) return null
+  return h.currentPrice * h.quantity - h.buyPrice
+}
+
+/** Total amount paid for a tradable position, or null if not recorded. */
+export function holdingCostBasis(h: PortfolioHolding): number | null {
+  if (h.type === 'savings') return null
+  if (h.buyPrice == null) return null
+  return h.buyPrice
+}
+
 export function snapshotNear(
   snapshots: NetWorthSnapshot[],
   targetDate: Date,

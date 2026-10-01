@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PortfolioPage from '@/components/portfolio/PortfolioPage'
-import { holdingValue, PortfolioHolding, NetWorthSnapshot } from '@/lib/netWorthUtils'
+import { holdingValue, fmtEur, PortfolioHolding, NetWorthSnapshot } from '@/lib/netWorthUtils'
+import { computeNetWorth } from '@/lib/netWorthTotals'
+import { normalizeToYearly } from '@/lib/financialHealthUtils'
 import { todayLocal } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const CATEGORIES = ['property', 'vehicle', 'cash', 'credit_card', 'loan', 'mortgage', 'other'] as const
 type Category = typeof CATEGORIES[number]
@@ -29,9 +30,7 @@ interface Subscription {
   id: number; name: string; cost: number; period: string; active: boolean
 }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
-}
+const fmt = (n: number) => fmtEur(n)
 
 function formatCategory(cat: string): string {
   if (cat === 'credit_card') return 'Credit Card'
@@ -220,12 +219,13 @@ export default function NetWorthPage() {
   const savingsTotal = holdings.filter(h => h.type === 'savings').reduce((s, h) => s + holdingValue(h), 0)
   const investmentsTotal = portfolioTotal - savingsTotal
   const liabilityEntries = entries.filter(e => e.type === 'liability')
-  const totalAssets = portfolioTotal
+  const assetEntries = entries.filter(e => e.type === 'asset')
   const subscriptionAnnualTotal = subscriptions
     .filter(s => s.active)
-    .reduce((sum, s) => sum + (s.period === 'yearly' ? s.cost : s.cost * 12), 0)
-  const totalLiabilities = liabilityEntries.reduce((s, e) => s + e.value, 0) + subscriptionAnnualTotal
-  const netWorth = totalAssets - totalLiabilities
+    .reduce((sum, s) => sum + normalizeToYearly(s.cost, s.period), 0)
+  // Shared formula, so this tile and the snapshot chart cannot drift apart.
+  const { assets: totalAssets, liabilities: totalLiabilities, total: netWorth } =
+    computeNetWorth({ holdings, entries, subscriptions })
 
   const sortedSnapshots = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
   const chartData = sortedSnapshots.map(s => ({ x: new Date(s.date).getTime(), y: s.total }))
@@ -295,7 +295,7 @@ export default function NetWorthPage() {
             </button>
           </div>
 
-          {holdings.length === 0 ? (
+          {holdings.length === 0 && assetEntries.length === 0 ? (
             <p className="text-sm text-gray-400">No portfolio holdings yet.</p>
           ) : (
             <div>
@@ -313,6 +313,24 @@ export default function NetWorthPage() {
                 <span className="text-xs text-gray-400">Portfolio total</span>
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{fmt(portfolioTotal)}</span>
               </div>
+
+              {/* Asset entries were counted by no total and shown in no list, so a
+                  recorded house or vehicle was invisible everywhere. */}
+              {Object.entries(groupByCategory(assetEntries)).map(([cat, items]) => (
+                <div key={cat} className="mt-3">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{formatCategory(cat)}</p>
+                  {items.map(e => (
+                    <div key={e.id} className="flex justify-between items-center py-1 group">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{e.name}</span>
+                      <span className="text-sm text-gray-900 dark:text-white mr-3">{fmt(e.value)}</span>
+                      <div className="hidden group-hover:flex gap-1">
+                        <button onClick={() => setEditing(e)} className="text-xs px-1.5 py-0.5 border rounded dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">Edit</button>
+                        <button onClick={() => deleteEntry(e.id)} className="text-xs px-1.5 py-0.5 text-red-400 border border-red-200 rounded hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">Del</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </div>

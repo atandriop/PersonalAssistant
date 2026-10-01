@@ -7,8 +7,8 @@ import { User } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import GiftPersonForm from './GiftPersonForm'
 import GiftIdeaForm from './GiftIdeaForm'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fmtEur } from '@/lib/netWorthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 interface GiftIdea {
   id: number
@@ -29,9 +29,10 @@ interface GiftPerson {
   ideas: GiftIdea[]
 }
 
-function fmt(n: number) {
-  return `€${n % 1 === 0 ? n : n.toFixed(2)}`
-}
+// Keeps this page's "no cents on a whole amount" style, but routes through the
+// shared formatter so thousands are grouped like everywhere else (it used to
+// render €1234.5 where every other page renders €1,235).
+const fmt = (n: number) => fmtEur(n, n % 1 === 0 ? 0 : 2)
 
 // ─── Person detail (expanded) ─────────────────────────────────────────────
 function PersonDetail({ person, onMutate }: { person: GiftPerson; onMutate: () => void }) {

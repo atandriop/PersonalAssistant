@@ -1,6 +1,7 @@
 'use client'
 
 import { calcFireNumber, calcRunwayMonths, calcFireProgress } from '@/lib/financialHealthUtils'
+import { fmtEur } from '@/lib/netWorthUtils'
 
 interface HealthTabProps {
   monthlySubCost: number
@@ -10,13 +11,8 @@ interface HealthTabProps {
   netWorthAssets: number
 }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
-}
-
-function fmtDecimal(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
-}
+const fmt = (n: number) => fmtEur(n)
+const fmtDecimal = (n: number) => fmtEur(n, 2)
 
 export default function HealthTab({ monthlySubCost, apptMonthly, maintMonthly, portfolioTotal, netWorthAssets }: HealthTabProps) {
   const totalMonthlyBurn = monthlySubCost + apptMonthly + maintMonthly

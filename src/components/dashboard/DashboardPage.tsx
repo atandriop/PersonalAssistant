@@ -17,8 +17,9 @@ import {
 } from 'lucide-react'
 import { holdingValue, snapshotNear, fmtEur, type NetWorthSnapshot, type PortfolioHolding } from '@/lib/netWorthUtils'
 import { upcomingBirthdays } from '@/lib/peopleUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { computeNetWorth } from '@/lib/netWorthTotals'
+import { normalizeToMonthly } from '@/lib/financialHealthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 const ALL_WIDGETS = [
   'habits', 'maintenance', 'goals', 'gifts',
@@ -325,10 +326,11 @@ export default function DashboardPage() {
   }
 
   // ── Net Worth widget ──
+  // Shared formula, so this widget agrees with the Net Worth page, the finance
+  // overview and the snapshot chart.
   const nwPortfolioTotal   = nwHoldings.reduce((s, h) => s + holdingValue(h), 0)
-  const nwLiabilityTotal   = nwEntries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0)
-  const nwSubAnnual        = subscriptions.filter(s => s.active).reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
-  const currentNetWorth    = nwPortfolioTotal - nwLiabilityTotal - nwSubAnnual
+  const { total: currentNetWorth } =
+    computeNetWorth({ holdings: nwHoldings, entries: nwEntries, subscriptions })
 
   const sortedSnaps = [...nwSnapshots].sort((a, b) => a.date.localeCompare(b.date))
   const now = new Date()
@@ -340,7 +342,7 @@ export default function DashboardPage() {
 
   const nwMonthlySubs = subscriptions
     .filter(s => s.active)
-    .reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost / 12 : sub.cost), 0)
+    .reduce((s, sub) => s + normalizeToMonthly(sub.cost, sub.period), 0)
   const nwWishlistTotal = nwWishlist
     .filter(i => !i.purchased)
     .reduce((s, i) => s + i.cost, 0)

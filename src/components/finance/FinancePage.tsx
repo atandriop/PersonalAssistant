@@ -11,9 +11,9 @@ import NetWorthPage from '@/components/networth/NetWorthPage'
 import SubscriptionsPage from '@/components/subscriptions/SubscriptionsPage'
 import CostsTab from '@/components/finance/CostsTab'
 import HealthTab from '@/components/finance/HealthTab'
-import { holdingValue, snapshotNear, type NetWorthSnapshot } from '@/lib/netWorthUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { holdingValue, holdingPnl, holdingCostBasis, snapshotNear, fmtEur, type NetWorthSnapshot } from '@/lib/netWorthUtils'
+import { normalizeToMonthly, normalizeToYearly } from '@/lib/financialHealthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 interface Holding {
   id: number; name: string; type: string
@@ -25,13 +25,8 @@ interface NetWorthEntry { id: number; value: number; type: 'asset' | 'liability'
 
 interface WishlistItem { id: number; cost: number; priority: string; purchased: boolean }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
-}
-
-function fmtDecimal(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
-}
+const fmt = (n: number) => fmtEur(n)
+const fmtDecimal = (n: number) => fmtEur(n, 2)
 
 const TYPE_COLOR: Record<string, string> = {
   stock: '#3b82f6', crypto: '#f59e0b', bonds: '#14b8a6', savings: '#10b981', other: '#8b5cf6',
@@ -65,16 +60,15 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
 
   const portfolioTotal = holdings.reduce((s, h) => s + holdingValue(h), 0)
   const assetTotal = portfolioTotal
-  const subAnnual = subscriptions.filter(s => s.active).reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
+  const subAnnual = subscriptions.filter(s => s.active)
+    .reduce((s, sub) => s + normalizeToYearly(sub.cost, sub.period), 0)
   const liabilityTotal = entries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0) + subAnnual
   const netWorth = assetTotal - liabilityTotal
 
-  const portfolioPnl = holdings
-    .filter(h => h.quantity != null && h.currentPrice != null && h.buyPrice != null)
-    .reduce((s, h) => s + ((h.currentPrice! - h.buyPrice!) * h.quantity!), 0)
+  const portfolioPnl = holdings.reduce((s, h) => s + (holdingPnl(h) ?? 0), 0)
 
-  const monthlySubCost = subscriptions.filter(s => s.active).reduce((s, sub) =>
-    s + (sub.period === 'yearly' ? sub.cost / 12 : sub.cost), 0)
+  const monthlySubCost = subscriptions.filter(s => s.active)
+    .reduce((s, sub) => s + normalizeToMonthly(sub.cost, sub.period), 0)
 
   const totalPortfolioValue = portfolioTotal || 1
   const byType = ['stock', 'crypto', 'bonds', 'savings', 'other'].map(type => ({
@@ -84,9 +78,9 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
 
   const activeSubs = [...subscriptions]
     .filter(s => s.active)
-    .map(s => ({ ...s, monthly: s.period === 'yearly' ? s.cost / 12 : s.cost }))
+    .map(s => ({ ...s, monthly: normalizeToMonthly(s.cost, s.period) }))
     .sort((a, b) => b.monthly - a.monthly)
-  const annualSubCost = activeSubs.reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
+  const annualSubCost = activeSubs.reduce((s, sub) => s + normalizeToYearly(sub.cost, sub.period), 0)
 
   // Net worth deltas
   const sortedSnaps = [...snapshots].sort((a, b) => a.date.localeCompare(b.date))
@@ -98,12 +92,9 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
   const finDelta90  = latestSnap && snap90fin ? latestSnap.total - snap90fin.total : null
 
   // Portfolio % gain
-  const costBasis = holdings
-    .filter(h => h.quantity != null && h.buyPrice != null)
-    .reduce((s, h) => s + (h.buyPrice! * h.quantity!), 0)
-  const tradingMarketValue = holdings
-    .filter(h => h.quantity != null && h.buyPrice != null)
-    .reduce((s, h) => s + holdingValue(h), 0)
+  const tradable = holdings.filter(h => holdingCostBasis(h) !== null)
+  const costBasis = tradable.reduce((s, h) => s + (holdingCostBasis(h) ?? 0), 0)
+  const tradingMarketValue = tradable.reduce((s, h) => s + holdingValue(h), 0)
   const portfolioPctGain = costBasis > 0
     ? ((tradingMarketValue - costBasis) / costBasis) * 100
     : null
@@ -136,9 +127,8 @@ export default function FinancePage({ defaultSection = 'overview' }: { defaultSe
     ).join('\n')
     const holdingLines = holdings.map(h => {
       const val = holdingValue(h)
-      const pnl = h.buyPrice != null && h.currentPrice != null && h.quantity != null
-        ? ` · P&L: ${h.currentPrice >= h.buyPrice ? '+' : ''}${fmtDecimal((h.currentPrice - h.buyPrice) * h.quantity)}`
-        : ''
+      const rawPnl = holdingPnl(h)
+      const pnl = rawPnl !== null ? ` · P&L: ${rawPnl >= 0 ? '+' : ''}${fmtDecimal(rawPnl)}` : ''
       return `  - ${h.name} (${h.type}): ${fmt(val)}${pnl}`
     }).join('\n')
     const subLines = activeSubs.map(s => `  - ${s.name}: ${fmtDecimal(s.monthly)}/mo`).join('\n')

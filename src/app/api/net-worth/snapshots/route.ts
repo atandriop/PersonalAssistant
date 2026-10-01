@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { todayLocal } from '@/lib/dateUtils'
+import { computeNetWorth } from '@/lib/netWorthTotals'
+import { route } from '@/lib/apiUtils'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export const GET = route(async () => {
   const snapshots = await prisma.netWorthSnapshot.findMany({ orderBy: { date: 'asc' } })
   return NextResponse.json(snapshots)
-}
+})
 
-export async function POST() {
+export const POST = route(async () => {
   const today = todayLocal()
 
-  const [holdings, entries] = await Promise.all([
+  const [holdings, entries, subscriptions] = await Promise.all([
     prisma.portfolioHolding.findMany(),
     prisma.netWorthEntry.findMany(),
+    prisma.subscription.findMany({ where: { active: true } }),
   ])
 
-  const portfolioValue = holdings.reduce((sum, h) => {
-    if (h.quantity != null && h.currentPrice != null) return sum + h.quantity * h.currentPrice
-    if (h.balance != null) return sum + h.balance
-    return sum
-  }, 0)
-
-  const liabilityTotal = entries.filter(e => e.type === 'liability').reduce((s, e) => s + e.value, 0)
-  const total = portfolioValue - liabilityTotal
+  // Shared formula: the inline version here counted neither `type: 'asset'`
+  // entries nor annualised subscriptions, so this chart could never line up
+  // with the Net Worth tile that did.
+  const { total } = computeNetWorth({ holdings, entries, subscriptions })
 
   const snapshot = await prisma.netWorthSnapshot.upsert({
     where: { date: today },
@@ -32,4 +31,4 @@ export async function POST() {
     create: { date: today, total },
   })
   return NextResponse.json(snapshot, { status: 201 })
-}
+})

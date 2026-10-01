@@ -6,8 +6,8 @@ import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
 import Badge from '@/components/ui/Badge'
 import HoldingForm from './HoldingForm'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { holdingValue, holdingPnl, holdingCostBasis } from '@/lib/netWorthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 interface Holding {
   id: number; name: string; type: string
@@ -19,22 +19,12 @@ const TYPE_COLOR: Record<string, string> = {
   stock: '#3b82f6', crypto: '#f59e0b', bonds: '#14b8a6', savings: '#10b981', other: '#8b5cf6',
 }
 
-function holdingValue(h: Holding): number {
-  return h.type === 'savings' ? (h.balance ?? 0) : (h.currentPrice ?? 0) * (h.quantity ?? 0)
-}
-
-function holdingPnl(h: Holding): number {
-  if (h.type === 'savings') return 0
-  return (h.currentPrice ?? 0) * (h.quantity ?? 0) - (h.buyPrice ?? 0)
-}
-
 function pnlDisplay(h: Holding): { text: string; cls: string } {
-  if (h.quantity == null || h.currentPrice == null || h.buyPrice == null) {
-    return { text: '—', cls: 'text-gray-400' }
-  }
-  const pnl = h.currentPrice * h.quantity - h.buyPrice
+  const pnl = holdingPnl(h)
+  const basis = holdingCostBasis(h)
+  if (pnl === null || basis === null) return { text: '—', cls: 'text-gray-400' }
   if (pnl === 0) return { text: '€0', cls: 'text-gray-400' }
-  const pct = h.buyPrice > 0 ? ` (${pnl > 0 ? '+' : ''}${((pnl / h.buyPrice) * 100).toFixed(1)}%)` : ''
+  const pct = basis > 0 ? ` (${pnl > 0 ? '+' : ''}${((pnl / basis) * 100).toFixed(1)}%)` : ''
   if (pnl > 0) return { text: `+€${pnl.toFixed(2)}${pct}`, cls: 'text-green-600 dark:text-green-400' }
   return { text: `−€${Math.abs(pnl).toFixed(2)}${pct}`, cls: 'text-red-500' }
 }
@@ -57,7 +47,7 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
   const filtered = holdings.filter(h => !filterType || h.type === filterType)
   const totalValue = holdings.reduce((s, h) => s + holdingValue(h), 0)
   const nonSavings = holdings.filter(h => h.type !== 'savings')
-  const totalPnl = nonSavings.reduce((s, h) => s + holdingPnl(h), 0)
+  const totalPnl = nonSavings.reduce((s, h) => s + (holdingPnl(h) ?? 0), 0)
   const totalCost = nonSavings.reduce((s, h) => s + (h.buyPrice ?? 0), 0)
 
   const byType = ['stock', 'crypto', 'bonds', 'savings', 'other']
@@ -108,7 +98,8 @@ export default function PortfolioPage({ hideHeader = false }: { hideHeader?: boo
       }
       const v = holdingValue(h)
       const p = holdingPnl(h)
-      return `[${h.type.toUpperCase()} — ${h.name}]: value €${v.toFixed(2)}, P&L ${p >= 0 ? '+' : ''}€${p.toFixed(2)}`
+      const pnlText = p === null ? 'n/a' : `${p >= 0 ? '+' : ''}€${p.toFixed(2)}`
+      return `[${h.type.toUpperCase()} — ${h.name}]: value €${v.toFixed(2)}, P&L ${pnlText}`
     }).join('\n')
     const byType = ['stock', 'crypto', 'bonds', 'savings', 'other']
       .map(t => {

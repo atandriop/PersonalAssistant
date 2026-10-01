@@ -3,8 +3,9 @@
 import useSWR from 'swr'
 import { SUBSCRIPTION_CATEGORIES } from '@/components/subscriptions/SubscriptionsPage'
 import { toLocalYMD } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { normalizeToYearly } from '@/lib/financialHealthUtils'
+import { fmtEur } from '@/lib/netWorthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 interface Subscription { id: number; cost: number; period: string; active: boolean; category: string }
 interface Trip { id: number; startDate: string | null; endDate: string | null; actualCost: number | null }
@@ -15,9 +16,7 @@ interface MaintenanceLog { id: number; date: string; cost: number | null }
 interface GiftPerson { ideas: GiftIdea[] }
 interface GiftIdea { id: number; estimatedCost: number | null; purchased: boolean; createdAt: string }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
-}
+const fmt = (n: number) => fmtEur(n)
 
 function isThisYear(dateStr: string | null | undefined): boolean {
   if (!dateStr) return false
@@ -61,7 +60,7 @@ export default function CostsTab() {
   const activeSubs = subscriptions.filter(s => s.active)
   const subsByCategory = SUBSCRIPTION_CATEGORIES.map(cat => {
     const catSubs = activeSubs.filter(s => (s.category ?? 'Other') === cat)
-    const annualTotal = catSubs.reduce((s, sub) => s + (sub.period === 'yearly' ? sub.cost : sub.cost * 12), 0)
+    const annualTotal = catSubs.reduce((s, sub) => s + normalizeToYearly(sub.cost, sub.period), 0)
     return {
       category: cat,
       ytd: annualTotal * (daysElapsed / daysInYear),

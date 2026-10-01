@@ -8,8 +8,8 @@ import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 
 import { advanceRenewalDate } from '@/lib/subscriptionUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { normalizeToMonthly, normalizeToYearly } from '@/lib/financialHealthUtils'
+import { fetcher } from '@/lib/fetcher'
 
 export const SUBSCRIPTION_CATEGORIES = [
   'Software & Services',
@@ -26,11 +26,7 @@ interface Subscription {
 
 const field = 'border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-800 dark:border-gray-600 dark:text-white'
 
-function monthlyEquiv(cost: number, period: string): number {
-  if (period === 'yearly') return cost / 12
-  if (period === 'quarterly') return cost / 3
-  return cost
-}
+const monthlyEquiv = normalizeToMonthly
 
 function daysUntil(renewalDate: string | null | undefined): number | null {
   if (!renewalDate) return null
@@ -102,9 +98,7 @@ export default function SubscriptionsPage() {
   const active = all.filter(s => s.active)
   const items = showActive ? active : all
   const monthlyTotal = active.reduce((sum, s) => sum + monthlyEquiv(s.cost, s.period), 0)
-  const annualTotal = active.reduce((sum, s) => sum + (
-    s.period === 'yearly' ? s.cost : s.period === 'quarterly' ? s.cost * 4 : s.cost * 12
-  ), 0)
+  const annualTotal = active.reduce((sum, s) => sum + normalizeToYearly(s.cost, s.period), 0)
   const soonCount = active.filter(s => { const d = daysUntil(s.renewalDate); return d !== null && d >= 0 && d <= 14 }).length
   const categoryBreakdown = SUBSCRIPTION_CATEGORIES
     .map(cat => ({

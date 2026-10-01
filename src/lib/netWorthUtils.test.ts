@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { holdingValue, snapshotNear, fmtEur } from './netWorthUtils'
+import { holdingValue, holdingPnl, holdingCostBasis, snapshotNear, fmtEur } from './netWorthUtils'
 
 const holding = (h: Partial<Parameters<typeof holdingValue>[0]>) =>
   ({ id: 1, name: 'H', type: 'stock', ...h }) as Parameters<typeof holdingValue>[0]
@@ -32,6 +32,50 @@ describe('holdingValue', () => {
   })
   it('handles fractional quantities', () => {
     expect(holdingValue(holding({ type: 'crypto', currentPrice: 30000, quantity: 0.25 }))).toBe(7500)
+  })
+})
+
+describe('holdingPnl', () => {
+  // buyPrice is the TOTAL paid for the position, not a per-unit price — the
+  // form's input is labelled "Total buy price". Treating it as per-unit and
+  // multiplying by quantity reported a +50% position as -85%.
+  it('subtracts the total paid from the current market value', () => {
+    expect(holdingPnl(holding({ type: 'stock', quantity: 10, buyPrice: 1000, currentPrice: 150 }))).toBe(500)
+  })
+  it('reports a loss when market value is below the total paid', () => {
+    expect(holdingPnl(holding({ type: 'stock', quantity: 10, buyPrice: 2000, currentPrice: 150 }))).toBe(-500)
+  })
+  it('returns 0 for a break-even position', () => {
+    expect(holdingPnl(holding({ type: 'stock', quantity: 4, buyPrice: 50, currentPrice: 12.5 }))).toBe(0)
+  })
+  it('returns null for a savings holding, which has no P&L', () => {
+    expect(holdingPnl(holding({ type: 'savings', balance: 2500 }))).toBeNull()
+  })
+  it('returns null when the position is missing a buy price', () => {
+    expect(holdingPnl(holding({ type: 'stock', quantity: 10, currentPrice: 150 }))).toBeNull()
+  })
+  it('returns null when the position is missing a quantity or price', () => {
+    expect(holdingPnl(holding({ type: 'stock', buyPrice: 1000, currentPrice: 150 }))).toBeNull()
+    expect(holdingPnl(holding({ type: 'stock', quantity: 10, buyPrice: 1000 }))).toBeNull()
+  })
+  it('handles a fractional crypto position', () => {
+    expect(holdingPnl(holding({ type: 'crypto', quantity: 0.25, buyPrice: 5000, currentPrice: 30000 }))).toBe(2500)
+  })
+})
+
+describe('holdingCostBasis', () => {
+  it('is the total buy price, not the buy price times quantity', () => {
+    expect(holdingCostBasis(holding({ type: 'stock', quantity: 10, buyPrice: 1000, currentPrice: 150 }))).toBe(1000)
+  })
+  it('returns null for a savings holding', () => {
+    expect(holdingCostBasis(holding({ type: 'savings', balance: 2500 }))).toBeNull()
+  })
+  it('returns null when no buy price was recorded', () => {
+    expect(holdingCostBasis(holding({ type: 'stock', quantity: 10, currentPrice: 150 }))).toBeNull()
+  })
+  it('pairs with holdingPnl so value = basis + pnl', () => {
+    const h = holding({ type: 'stock', quantity: 10, buyPrice: 1000, currentPrice: 150 })
+    expect(holdingCostBasis(h)! + holdingPnl(h)!).toBe(holdingValue(h))
   })
 })
 
