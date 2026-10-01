@@ -1,6 +1,5 @@
 import useSWR from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 export function useCompanions() {
   const { data, mutate } = useSWR<{ id: number; name: string }[]>('/api/companions', fetcher)

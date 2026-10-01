@@ -7,8 +7,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import HabitRow, { Habit } from './HabitRow'
 import HabitForm from './HabitForm'
 import { todayLocal, addDays } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface HabitLog { date: string; note: string | null }
 

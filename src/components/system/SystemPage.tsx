@@ -4,8 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import { exportPdf } from '@/lib/exportPdf'
 import { todayLocal } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface SystemStats {
   totalMem: number; freeMem: number; usedMem: number

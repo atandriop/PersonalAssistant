@@ -8,8 +8,7 @@ import GiftsPage from '@/components/gifts/GiftsPage'
 import PromptModal from '@/components/ui/PromptModal'
 import type { Task, Appointment } from '@/types'
 import { todayLocal } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 type TabId = 'tasks' | 'gifts'
 

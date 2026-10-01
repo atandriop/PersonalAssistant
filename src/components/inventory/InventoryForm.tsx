@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import { computeValue } from '@/lib/inventoryUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface Category {
   id: number

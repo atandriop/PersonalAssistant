@@ -7,8 +7,7 @@ import type { Memory } from '@/types'
 import MemoryCard from './MemoryCard'
 import MemoryForm from './MemoryForm'
 import PromptModal from '@/components/ui/PromptModal'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const CATEGORIES = ['All', 'Career', 'Education', 'Travel', 'Personal', 'Other'] as const
 

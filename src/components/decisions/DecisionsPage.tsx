@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import PromptModal from '@/components/ui/PromptModal'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface MatrixSummary { id: number; name: string; description?: string }
 interface Criterion { id: number; name: string; weight: number }

@@ -178,7 +178,16 @@ export default function DashboardPage() {
   const [showAddPerson, setShowAddPerson] = useState(false)
   const [addIdeaForPersonId, setAddIdeaForPersonId] = useState<number | null>(null)
 
-  useEffect(() => { setHidden(loadHidden()) }, [])
+  // `hidden` lives in localStorage, so it is only known after hydration. Until
+  // then no widget fetch is issued at all — otherwise the first render fires all
+  // 18 requests before we know which widgets are even visible.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => { setHidden(loadHidden()); setHydrated(true) }, [])
+
+  /** SWR key for a widget's data, or null while hidden or not yet hydrated. */
+  function widgetKey(id: WidgetId, key: string): string | null {
+    return hydrated && !hidden.has(id) ? key : null
+  }
 
   function toggleWidget(id: WidgetId) {
     setHidden(prev => {
@@ -191,25 +200,27 @@ export default function DashboardPage() {
 
   function show(id: WidgetId) { return !hidden.has(id) }
 
-  const { data: habits = [], isLoading: habitsLoading, mutate: mutateHabits } = useSWR<HabitWithToday[]>('/api/habits?includeToday=true', fetcher)
-  const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>('/api/maintenance/items', fetcher)
-  const { data: lifeAreas = [], isLoading: goalsLoading, mutate: mutateAreas } = useSWR<LifeArea[]>('/api/life-areas', fetcher)
-  const { data: giftPeople = [], isLoading: giftsLoading, mutate: mutateGifts } = useSWR<GiftPerson[]>('/api/gifts/people', fetcher)
-  const { data: appointments = [], isLoading: apptLoading, mutate: mutateAppts } = useSWR<Appointment[]>('/api/appointments', fetcher)
-  const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>('/api/documents', fetcher)
-  const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>('/api/bucket-list/trips', fetcher)
-  const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>('/api/bucket-list/experiences', fetcher)
-  const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>('/api/travel/countries', fetcher)
-  const { data: travelTrips = [], isLoading: travelTripsLoading, mutate: mutateTravelTrips } = useSWR<TravelTrip[]>('/api/travel/trips', fetcher)
-  const { data: memories = [] } = useSWR<Memory[]>('/api/memories', fetcher)
-  const { data: tasks = [] } = useSWR<Task[]>('/api/tasks?done=false', fetcher)
-  const { data: subscriptions = [] } = useSWR<Subscription[]>('/api/subscriptions', fetcher)
+  const { data: habits = [], isLoading: habitsLoading, mutate: mutateHabits } = useSWR<HabitWithToday[]>(widgetKey('habits', '/api/habits?includeToday=true'), fetcher)
+  const { data: maintenanceItems = [], isLoading: maintenanceLoading } = useSWR<HomeItem[]>(widgetKey('maintenance', '/api/maintenance/items'), fetcher)
+  const { data: lifeAreas = [], isLoading: goalsLoading, mutate: mutateAreas } = useSWR<LifeArea[]>(widgetKey('goals', '/api/life-areas'), fetcher)
+  const { data: giftPeople = [], isLoading: giftsLoading, mutate: mutateGifts } = useSWR<GiftPerson[]>(widgetKey('gifts', '/api/gifts/people'), fetcher)
+  const { data: appointments = [], isLoading: apptLoading, mutate: mutateAppts } = useSWR<Appointment[]>(widgetKey('appointments', '/api/appointments'), fetcher)
+  const { data: allDocs = [], isLoading: docsLoading } = useSWR<Document[]>(widgetKey('expiring-docs', '/api/documents'), fetcher)
+  const { data: bucketTrips = [], isLoading: tripsLoading } = useSWR<BucketTrip[]>(widgetKey('bucket-list', '/api/bucket-list/trips'), fetcher)
+  const { data: bucketExperiences = [], isLoading: experiencesLoading } = useSWR<BucketExperience[]>(widgetKey('bucket-list', '/api/bucket-list/experiences'), fetcher)
+  const { data: travelCountries = [], isLoading: travelCountriesLoading } = useSWR<TravelCountry[]>(widgetKey('travel', '/api/travel/countries'), fetcher)
+  const { data: travelTrips = [], isLoading: travelTripsLoading, mutate: mutateTravelTrips } = useSWR<TravelTrip[]>(widgetKey('travel', '/api/travel/trips'), fetcher)
+  // Memories feed both the 'memories' and 'on-this-day' widgets.
+  const { data: memories = [] } = useSWR<Memory[]>(
+    hydrated && (!hidden.has('memories') || !hidden.has('on-this-day')) ? '/api/memories' : null, fetcher)
+  const { data: tasks = [] } = useSWR<Task[]>(widgetKey('overdue-tasks', '/api/tasks?done=false'), fetcher)
+  // Subscriptions feed both the 'subscriptions' widget and the net-worth total.
+  const { data: subscriptions = [] } = useSWR<Subscription[]>(
+    hydrated && (!hidden.has('subscriptions') || !hidden.has('net-worth')) ? '/api/subscriptions' : null, fetcher)
   const { data: people = [] } = useSWR<{ id: number; name: string; birthday: string | null; relationship: string | null }[]>(
-    '/api/people',
-    fetcher
-  )
+    widgetKey('birthdays', '/api/people'), fetcher)
 
-  const isNWVisible = !hidden.has('net-worth')
+  const isNWVisible = hydrated && !hidden.has('net-worth')
   const { data: nwSnapshots = [] } = useSWR<NetWorthSnapshot[]>(
     isNWVisible ? '/api/net-worth/snapshots' : null, fetcher)
   const { data: nwEntries = [] } = useSWR<{ value: number; type: string }[]>(

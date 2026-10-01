@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import useSWR from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 export type EventSourceType = 'task' | 'appointment' | 'trip' | 'subscription' | 'document' | 'maintenance'
 

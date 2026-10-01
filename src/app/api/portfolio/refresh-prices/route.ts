@@ -31,26 +31,36 @@ async function fetchCryptoPrices(coinIds: string[]): Promise<Record<string, { eu
   }
 }
 
-async function fetchStockPrice(symbol: string): Promise<number | null> {
+/** EUR/USD rate, fetched once per request rather than once per holding. */
+async function fetchEurUsd(): Promise<number | null> {
   try {
-    const [quoteRes, fxRes] = await Promise.all([
-      fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`,
-        { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
-      ),
-      fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=EURUSD%3DX`,
-        { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
-      ),
-    ])
-    if (!quoteRes.ok || !fxRes.ok) return null
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=EURUSD%3DX`,
+      { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+    )
+    if (!res.ok) return null
+    const data = await res.json() as { quoteResponse?: { result?: { regularMarketPrice?: number }[] } }
+    return data.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
+  } catch {
+    return null
+  }
+}
+
+// The FX rate is passed in: it used to be re-fetched inside this function, so a
+// refresh with 5 non-crypto holdings made 5 identical calls to the same Yahoo
+// endpoint, for 5x the latency and rate-limit exposure.
+async function fetchStockPrice(symbol: string, eurUsd: number | null): Promise<number | null> {
+  try {
+    const quoteRes = await fetch(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`,
+      { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+    )
+    if (!quoteRes.ok) return null
     const quoteData = await quoteRes.json() as { quoteResponse?: { result?: { regularMarketPrice?: number; currency?: string }[] } }
-    const fxData = await fxRes.json() as { quoteResponse?: { result?: { regularMarketPrice?: number }[] } }
     const price = quoteData.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
     const currency = quoteData.quoteResponse?.result?.[0]?.currency ?? 'USD'
     if (price === null) return null
     if (currency === 'EUR') return price
-    const eurUsd = fxData.quoteResponse?.result?.[0]?.regularMarketPrice ?? null
     if (eurUsd === null) return null
     return price / eurUsd
   } catch {
@@ -91,10 +101,11 @@ export async function POST() {
     })
   )
 
-  // Stocks: individual fetches (already EUR-converted)
+  // Stocks: one quote each, sharing a single FX rate for the whole request
+  const eurUsd = stockHoldings.length > 0 ? await fetchEurUsd() : null
   await Promise.all(
     stockHoldings.map(async h => {
-      const price = await fetchStockPrice(h.name)
+      const price = await fetchStockPrice(h.name, eurUsd)
       if (price !== null) {
         await prisma.portfolioHolding.update({ where: { id: h.id }, data: { currentPrice: price } })
         updated.push(h.name)

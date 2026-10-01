@@ -12,7 +12,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 import { computeValue, type ItemForValue } from '@/lib/inventoryUtils'
 import UpdateValuesModal from '@/components/inventory/UpdateValuesModal'
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface Category {
   id: number; name: string; color: string
@@ -265,7 +265,6 @@ export default function ItemsPage() {
           </button>
         </div>
       </div>
-
 
       {/* Summary strip */}
       <div className="mb-4 flex flex-wrap gap-3 text-sm">

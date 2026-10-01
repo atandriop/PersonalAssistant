@@ -5,8 +5,7 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
 import AreaDetail, { LifeArea, HabitRef, calcAreaProgress, useHabitLogs } from './AreaDetail'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const PRESET_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
 

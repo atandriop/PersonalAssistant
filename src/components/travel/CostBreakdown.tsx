@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import useSWR from 'swr'
 import type { Memory, TripCostLine } from '@/types'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 type Category = 'hotel' | 'airfare' | 'food' | 'entertainment'
 

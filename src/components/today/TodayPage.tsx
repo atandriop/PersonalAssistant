@@ -5,8 +5,7 @@ import useSWR from 'swr'
 import type { Task, Appointment } from '@/types'
 import { todayLocal } from '@/lib/dateUtils'
 import { Activity, AlertCircle, Calendar, RefreshCw, Gift, CheckSquare } from 'lucide-react'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface HabitWithToday {
   id: number; name: string; color: string; doneToday: boolean

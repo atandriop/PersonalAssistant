@@ -8,8 +8,7 @@ import { useCountries, useCities } from '@/lib/useGeoData'
 import { useCompanions, useCompanies } from '@/lib/usePeopleCompanies'
 import CostBreakdown, { type CostLinePayload } from './CostBreakdown'
 import { tripEndDate, daysInclusive } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 export default function TripForm({ initial, onSave, onCancel }: {
   initial?: TravelTrip
@@ -75,9 +74,11 @@ export default function TripForm({ initial, onSave, onCancel }: {
       company: company.trim() || null,
       startDate: startDate || null,
       endDate,
-      ...(costLines.length > 0
-        ? { costLines }
-        : { actualCost: initial?.actualCost ?? null }),
+      // Always send costLines, including an empty array: the handler keys its
+      // deleteMany on Array.isArray(costLines), so omitting the key when the
+      // list was emptied meant removing every cost line silently did nothing.
+      costLines,
+      ...(costLines.length > 0 ? {} : { actualCost: initial?.actualCost ?? null }),
       rating,
       notes: notes.trim() || null,
     }

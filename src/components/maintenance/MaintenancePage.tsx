@@ -6,8 +6,7 @@ import Modal from '@/components/ui/Modal'
 import PromptModal from '@/components/ui/PromptModal'
 import { TaskStatus, getTaskStatus } from '@/lib/maintenance'
 import { todayLocal } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface MaintenanceTask {
   id: number

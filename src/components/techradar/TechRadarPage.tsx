@@ -4,8 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import Badge from '@/components/ui/Badge'
 import PromptModal from '@/components/ui/PromptModal'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface TechRadarItem {
   id: number; name: string; ring: string; category: string; notes?: string | null

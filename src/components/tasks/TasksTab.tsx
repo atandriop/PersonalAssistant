@@ -6,8 +6,7 @@ import Modal from '@/components/ui/Modal'
 import TaskForm from './TaskForm'
 import type { Task, Subtask } from '@/types'
 import { todayLocal, addDays } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const PRIORITY_COLOR: Record<string, string> = {
   High: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',

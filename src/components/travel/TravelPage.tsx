@@ -9,11 +9,17 @@ import CountryCard from './CountryCard'
 import CountryForm from './CountryForm'
 import TripCard from './TripCard'
 import TripForm from './TripForm'
-import WorldMap from './WorldMap'
+import dynamic from 'next/dynamic'
+
+// react-simple-maps pulls in d3-geo (~100KB minified) and is one element among
+// many on this page, so it is loaded after first paint rather than blocking it.
+const WorldMap = dynamic(() => import('./WorldMap'), {
+  ssr: false,
+  loading: () => <div className="h-80 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />,
+})
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
 import { todayLocal, tripEndDate, daysInclusive } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 function CollapsibleSection({ label, count, labelColor, defaultOpen, labelSuffix, children }: {
   label: string

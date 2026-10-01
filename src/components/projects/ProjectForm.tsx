@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { Project } from '@/types'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const COLORS = ['#6b7280', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
 

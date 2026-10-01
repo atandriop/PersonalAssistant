@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import useSWR from 'swr'
 import type { Task } from '@/types'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface SubtaskDraft { title: string }
 interface WishlistOption { id: number; name: string }

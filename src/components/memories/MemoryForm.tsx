@@ -5,8 +5,7 @@ import useSWR from 'swr'
 import type { Memory, TravelTrip } from '@/types'
 import Combobox from '@/components/ui/Combobox'
 import { useCompanions, useCompanies } from '@/lib/usePeopleCompanies'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const CATEGORIES = ['Career', 'Education', 'Travel', 'Personal', 'Other'] as const
 

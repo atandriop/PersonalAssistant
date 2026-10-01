@@ -7,8 +7,7 @@ import Modal from '@/components/ui/Modal'
 import PersonForm from './PersonForm'
 import { daysUntilBirthday } from '@/lib/peopleUtils'
 import { Plus, Pencil, Trash2, Cake, Phone, Mail, Calendar, Gift, Plane } from 'lucide-react'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const RELATIONSHIP_COLOR: Record<string, string> = {
   Friend:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',

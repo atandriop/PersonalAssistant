@@ -6,8 +6,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import { HomeItem, getTaskStatus } from '@/lib/maintenance'
 import type { Habit, LifeArea, Subscription } from '@/types'
 import { toLocalYMD, todayLocal, addDays } from '@/lib/dateUtils'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface WishlistItemRow { id: number; name: string; cost: number; priority: string }
 interface InventoryItemRow { id: number; name: string; cost: number; currentValue?: number | null }

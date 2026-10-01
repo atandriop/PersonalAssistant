@@ -6,8 +6,7 @@ import type { Document } from '@/types'
 import DocumentCard from './DocumentCard'
 import DocumentForm from './DocumentForm'
 import DocumentDetailModal from './DocumentDetailModal'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const FILTER_CATEGORIES = ['All', 'Identity', 'Finance', 'Vehicle', 'Health', 'Insurance', 'Other']
 

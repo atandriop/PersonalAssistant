@@ -6,8 +6,7 @@ import type { Project, Task } from '@/types'
 import Modal from '@/components/ui/Modal'
 import ProjectForm from './ProjectForm'
 import { Plus, CheckCircle, Circle, Pencil, Trash2 } from 'lucide-react'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 export default function ProjectsPage() {
   const { data: projects = [], mutate } = useSWR<Project[]>('/api/projects', fetcher)

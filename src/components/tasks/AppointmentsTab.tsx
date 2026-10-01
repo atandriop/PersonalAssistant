@@ -5,9 +5,9 @@ import useSWR from 'swr'
 import Modal from '@/components/ui/Modal'
 import AppointmentForm from './AppointmentForm'
 import type { Appointment } from '@/types'
-import { toLocalYMD, todayLocal, addDays } from '@/lib/dateUtils'
+import { todayLocal, addDays } from '@/lib/dateUtils'
+import { fetcher, mutateJson } from '@/lib/fetcher'
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const CATEGORY_COLOR: Record<string, string> = {
   Medical: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -23,25 +23,6 @@ const INTERVAL_LABEL: Record<string, string> = {
   yearly: 'every year',
 }
 
-function advanceDate(dateStr: string, interval: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  if (interval === 'monthly') {
-    const targetMonth = (d.getMonth() + 1) % 12
-    d.setMonth(d.getMonth() + 1)
-    if (d.getMonth() !== targetMonth) d.setDate(0)
-  } else if (interval === 'quarterly') {
-    const targetMonth = (d.getMonth() + 3) % 12
-    d.setMonth(d.getMonth() + 3)
-    if (d.getMonth() !== targetMonth) d.setDate(0)
-  } else if (interval === '6months') {
-    const targetMonth = (d.getMonth() + 6) % 12
-    d.setMonth(d.getMonth() + 6)
-    if (d.getMonth() !== targetMonth) d.setDate(0)
-  }
-  else if (interval === 'yearly') d.setFullYear(d.getFullYear() + 1)
-  return toLocalYMD(d)
-}
-
 function ApptRow({
   appt,
   onMutate,
@@ -55,40 +36,25 @@ function ApptRow({
   const categoryColor = CATEGORY_COLOR[appt.category] ?? CATEGORY_COLOR.Other
 
   async function markDone() {
-    await fetch(`/api/appointments/${appt.id}`, {
+    await mutateJson(`/api/appointments/${appt.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...appt, done: true }),
     })
     onMutate()
   }
 
+  // PUT with done: true is all that is needed — the route schedules the next
+  // occurrence itself. This used to also POST one, so every click created two
+  // duplicates on top of the route's own.
   async function markDoneAndScheduleNext() {
     try {
-      await fetch(`/api/appointments/${appt.id}`, {
+      await mutateJson(`/api/appointments/${appt.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...appt, done: true }),
       })
-      const nextDate = advanceDate(appt.date, appt.recurringInterval ?? 'yearly')
-      await fetch('/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: appt.title,
-          date: nextDate,
-          time: appt.time,
-          location: appt.location,
-          category: appt.category,
-          notes: appt.notes,
-          cost: appt.cost,
-          recurring: true,
-          recurringInterval: appt.recurringInterval,
-        }),
-      })
       onMutate()
-    } catch {
-      alert('Failed to schedule next occurrence. Please try again.')
+    } catch (e) {
+      alert(`Failed to schedule next occurrence: ${e instanceof Error ? e.message : 'unknown error'}`)
       onMutate()
     }
   }

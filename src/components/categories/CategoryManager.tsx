@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher, mutateJson } from '@/lib/fetcher'
 
 const PRESET_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316']
 
@@ -22,36 +21,57 @@ export default function CategoryManager({ onClose }: { onClose: () => void }) {
   const [valueMethod, setValueMethod] = useState('cost')
   const [depreciationRate, setDepreciationRate] = useState('')
   const [editing, setEditing] = useState<Category | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const field = 'border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-800 dark:border-gray-600 dark:text-white'
 
   async function save() {
     if (!name.trim()) return
+
+    // The save button is not inside a <form>, so the rate input's min/max never
+    // fire. Validate here as well as server-side: a rate outside 1-99 produced a
+    // depreciationRate above 1, which made every inventory value NaN.
+    const ratePct = Number(depreciationRate)
+    if (valueMethod === 'depreciation' && depreciationRate !== '') {
+      if (!Number.isFinite(ratePct) || ratePct < 1 || ratePct > 99) {
+        setError('Annual depreciation rate must be between 1 and 99%')
+        return
+      }
+    }
+
     const body = {
       name,
       color,
       valueMethod,
       depreciationRate: valueMethod === 'depreciation' && depreciationRate
-        ? Number(depreciationRate) / 100
+        ? ratePct / 100
         : null,
     }
-    if (editing) {
-      await fetch(`/api/categories/${editing.id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    try {
+      await mutateJson(editing ? `/api/categories/${editing.id}` : '/api/categories', {
+        method: editing ? 'PUT' : 'POST',
         body: JSON.stringify(body),
       })
-    } else {
-      await fetch('/api/categories', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save category')
+      return
     }
+    setError(null)
     setName(''); setColor(PRESET_COLORS[0]); setValueMethod('cost'); setDepreciationRate(''); setEditing(null)
     mutate()
   }
 
+  // The route returns 409 naming the dependent count when the category is still
+  // in use. Previously this ignored the status entirely, so the delete appeared
+  // to succeed while the category stayed put.
   async function del(id: number) {
-    await fetch(`/api/categories/${id}`, { method: 'DELETE' })
+    try {
+      await mutateJson(`/api/categories/${id}`, { method: 'DELETE' })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete category')
+      return
+    }
+    setError(null)
     mutate()
   }
 
@@ -67,6 +87,11 @@ export default function CategoryManager({ onClose }: { onClose: () => void }) {
 
   return (
     <div>
+      {error && (
+        <p className="mb-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
       <div className="flex flex-col gap-2 mb-4">
         {categories.map(cat => (
           <div key={cat.id} className="flex items-center gap-2 text-sm">

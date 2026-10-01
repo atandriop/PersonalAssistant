@@ -7,8 +7,7 @@ import PromptModal from '@/components/ui/PromptModal'
 import AreaDetail, { LifeArea, HabitRef, calcAreaProgress, useHabitLogs } from '@/components/goals/AreaDetail'
 import HabitRow, { Habit } from '@/components/habits/HabitRow'
 import HabitForm, { PRESET_COLORS } from '@/components/habits/HabitForm'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 function AreaForm({ initial, onSave, onCancel }: { initial?: LifeArea; onSave: () => void; onCancel: () => void }) {
   const [name, setName] = useState(initial?.name ?? '')

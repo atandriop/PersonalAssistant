@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import useSWR from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 interface Category { id: number; name: string; color: string }
 

@@ -9,8 +9,7 @@ import TripForm from './TripForm'
 import ExperienceCard from './ExperienceCard'
 import ExperienceForm from './ExperienceForm'
 import BulkEditor, { type ColumnDef, type BulkChanges } from '@/components/ui/BulkEditor'
-
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+import { fetcher } from '@/lib/fetcher'
 
 const TRIP_FILTERS = ['All', 'Not Done', 'Done']
 const EXP_STATUS_FILTERS = ['All', 'Not Done', 'Done']

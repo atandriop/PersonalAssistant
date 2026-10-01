@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, memo } from 'react'
 
 export type ColumnType = 'text' | 'number' | 'boolean' | 'date' | 'select'
 
@@ -126,6 +126,47 @@ function CellInput({ col, value, onChange }: {
   )
 }
 
+/**
+ * One table row, memoized. Without this, a keystroke in any cell re-rendered
+ * every row: the inventory editor has 7 columns x 334 rows, so ~5300 controlled
+ * inputs were reconciled per keypress.
+ */
+const EditorRow = memo(function EditorRow({ row, rowIndex, columns, isMarked, onCellChange, onToggleDelete }: {
+  row: Record<string, unknown>
+  rowIndex: number
+  columns: ColumnDef[]
+  isMarked: boolean
+  onCellChange: (rowIdx: number, key: string, value: unknown) => void
+  onToggleDelete: (rowIdx: number) => void
+}) {
+  return (
+    <tr className={isMarked ? 'opacity-40 bg-red-50 dark:bg-red-900/10' : 'bg-white dark:bg-gray-900'}>
+      <td className="px-2 text-center">
+        <button
+          type="button"
+          onClick={() => onToggleDelete(rowIndex)}
+          title={isMarked ? 'Undo delete' : 'Delete row'}
+          className={`text-xs leading-none ${isMarked
+            ? 'text-blue-400 hover:text-blue-600'
+            : 'text-gray-300 hover:text-red-500'}`}
+        >
+          {isMarked ? '↩' : '×'}
+        </button>
+      </td>
+      {columns.map(col => (
+        <td key={col.key} className={`px-2 py-1 ${isMarked ? 'line-through' : ''}`}>
+          <CellInput col={col} value={row[col.key]} onChange={v => onCellChange(rowIndex, col.key, v)} />
+        </td>
+      ))}
+    </tr>
+  )
+})
+
+/** Stable comparison key for a row, over the editable columns only. */
+function rowSignature(row: Record<string, unknown>, columns: ColumnDef[]): string {
+  return JSON.stringify(columns.map(c => row[c.key] ?? null))
+}
+
 export default function BulkEditor({ columns, rows, csvHint, onSave, onCancel }: BulkEditorProps) {
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>(() =>
     rows.map(r => ({ ...r }))
@@ -135,22 +176,36 @@ export default function BulkEditor({ columns, rows, csvHint, onSave, onCancel }:
   const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Signatures as the editor was opened, so Save can submit only what changed.
+  const originalRef = useRef<Map<number, string>>(
+    new Map(
+      rows
+        .filter(r => typeof r.id === 'number')
+        .map(r => [r.id as number, rowSignature(r, columns)])
+    )
+  )
+
   const hint = csvHint ?? columns.map(c => c.key).join(',')
   const parsedCount = csvText.trim() ? parseCSV(csvText, columns, hint).length : 0
 
-  function updateCell(rowIdx: number, key: string, value: unknown) {
+  const updateCell = useCallback((rowIdx: number, key: string, value: unknown) => {
     setTableRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, [key]: value } : r))
-  }
+  }, [])
 
-  function toggleDelete(rowIdx: number) {
-    const row = tableRows[rowIdx]
-    if (typeof row.id === 'number') {
+  // Read the current rows through a ref so the callback identity stays stable
+  // (EditorRow is memoized) without putting a side effect in a state updater.
+  const rowsRef = useRef(tableRows)
+  rowsRef.current = tableRows
+
+  const toggleDelete = useCallback((rowIdx: number) => {
+    const row = rowsRef.current[rowIdx]
+    if (typeof row?.id === 'number') {
       const id = row.id as number
       setDeletedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
     } else {
       setTableRows(prev => prev.filter((_, i) => i !== rowIdx))
     }
-  }
+  }, [])
 
   function addRow() {
     const blank: Record<string, unknown> = {}
@@ -171,8 +226,16 @@ export default function BulkEditor({ columns, rows, csvHint, onSave, onCancel }:
 
   async function handleSave() {
     const importedRows = csvText.trim() ? parseCSV(csvText, columns, hint) : []
+    // Submit only rows that actually changed, plus new and imported ones. Every
+    // row used to be submitted unconditionally, so saving the inventory editor
+    // issued 334 PUTs (~1000 SQL statements) even with nothing edited.
     const upserted = [
-      ...tableRows.filter(r => typeof r.id !== 'number' || !deletedIds.includes(r.id as number)),
+      ...tableRows.filter(r => {
+        if (typeof r.id !== 'number') return true
+        if (deletedIds.includes(r.id as number)) return false
+        const before = originalRef.current.get(r.id as number)
+        return before === undefined || before !== rowSignature(r, columns)
+      }),
       ...importedRows,
     ]
     setSaving(true)
@@ -199,32 +262,17 @@ export default function BulkEditor({ columns, rows, csvHint, onSave, onCancel }:
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-            {tableRows.map((row, i) => {
-              const isMarked = typeof row.id === 'number' && deletedIds.includes(row.id as number)
-              return (
-                <tr key={i} className={isMarked
-                  ? 'opacity-40 bg-red-50 dark:bg-red-900/10'
-                  : 'bg-white dark:bg-gray-900'}>
-                  <td className="px-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => toggleDelete(i)}
-                      title={isMarked ? 'Undo delete' : 'Delete row'}
-                      className={`text-xs leading-none ${isMarked
-                        ? 'text-blue-400 hover:text-blue-600'
-                        : 'text-gray-300 hover:text-red-500'}`}
-                    >
-                      {isMarked ? '↩' : '×'}
-                    </button>
-                  </td>
-                  {columns.map(col => (
-                    <td key={col.key} className={`px-2 py-1 ${isMarked ? 'line-through' : ''}`}>
-                      <CellInput col={col} value={row[col.key]} onChange={v => updateCell(i, col.key, v)} />
-                    </td>
-                  ))}
-                </tr>
-              )
-            })}
+            {tableRows.map((row, i) => (
+              <EditorRow
+                key={typeof row.id === 'number' ? `id-${row.id}` : `new-${i}`}
+                row={row}
+                rowIndex={i}
+                columns={columns}
+                isMarked={typeof row.id === 'number' && deletedIds.includes(row.id as number)}
+                onCellChange={updateCell}
+                onToggleDelete={toggleDelete}
+              />
+            ))}
           </tbody>
         </table>
         <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-700">
